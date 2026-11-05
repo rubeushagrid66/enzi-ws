@@ -669,6 +669,142 @@ export const dbService = {
     return prisma.parameterL3.create({ data: { l2Id, name } });
   },
 
+  async updateGroup(id: string, name: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from("groups").update({ name, updated_at: new Date().toISOString() }).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    }
+    return prisma.group.update({ where: { id }, data: { name } });
+  },
+
+  async updateParticipant(id: string, data: { name?: string; roleTitle?: string; groupId?: string }) {
+    if (isSupabaseConfigured && supabase) {
+      const { data: p, error } = await supabase.from("participants").update({
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.roleTitle !== undefined && { role_title: data.roleTitle }),
+        ...(data.groupId !== undefined && { group_id: data.groupId }),
+        updated_at: new Date().toISOString(),
+      }).eq("id", id).select().single();
+      if (error) throw error;
+      return p;
+    }
+    return prisma.participant.update({ where: { id }, data });
+  },
+
+  async updateAspect(id: string, data: { name?: string; description?: string }) {
+    if (isSupabaseConfigured && supabase) {
+      const { data: a, error } = await supabase.from("viability_aspects").update({
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.description !== undefined && { description: data.description }),
+        updated_at: new Date().toISOString(),
+      }).eq("id", id).select().single();
+      if (error) throw error;
+      return a;
+    }
+    return prisma.viabilityAspect.update({ where: { id }, data });
+  },
+
+  async updateParameterL1(id: string, name: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from("parameters_l1").update({ name, updated_at: new Date().toISOString() }).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    }
+    return prisma.parameterL1.update({ where: { id }, data: { name } });
+  },
+
+  async updateParameterL2(id: string, name: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from("parameters_l2").update({ name, updated_at: new Date().toISOString() }).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    }
+    return prisma.parameterL2.update({ where: { id }, data: { name } });
+  },
+
+  async updateParameterL3(id: string, name: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from("parameters_l3").update({ name, updated_at: new Date().toISOString() }).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    }
+    return prisma.parameterL3.update({ where: { id }, data: { name } });
+  },
+
+  async deleteParameterL1(id: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("parameters_l1").delete().eq("id", id);
+      if (error) throw error;
+      return { success: true };
+    }
+    await prisma.parameterL1.delete({ where: { id } });
+    return { success: true };
+  },
+
+  async deleteParameterL2(id: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("parameters_l2").delete().eq("id", id);
+      if (error) throw error;
+      return { success: true };
+    }
+    await prisma.parameterL2.delete({ where: { id } });
+    return { success: true };
+  },
+
+  async deleteParameterL3(id: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("parameters_l3").delete().eq("id", id);
+      if (error) throw error;
+      return { success: true };
+    }
+    await prisma.parameterL3.delete({ where: { id } });
+    return { success: true };
+  },
+
+  async updateUser(id: string, data: { name?: string; role?: string; passwordHash?: string; isActive?: boolean }) {
+    if (isSupabaseConfigured && supabase) {
+      const { data: u, error } = await supabase.from("users").update({
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.role !== undefined && { role: data.role === "ADMIN" ? "ADMIN" : "FACILITATOR" }),
+        ...(data.passwordHash !== undefined && { password_hash: data.passwordHash }),
+        ...(data.isActive !== undefined && { is_active: data.isActive }),
+        updated_at: new Date().toISOString(),
+      }).eq("id", id).select("id, name, email, role, is_active, created_at").single();
+      if (error) throw error;
+      return { id: u.id, name: u.name, email: u.email, role: u.role, isActive: u.is_active, createdAt: u.created_at };
+    }
+    return prisma.user.update({
+      where: { id },
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.role !== undefined && { role: data.role }),
+        ...(data.passwordHash !== undefined && { passwordHash: data.passwordHash }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
+      },
+      select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
+    });
+  },
+
+  async deleteUser(id: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("users").delete().eq("id", id);
+      if (error) throw error;
+      return { success: true };
+    }
+    await prisma.user.delete({ where: { id } });
+    return { success: true };
+  },
+
+  async countAdmins() {
+    if (isSupabaseConfigured && supabase) {
+      const { count, error } = await supabase.from("users").select("id", { count: "exact", head: true }).eq("role", "ADMIN").eq("is_active", true);
+      if (error) throw error;
+      return count ?? 0;
+    }
+    return prisma.user.count({ where: { role: "ADMIN", isActive: true } });
+  },
+
   // ── Users CRUD ───────────────────────────────────────────────────────────────
 
   async getUsers() {

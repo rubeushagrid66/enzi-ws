@@ -198,3 +198,20 @@ export async function PUT(
     );
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: { slug: string } }
+) {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    await dbService.deleteProject(params.slug);
+    return NextResponse.json({ success: true, message: "Project deleted" });
+  } catch (error) {
+    console.error("Failed to delete project:", error);
+    return NextResponse.json({ error: "Failed to delete project" }, { status: 500 });
+  }
+}

@@ -44,7 +44,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <main id="main-content" className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <Link href="/" className="inline-flex items-center gap-2 group mb-4">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold text-xl shadow-md group-hover:bg-emerald-700 transition">
@@ -73,35 +73,37 @@ export default function AdminLoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+              <label htmlFor="login-email" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
                 Email Address
               </label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
+                  id="login-email"
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@enzi.io"
-                  className="w-full pl-10 pr-3 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50"
+                  className="w-full pl-10 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+              <label htmlFor="login-password" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
                 Password
               </label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
+                  id="login-password"
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-3 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50"
+                  className="w-full pl-10 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50"
                 />
               </div>
             </div>
@@ -124,7 +126,7 @@ export default function AdminLoginPage() {
 
           {/* Quick Demo Credentials */}
           <div className="mt-6 pt-6 border-t border-slate-100">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center mb-3">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 text-center mb-3">
               Quick 1-Click Demo Logins
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -134,7 +136,7 @@ export default function AdminLoginPage() {
                 className="p-2.5 rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50 text-left transition"
               >
                 <div className="text-xs font-bold text-slate-800">Lead Admin</div>
-                <div className="text-[10px] text-slate-500">admin@enzi.io</div>
+                <div className="text-xs text-slate-500">admin@enzi.io</div>
               </button>
 
               <button
@@ -145,7 +147,7 @@ export default function AdminLoginPage() {
                 className="p-2.5 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 text-left transition"
               >
                 <div className="text-xs font-bold text-slate-800">Facilitator</div>
-                <div className="text-[10px] text-slate-500">facilitator@enzi.io</div>
+                <div className="text-xs text-slate-500">facilitator@enzi.io</div>
               </button>
             </div>
           </div>
@@ -160,6 +162,6 @@ export default function AdminLoginPage() {
           </Link>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

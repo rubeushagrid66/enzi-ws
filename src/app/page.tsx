@@ -62,7 +62,7 @@ export default async function HomePage() {
       </section>
 
       {/* Workshop Projects Grid */}
-      <section className="py-12 sm:py-16">
+      <main id="main-content" className="py-12 sm:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -99,7 +99,7 @@ export default async function HomePage() {
                       <span className="font-mono text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
                         /{project.slug}
                       </span>
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                         <CheckCircle2 className="h-3 w-3" /> Active
                       </span>
                     </div>
@@ -116,10 +116,10 @@ export default async function HomePage() {
 
                     {/* Framework Weight Distribution */}
                     <div className="pt-2">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                      <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                         Framework Weights:
                       </div>
-                      <div className="grid grid-cols-3 gap-1.5 text-center text-[10px]">
+                      <div className="grid grid-cols-3 gap-1.5 text-center text-xs">
                         <div className="p-1.5 rounded bg-emerald-50 border border-emerald-100 text-emerald-900 font-semibold">
                           D: {dWeight}%
                         </div>
@@ -151,7 +151,7 @@ export default async function HomePage() {
             })}
           </div>
         </div>
-      </section>
+      </main>
 
       {/* Footer */}
       <footer className="mt-auto border-t border-slate-200 bg-white py-6">

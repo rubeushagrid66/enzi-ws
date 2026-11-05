@@ -191,7 +191,7 @@ export default function ProjectResultViewer({
               </div>
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div className="bg-white p-2.5 rounded-xl border border-emerald-200">
-                  <div className="text-[10px] font-semibold text-emerald-700 uppercase">
+                  <div className="text-xs font-semibold text-emerald-700 uppercase">
                     Desirability
                   </div>
                   <div className="text-lg font-extrabold text-emerald-950">
@@ -199,7 +199,7 @@ export default function ProjectResultViewer({
                   </div>
                 </div>
                 <div className="bg-white p-2.5 rounded-xl border border-blue-200">
-                  <div className="text-[10px] font-semibold text-blue-700 uppercase">
+                  <div className="text-xs font-semibold text-blue-700 uppercase">
                     Viability
                   </div>
                   <div className="text-lg font-extrabold text-blue-950">
@@ -207,7 +207,7 @@ export default function ProjectResultViewer({
                   </div>
                 </div>
                 <div className="bg-white p-2.5 rounded-xl border border-amber-200">
-                  <div className="text-[10px] font-semibold text-amber-700 uppercase">
+                  <div className="text-xs font-semibold text-amber-700 uppercase">
                     Feasibility
                   </div>
                   <div className="text-lg font-extrabold text-amber-950">
@@ -215,7 +215,7 @@ export default function ProjectResultViewer({
                   </div>
                 </div>
               </div>
-              <div className="mt-2 text-[10px] text-center text-slate-400 font-mono">
+              <div className="mt-2 text-xs text-center text-slate-500 font-mono">
                 Auto-Calibrated Total: 100%
               </div>
             </div>
@@ -251,6 +251,7 @@ export default function ProjectResultViewer({
             {/* View Switcher */}
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
               <button
+                aria-pressed={viewMode === "directory"}
                 onClick={() => setViewMode("directory")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
                   viewMode === "directory"
@@ -261,6 +262,7 @@ export default function ProjectResultViewer({
                 Findings Directory
               </button>
               <button
+                aria-pressed={viewMode === "canvas"}
                 onClick={() => setViewMode("canvas")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
                   viewMode === "canvas"
@@ -276,7 +278,7 @@ export default function ProjectResultViewer({
       </section>
 
       {/* Main Content Area */}
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 flex-1 w-full">
+      <main id="main-content" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 flex-1 w-full">
         {/* VIEW MODE 1: FINDINGS DIRECTORY */}
         {viewMode === "directory" && (
           <div className="space-y-6">
@@ -284,7 +286,9 @@ export default function ProjectResultViewer({
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
               <div className="relative flex-1">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <label htmlFor="viewer-search" className="sr-only">Search findings</label>
                 <input
+                  id="viewer-search"
                   type="text"
                   placeholder="Search user findings, pain points, or keywords..."
                   value={searchQuery}
@@ -295,7 +299,9 @@ export default function ProjectResultViewer({
 
               <div className="flex flex-wrap items-center gap-2">
                 {/* Quadrant filter */}
+                <label htmlFor="viewer-quadrant" className="sr-only">Filter by quadrant</label>
                 <select
+                  id="viewer-quadrant"
                   value={selectedQuadrant}
                   onChange={(e) => setSelectedQuadrant(e.target.value)}
                   className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -309,7 +315,10 @@ export default function ProjectResultViewer({
 
                 {/* Tag filter */}
                 {allTags.length > 0 && (
+                  <>
+                  <label htmlFor="viewer-tag" className="sr-only">Filter by tag</label>
                   <select
+                    id="viewer-tag"
                     value={selectedTag}
                     onChange={(e) => setSelectedTag(e.target.value)}
                     className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -321,6 +330,7 @@ export default function ProjectResultViewer({
                       </option>
                     ))}
                   </select>
+                  </>
                 )}
               </div>
             </div>
@@ -356,7 +366,7 @@ export default function ProjectResultViewer({
                           </span>
 
                           <div className="flex items-center gap-1 text-xs font-extrabold text-slate-900 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
-                            <span className="text-[10px] text-slate-400 font-normal">
+                            <span className="text-xs text-slate-500 font-normal">
                               DVF:
                             </span>
                             <span>{s.composite ?? 0}</span>
@@ -381,7 +391,7 @@ export default function ProjectResultViewer({
                             {finding.tagsList.map((tag: any, i: number) => (
                               <span
                                 key={i}
-                                className="text-[10px] font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200"
+                                className="text-xs font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200"
                               >
                                 {tag.category}: {tag.value}
                               </span>
@@ -392,7 +402,7 @@ export default function ProjectResultViewer({
 
                       {/* DVF Metric Breakdown Bars */}
                       <div className="mt-5 pt-4 border-t border-slate-100 space-y-2">
-                        <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
+                        <div className="grid grid-cols-3 gap-2 text-center text-xs">
                           <div className="rounded bg-emerald-50/80 p-1.5 border border-emerald-100">
                             <div className="text-emerald-700 font-semibold">Desir.</div>
                             <div className="font-extrabold text-emerald-900 mt-0.5">

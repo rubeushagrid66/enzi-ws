@@ -203,18 +203,18 @@ export default function FeasibilityMatrix({
       {/* 2x2 Matrix Canvas */}
       <div className="relative">
         {/* Y-Axis Label (Impact) */}
-        <div className="absolute -left-6 top-1/2 -translate-y-1/2 -rotate-90 text-[10px] font-bold uppercase tracking-widest text-slate-400 select-none">
+        <div className="absolute -left-6 top-1/2 -translate-y-1/2 -rotate-90 text-xs font-bold uppercase tracking-widest text-slate-500 select-none">
           Impact (Low → High)
         </div>
 
         {/* X-Axis Label (Effort) */}
-        <div className="text-center text-[10px] font-bold uppercase tracking-widest text-slate-400 select-none pb-1">
+        <div className="text-center text-xs font-bold uppercase tracking-widest text-slate-500 select-none pb-1">
           ← High Effort (Harder) —————— Low Effort (Easier) →
         </div>
 
         <div
           ref={containerRef}
-          className="relative h-[480px] w-full rounded-2xl border-2 border-slate-300 bg-white overflow-hidden shadow-inner select-none"
+          className="relative h-[380px] w-full rounded-2xl border-2 border-slate-300 bg-white overflow-hidden shadow-inner select-none sm:h-[480px]"
         >
           {/* Quadrant Dividers */}
           <div className="absolute inset-x-0 top-1/2 h-0.5 border-t-2 border-dashed border-slate-300 pointer-events-none" />
@@ -226,7 +226,7 @@ export default function FeasibilityMatrix({
               <span className="text-xs font-bold uppercase tracking-wider text-amber-800/80">
                 Big Bets
               </span>
-              <span className="text-[10px] font-medium text-amber-600 bg-amber-100/60 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-medium text-amber-600 bg-amber-100/60 px-2 py-0.5 rounded-full">
                 High Impact • High Effort
               </span>
             </div>
@@ -286,7 +286,7 @@ export default function FeasibilityMatrix({
                   className="absolute pointer-events-none z-10 flex items-center gap-1 opacity-45 hover:opacity-100 transition"
                 >
                   <div className="h-4 w-4 rounded-full bg-slate-400 border-2 border-white shadow-xs" />
-                  <span className="text-[9px] font-medium text-slate-600 bg-white/90 px-1.5 py-0.5 rounded shadow-xs max-w-[120px] truncate border border-slate-200">
+                  <span className="text-xs font-medium text-slate-600 bg-white/90 px-1.5 py-0.5 rounded shadow-xs max-w-[120px] truncate border border-slate-200">
                     {other.title}
                   </span>
                 </div>

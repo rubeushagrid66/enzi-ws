@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Target,
@@ -33,6 +33,12 @@ export default function FindingDetailModal({
   onClose,
   onFindingUpdated,
 }: FindingDetailModalProps) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   const [activeTab, setActiveTab] = useState<"desirability" | "viability" | "feasibility">(
     "desirability"
   );
@@ -107,8 +113,8 @@ export default function FindingDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-labelledby="finding-detail-title" className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-slate-200 my-8" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="p-6 border-b border-slate-200 bg-gradient-to-b from-slate-50 to-white">
           <div className="flex items-start justify-between gap-4">
@@ -121,7 +127,7 @@ export default function FindingDetailModal({
                   DVF Score: {scores.composite ?? 0} / 100
                 </span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
+              <h2 id="finding-detail-title" className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
                 {localFinding.title}
               </h2>
               {localFinding.description && (
@@ -132,7 +138,8 @@ export default function FindingDetailModal({
             </div>
             <button
               onClick={onClose}
-              className="rounded-xl p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+              aria-label="Close finding detail"
+              className="rounded-xl p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
             >
               <X className="h-5 w-5" />
             </button>
