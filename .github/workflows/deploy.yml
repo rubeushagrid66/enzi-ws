@@ -11,6 +11,21 @@ jobs:
     name: Build & Verify
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgrespassword
+          POSTGRES_DB: enzi_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -27,13 +42,15 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      - name: Push Database Schema (SQLite verify)
+      - name: Push Database Schema (Postgres verify)
         run: npx prisma db push --skip-generate
         env:
-          DATABASE_URL: "file:./ci.db"
+          DATABASE_URL: "postgresql://postgres:postgrespassword@localhost:5432/enzi_ci"
+          DIRECT_URL: "postgresql://postgres:postgrespassword@localhost:5432/enzi_ci"
 
       - name: Build Next.js Application
         run: npm run build
         env:
-          DATABASE_URL: "file:./ci.db"
+          DATABASE_URL: "postgresql://postgres:postgrespassword@localhost:5432/enzi_ci"
+          DIRECT_URL: "postgresql://postgres:postgrespassword@localhost:5432/enzi_ci"
           JWT_SECRET: "ci-test-secret-key-12345"
