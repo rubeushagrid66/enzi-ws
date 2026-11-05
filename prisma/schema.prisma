@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("FACILITATOR") // ADMIN | FACILITATOR
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Project {
+  id               String            @id @default(cuid())
+  name             String
+  slug             String            @unique
+  description      String?
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  findings         Finding[]
+  groups           Group[]
+  frameworkWeights FrameworkWeight[]
+  parametersL1     ParameterL1[]
+  viabilityAspects ViabilityAspect[]
+}
+
+model FrameworkWeight {
+  id            String   @id @default(cuid())
+  projectId     String
+  name          String   // Desirability | Viability | Feasibility
+  weight        Float    @default(33.33) // Stored percentage (normalized to 100)
+  customFormula String?  // Optional custom formula configuration
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
+}
+
+model Finding {
+  id                  String                  @id @default(cuid())
+  projectId           String
+  title               String
+  description         String?
+  tags                String                  @default("[]") // JSON string: [{ category: string, value: string }]
+  isActive            Boolean                 @default(true)
+  feasibilityX        Float?                  // Continuous 0-100% position on X axis (Effort: 0=High, 100=Low or vice versa)
+  feasibilityY        Float?                  // Continuous 0-100% position on Y axis (Impact: 0=Low, 100=High)
+  feasibilityQuadrant String?                 // BIG_BETS | QUICK_WINS | AVOID | FILL_INS
+  feasibilityImpact   String?                 // HIGH | LOW
+  feasibilityEffort   String?                 // HIGH | LOW
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  project             Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parameterValues     FindingParameterValue[]
+  viabilityVotes      ViabilityVote[]
+}
+
+model Group {
+  id           String        @id @default(cuid())
+  projectId    String
+  name         String
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  participants Participant[]
+}
+
+model Participant {
+  id             String          @id @default(cuid())
+  groupId        String
+  name           String
+  roleTitle      String?
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  group          Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  viabilityVotes ViabilityVote[]
+}
+
+model ViabilityAspect {
+  id             String          @id @default(cuid())
+  projectId      String
+  name           String          // e.g. "Market Demand", "Operational Capacity", "Tech Readiness"
+  description    String?
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  viabilityVotes ViabilityVote[]
+}
+
+model ViabilityVote {
+  id            String          @id @default(cuid())
+  findingId     String
+  participantId String
+  aspectId      String
+  isValidated   Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  finding       Finding         @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  participant   Participant     @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  aspect        ViabilityAspect @relation(fields: [aspectId], references: [id], onDelete: Cascade)
+
+  @@unique([findingId, participantId, aspectId])
+}
+
+model ParameterL1 {
+  id            String        @id @default(cuid())
+  projectId     String
+  name          String        // Category e.g. "Sumber", "Platform"
+  isActive      Boolean       @default(true)
+  scoringRules  String        @default("[]") // JSON string: [{ minPercent: number, score: number }]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  subCategories ParameterL2[]
+}
+
+model ParameterL2 {
+  id         String        @id @default(cuid())
+  l1Id       String
+  name       String        // Sub-category e.g. "Wawancara", "Survey"
+  isActive   Boolean       @default(true)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  category   ParameterL1   @relation(fields: [l1Id], references: [id], onDelete: Cascade)
+  segments   ParameterL3[]
+}
+
+model ParameterL3 {
+  id          String                  @id @default(cuid())
+  l2Id        String
+  name        String                  // Segment e.g. "Cash Management", "Digital Value Chain"
+  isActive    Boolean                 @default(true)
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  subCategory ParameterL2             @relation(fields: [l2Id], references: [id], onDelete: Cascade)
+  values      FindingParameterValue[]
+}
+
+model FindingParameterValue {
+  id        String      @id @default(cuid())
+  findingId String
+  l3Id      String
+  value     String      // Granular item, e.g. "Fitur pengingat otomatis"
+  createdAt DateTime    @default(now())
+  finding   Finding     @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  segment   ParameterL3 @relation(fields: [l3Id], references: [id], onDelete: Cascade)
+
+  @@unique([findingId, l3Id, value])
+}
