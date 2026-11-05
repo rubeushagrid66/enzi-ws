@@ -55,14 +55,9 @@ export default function AdminDashboardPage() {
   // Finding creation modal state
   const [newFindingTitle, setNewFindingTitle] = useState("");
   const [newFindingDesc, setNewFindingDesc] = useState("");
-  const [newFindingTags, setNewFindingTags] = useState<
-    Array<{ category: string; value: string }>
-  >([
-    { category: "Sumber", value: "Wawancara" },
-    { category: "Platform", value: "CMS Portal" },
-  ]);
-  const [newTagCategory, setNewTagCategory] = useState("Feature");
-  const [newTagValue, setNewTagValue] = useState("");
+  const [newFindingSumber, setNewFindingSumber] = useState<string[]>([]);
+  const [newFindingFitur, setNewFindingFitur] = useState("");
+  const [newFindingPlatform, setNewFindingPlatform] = useState<string[]>([]);
   const [isCreatingFinding, setIsCreatingFinding] = useState(false);
 
   // Groups and Participants state
@@ -210,17 +205,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Add Dynamic Tag to Finding builder
-  const handleAddTag = () => {
-    if (!newTagCategory || !newTagValue) return;
-    setNewFindingTags([...newFindingTags, { category: newTagCategory, value: newTagValue }]);
-    setNewTagValue("");
-  };
-
-  const handleRemoveTag = (index: number) => {
-    setNewFindingTags(newFindingTags.filter((_, i) => i !== index));
-  };
-
   // Create Finding
   const handleCreateFinding = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -232,17 +216,18 @@ export default function AdminDashboardPage() {
         body: JSON.stringify({
           title: newFindingTitle,
           description: newFindingDesc,
-          tags: newFindingTags,
+          sumber: newFindingSumber,
+          fitur: newFindingFitur,
+          platform: newFindingPlatform,
         }),
       });
       if (res.ok) {
         setIsCreatingFinding(false);
         setNewFindingTitle("");
         setNewFindingDesc("");
-        setNewFindingTags([
-          { category: "Sumber", value: "Wawancara" },
-          { category: "Platform", value: "CMS Portal" },
-        ]);
+        setNewFindingSumber([]);
+        setNewFindingFitur("");
+        setNewFindingPlatform([]);
         await loadProjectDetails(selectedProjectSlug);
       }
     } catch (e) {
@@ -1239,52 +1224,72 @@ export default function AdminDashboardPage() {
                 />
               </div>
 
-              {/* Dynamic Tagging System */}
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1">
-                  Dynamic Tagging (Sumber, Platform, Feature)
-                </label>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {newFindingTags.map((tag, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-slate-100 text-slate-800 border border-slate-200"
-                    >
-                      <span className="font-semibold text-slate-600">{tag.category}:</span>
-                      <span>{tag.value}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTag(i)}
-                        className="text-slate-400 hover:text-rose-600"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
+              {/* Structured Fields: Sumber, Fitur, Platform */}
+              <div className="space-y-4">
+                {/* Sumber */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5">
+                    Sumber
+                  </label>
+                  <div className="flex gap-3">
+                    {["Wawancara", "Survey"].map((opt) => (
+                      <label key={opt} className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={newFindingSumber.includes(opt)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setNewFindingSumber([...newFindingSumber, opt]);
+                            } else {
+                              setNewFindingSumber(newFindingSumber.filter((s) => s !== opt));
+                            }
+                          }}
+                          className="w-3.5 h-3.5 rounded accent-emerald-600"
+                        />
+                        <span className="text-xs text-slate-700">{opt}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="flex gap-2">
+                {/* Fitur */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5">
+                    Fitur
+                  </label>
                   <input
                     type="text"
-                    placeholder="Category (e.g. Feature)"
-                    value={newTagCategory}
-                    onChange={(e) => setNewTagCategory(e.target.value)}
-                    className="w-1/3 px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 bg-slate-50"
+                    placeholder="e.g. Bulk Payment"
+                    value={newFindingFitur}
+                    onChange={(e) => setNewFindingFitur(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
-                  <input
-                    type="text"
-                    placeholder="Value (e.g. Bulk Transfer)"
-                    value={newTagValue}
-                    onChange={(e) => setNewTagValue(e.target.value)}
-                    className="flex-1 px-2.5 py-1.5 text-xs rounded-lg border border-slate-200 bg-slate-50"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddTag}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-800 transition"
-                  >
-                    + Tag
-                  </button>
+                </div>
+
+                {/* Platform */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5">
+                    Platform
+                  </label>
+                  <div className="flex gap-3">
+                    {["CMS", "DVC"].map((opt) => (
+                      <label key={opt} className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={newFindingPlatform.includes(opt)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setNewFindingPlatform([...newFindingPlatform, opt]);
+                            } else {
+                              setNewFindingPlatform(newFindingPlatform.filter((p) => p !== opt));
+                            }
+                          }}
+                          className="w-3.5 h-3.5 rounded accent-emerald-600"
+                        />
+                        <span className="text-xs text-slate-700">{opt}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
 

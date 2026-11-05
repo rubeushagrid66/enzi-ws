@@ -58,8 +58,50 @@ export async function GET(
       };
     });
 
+    // Helper to parse finding fields (Sumber, Fitur, Platform)
+    const parseFindingMeta = (rawTags: any) => {
+      let sumber: string[] = [];
+      let fitur: string = "";
+      let platform: string[] = [];
+      let tagsList: Array<{ category: string; value: string }> = [];
+
+      let parsed: any = null;
+      try {
+        parsed = typeof rawTags === "string" ? JSON.parse(rawTags) : rawTags;
+      } catch {
+        parsed = [];
+      }
+
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        sumber = Array.isArray(parsed.sumber) ? parsed.sumber : (parsed.sumber ? [parsed.sumber] : []);
+        fitur = parsed.fitur || "";
+        platform = Array.isArray(parsed.platform) ? parsed.platform : (parsed.platform ? [parsed.platform] : []);
+      } else if (Array.isArray(parsed)) {
+        for (const item of parsed) {
+          const cat = (item.category || "").toLowerCase();
+          const val = item.value || "";
+          if (cat === "sumber") {
+            if (!sumber.includes(val)) sumber.push(val);
+          } else if (["fitur", "feature"].includes(cat)) {
+            fitur = val;
+          } else if (cat === "platform") {
+            if (!platform.includes(val)) platform.push(val);
+          }
+        }
+      }
+
+      // Build unified visual tagsList
+      sumber.forEach((s) => tagsList.push({ category: "Sumber", value: s }));
+      if (fitur) tagsList.push({ category: "Fitur", value: fitur });
+      platform.forEach((p) => tagsList.push({ category: "Platform", value: p }));
+
+      return { sumber, fitur, platform, tagsList };
+    };
+
     // Calculate DVF metrics for each finding
     const findingsWithScores = (project.findings || []).map((f: any) => {
+      const { sumber, fitur, platform, tagsList } = parseFindingMeta(f.tags);
+
       // 1. Desirability
       const findingValues = (f.parameterValues || []).map((pv: any) => ({
         l3Id: pv.l3Id,
@@ -69,7 +111,10 @@ export async function GET(
             }
           : undefined,
       }));
-      const desirabilityData = calculateDesirabilityScore(parsedL1, findingValues);
+      const desirabilityData = calculateDesirabilityScore(parsedL1, findingValues, {
+        sumber,
+        platform,
+      });
 
       // 2. Viability
       const viabilityData = calculateViabilityScore(
@@ -91,16 +136,12 @@ export async function GET(
         feasibility: feasibilityData.score,
       });
 
-      let parsedTags: Array<{ category: string; value: string }> = [];
-      try {
-        parsedTags = JSON.parse(f.tags);
-      } catch {
-        parsedTags = [];
-      }
-
       return {
         ...f,
-        tagsList: parsedTags,
+        sumber,
+        fitur,
+        platform,
+        tagsList,
         scores: {
           desirability: desirabilityData.score,
           desirabilityDetails: desirabilityData,

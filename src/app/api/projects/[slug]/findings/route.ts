@@ -47,7 +47,12 @@ export async function POST(
 
     const { slug } = params;
     const body = await request.json();
-    const { title, description, tags, parameterL3Ids } = body;
+    const { title, description, tags, sumber, fitur, platform, parameterL3Ids } = body;
+
+    // Build tags JSON — accept both new structured format and legacy array
+    const tagsJson = (sumber !== undefined || fitur !== undefined || platform !== undefined)
+      ? JSON.stringify({ sumber: sumber || [], fitur: fitur || "", platform: platform || [] })
+      : (typeof tags === "string" ? tags : JSON.stringify(tags || []));
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -67,7 +72,7 @@ export async function POST(
         projectId: project.id,
         title,
         description: description || "",
-        tags: typeof tags === "string" ? tags : JSON.stringify(tags || []),
+        tags: tagsJson,
         feasibilityX: 50.0,
         feasibilityY: 50.0,
         feasibilityQuadrant: "QUICK_WINS",

@@ -83,7 +83,8 @@ export function calculateDesirabilityScore(
     scoringRules: ScoringRule[];
     subCategories: Array<{ id: string; name: string }>;
   }>,
-  findingValues: Array<{ l3Id: string; l3?: { l2Id: string } }>
+  findingValues: Array<{ l3Id: string; l3?: { l2Id: string } }>,
+  findingAttributes?: { sumber?: string[]; platform?: string[] }
 ): DesirabilityResult {
   if (!l1Parameters || l1Parameters.length === 0) {
     return {
@@ -93,9 +94,16 @@ export function calculateDesirabilityScore(
     };
   }
 
-  // Set of covered L2 sub-categories
+  // Set of covered L2 sub-categories from L3 mappings
   const coveredL2Ids = new Set(
     findingValues.map((v) => v.l3?.l2Id).filter(Boolean) as string[]
+  );
+
+  const sumberNormalized = (findingAttributes?.sumber || []).map((s) =>
+    s.toLowerCase().trim()
+  );
+  const platformNormalized = (findingAttributes?.platform || []).map((p) =>
+    p.toLowerCase().trim()
   );
 
   const breakdowns: L1Breakdown[] = [];
@@ -103,9 +111,32 @@ export function calculateDesirabilityScore(
 
   for (const l1 of l1Parameters) {
     const totalSub = l1.subCategories.length;
-    const coveredSub = l1.subCategories.filter((sub) =>
-      coveredL2Ids.has(sub.id)
-    ).length;
+    const l1NameLower = l1.name.toLowerCase();
+    const isSumberCategory = l1NameLower.includes("sumber") || l1NameLower.includes("source");
+    const isPlatformCategory = l1NameLower.includes("platform");
+
+    const coveredSub = l1.subCategories.filter((sub) => {
+      // 1. Direct L3 value match
+      if (coveredL2Ids.has(sub.id)) return true;
+
+      const subNameLower = sub.name.toLowerCase();
+
+      // 2. Direct Sumber match
+      if (isSumberCategory && sumberNormalized.length > 0) {
+        if (sumberNormalized.some((s) => subNameLower.includes(s) || s.includes(subNameLower))) {
+          return true;
+        }
+      }
+
+      // 3. Direct Platform match
+      if (isPlatformCategory && platformNormalized.length > 0) {
+        if (platformNormalized.some((p) => subNameLower.includes(p) || p.includes(subNameLower))) {
+          return true;
+        }
+      }
+
+      return false;
+    }).length;
 
     const coveragePercent =
       totalSub > 0 ? Number(((coveredSub / totalSub) * 100).toFixed(1)) : 0;
