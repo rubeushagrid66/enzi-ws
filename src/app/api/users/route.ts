@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { dbService } from "@/lib/db-service";
 import { getSession, hashPassword } from "@/lib/auth";
 
 export async function GET() {
@@ -8,19 +8,7 @@ export async function GET() {
     if (!session || session.role !== "ADMIN") {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
-
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
+    const users = await dbService.getUsers();
     return NextResponse.json({ users });
   } catch (error) {
     console.error("Error fetching users:", error);
@@ -44,36 +32,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const existing = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
-    });
-
-    if (existing) {
-      return NextResponse.json({ error: "Email already registered" }, { status: 400 });
-    }
-
     const passwordHash = await hashPassword(password);
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email: email.toLowerCase().trim(),
-        passwordHash,
-        role: role === "ADMIN" ? "ADMIN" : "FACILITATOR",
-        isActive: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
-    });
-
+    const user = await dbService.createUser({ name, email, passwordHash, role });
     return NextResponse.json({ success: true, user });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating user:", error);
+    if (error?.message?.includes("already registered")) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
   }
 }

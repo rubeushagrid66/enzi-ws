@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
-import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import {
   calculateDesirabilityScore,
@@ -184,13 +183,10 @@ export async function PUT(
     const { slug } = params;
     const body = await request.json();
 
-    const updated = await prisma.project.update({
-      where: { slug },
-      data: {
-        name: body.name,
-        description: body.description,
-        isActive: body.isActive,
-      },
+    const updated = await dbService.updateProject(slug, {
+      name: body.name,
+      description: body.description,
+      isActive: body.isActive,
     });
 
     return NextResponse.json({ success: true, project: updated });

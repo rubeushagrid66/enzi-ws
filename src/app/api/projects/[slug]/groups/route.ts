@@ -1,29 +1,16 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: { slug: string } }
 ) {
   try {
-    const { slug } = params;
-    const project = await prisma.project.findUnique({
-      where: { slug },
-      include: {
-        groups: {
-          include: {
-            participants: true,
-          },
-          orderBy: { createdAt: "asc" },
-        },
-      },
-    });
-
+    const project = await dbService.getProjectBySlug(params.slug);
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
-
     return NextResponse.json({ groups: project.groups });
   } catch (error) {
     console.error("Error fetching groups:", error);
@@ -41,15 +28,11 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { slug } = params;
     const body = await request.json();
     const { type, name, groupId, roleTitle } = body;
 
-    const project = await prisma.project.findUnique({
-      where: { slug },
-    });
-
-    if (!project) {
+    const projectId = await dbService.getProjectIdBySlug(params.slug);
+    if (!projectId) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
@@ -57,13 +40,7 @@ export async function POST(
       if (!name) {
         return NextResponse.json({ error: "Group name is required" }, { status: 400 });
       }
-      const group = await prisma.group.create({
-        data: {
-          projectId: project.id,
-          name,
-          isActive: true,
-        },
-      });
+      const group = await dbService.createGroup(projectId, name);
       return NextResponse.json({ success: true, group });
     } else if (type === "PARTICIPANT") {
       if (!name || !groupId) {
@@ -72,14 +49,7 @@ export async function POST(
           { status: 400 }
         );
       }
-      const participant = await prisma.participant.create({
-        data: {
-          groupId,
-          name,
-          roleTitle: roleTitle || "",
-          isActive: true,
-        },
-      });
+      const participant = await dbService.createParticipant(groupId, name, roleTitle);
       return NextResponse.json({ success: true, participant });
     }
 

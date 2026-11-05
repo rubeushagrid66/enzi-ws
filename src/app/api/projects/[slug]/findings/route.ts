@@ -1,37 +1,20 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: { slug: string } }
 ) {
   try {
-    const { slug } = params;
-    const project = await prisma.project.findUnique({
-      where: { slug },
-      include: {
-        findings: {
-          include: {
-            parameterValues: true,
-            viabilityVotes: true,
-          },
-          orderBy: { createdAt: "desc" },
-        },
-      },
-    });
-
+    const project = await dbService.getProjectBySlug(params.slug);
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
-
     return NextResponse.json({ findings: project.findings });
   } catch (error) {
     console.error("Error fetching findings:", error);
-    return NextResponse.json(
-      { error: "Error fetching findings" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error fetching findings" }, { status: 500 });
   }
 }
 
@@ -45,61 +28,29 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { slug } = params;
     const body = await request.json();
-    const { title, description, tags, sumber, fitur, platform, parameterL3Ids } = body;
-
-    // Build tags JSON — accept both new structured format and legacy array
-    const tagsJson = (sumber !== undefined || fitur !== undefined || platform !== undefined)
-      ? JSON.stringify({ sumber: sumber || [], fitur: fitur || "", platform: platform || [] })
-      : (typeof tags === "string" ? tags : JSON.stringify(tags || []));
+    const { title, description, sumber, fitur, platform } = body;
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
 
-    const project = await prisma.project.findUnique({
-      where: { slug },
-    });
-
-    if (!project) {
+    const projectId = await dbService.getProjectIdBySlug(params.slug);
+    if (!projectId) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Default feasibility coordinates in middle (50, 50)
-    const finding = await prisma.finding.create({
-      data: {
-        projectId: project.id,
-        title,
-        description: description || "",
-        tags: tagsJson,
-        feasibilityX: 50.0,
-        feasibilityY: 50.0,
-        feasibilityQuadrant: "QUICK_WINS",
-        feasibilityImpact: "HIGH",
-        feasibilityEffort: "LOW",
-      },
+    const finding = await dbService.createFinding(projectId, {
+      title,
+      description,
+      sumber,
+      fitur,
+      platform,
     });
-
-    // If parameter L3 segments are linked
-    if (Array.isArray(parameterL3Ids)) {
-      for (const l3Id of parameterL3Ids) {
-        await prisma.findingParameterValue.create({
-          data: {
-            findingId: finding.id,
-            l3Id,
-            value: title,
-          },
-        });
-      }
-    }
 
     return NextResponse.json({ success: true, finding });
   } catch (error) {
     console.error("Error creating finding:", error);
-    return NextResponse.json(
-      { error: "Error creating finding" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error creating finding" }, { status: 500 });
   }
 }

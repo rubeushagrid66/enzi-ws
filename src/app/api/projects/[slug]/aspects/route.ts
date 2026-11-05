@@ -1,26 +1,16 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: { slug: string } }
 ) {
   try {
-    const { slug } = params;
-    const project = await prisma.project.findUnique({
-      where: { slug },
-      include: {
-        viabilityAspects: {
-          orderBy: { createdAt: "asc" },
-        },
-      },
-    });
-
+    const project = await dbService.getProjectBySlug(params.slug);
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
-
     return NextResponse.json({ aspects: project.viabilityAspects });
   } catch (error) {
     console.error("Error fetching aspects:", error);
@@ -38,30 +28,17 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { slug } = params;
     const { name, description } = await request.json();
-
     if (!name) {
       return NextResponse.json({ error: "Aspect name is required" }, { status: 400 });
     }
 
-    const project = await prisma.project.findUnique({
-      where: { slug },
-    });
-
-    if (!project) {
+    const projectId = await dbService.getProjectIdBySlug(params.slug);
+    if (!projectId) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    const aspect = await prisma.viabilityAspect.create({
-      data: {
-        projectId: project.id,
-        name,
-        description: description || "",
-        isActive: true,
-      },
-    });
-
+    const aspect = await dbService.createAspect(projectId, name, description);
     return NextResponse.json({ success: true, aspect });
   } catch (error) {
     console.error("Error creating aspect:", error);

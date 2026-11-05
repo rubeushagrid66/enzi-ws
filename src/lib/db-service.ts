@@ -327,4 +327,396 @@ export const dbService = {
       where: { email: cleanEmail },
     });
   },
+
+  // ── Project CRUD ────────────────────────────────────────────────────────────
+
+  async createProject(data: {
+    name: string;
+    slug: string;
+    description?: string;
+    isActive?: boolean;
+  }) {
+    const slug = data.slug
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-");
+
+    if (isSupabaseConfigured && supabase) {
+      // Check slug uniqueness
+      const { data: existing } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("slug", slug)
+        .single();
+      if (existing) throw new Error("A project with this slug already exists");
+
+      const { data: project, error } = await supabase
+        .from("projects")
+        .insert({ name: data.name, slug, description: data.description || "", is_active: data.isActive ?? true })
+        .select()
+        .single();
+      if (error) throw error;
+
+      // Seed default weights and aspects
+      await supabase.from("framework_weights").insert([
+        { project_id: project.id, name: "Desirability", weight: 33.34 },
+        { project_id: project.id, name: "Viability", weight: 33.33 },
+        { project_id: project.id, name: "Feasibility", weight: 33.33 },
+      ]);
+      await supabase.from("viability_aspects").insert([
+        { project_id: project.id, name: "Market Demand", description: "Customer need and adoption" },
+        { project_id: project.id, name: "Revenue / Business Value", description: "Financial viability" },
+        { project_id: project.id, name: "Operational Scalability", description: "Process supportability" },
+      ]);
+
+      return project;
+    }
+
+    // Check slug uniqueness via Prisma
+    const existing = await prisma.project.findUnique({ where: { slug } });
+    if (existing) throw new Error("A project with this slug already exists");
+
+    return prisma.project.create({
+      data: {
+        name: data.name,
+        slug,
+        description: data.description || "",
+        isActive: data.isActive ?? true,
+        frameworkWeights: {
+          create: [
+            { name: "Desirability", weight: 33.34 },
+            { name: "Viability", weight: 33.33 },
+            { name: "Feasibility", weight: 33.33 },
+          ],
+        },
+        viabilityAspects: {
+          create: [
+            { name: "Market Demand", description: "Customer need and adoption" },
+            { name: "Revenue / Business Value", description: "Financial viability" },
+            { name: "Operational Scalability", description: "Process supportability" },
+          ],
+        },
+      },
+      include: { frameworkWeights: true, viabilityAspects: true },
+    });
+  },
+
+  async updateProject(slug: string, data: { name?: string; description?: string; isActive?: boolean }) {
+    if (isSupabaseConfigured && supabase) {
+      const { data: project, error } = await supabase
+        .from("projects")
+        .update({
+          ...(data.name !== undefined && { name: data.name }),
+          ...(data.description !== undefined && { description: data.description }),
+          ...(data.isActive !== undefined && { is_active: data.isActive }),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("slug", slug)
+        .select()
+        .single();
+      if (error) throw error;
+      return project;
+    }
+    return prisma.project.update({
+      where: { slug },
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
+      },
+    });
+  },
+
+  async deleteProject(slug: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("projects").delete().eq("slug", slug);
+      if (error) throw error;
+      return { success: true };
+    }
+    await prisma.project.delete({ where: { slug } });
+    return { success: true };
+  },
+
+  // ── Finding CRUD ─────────────────────────────────────────────────────────────
+
+  async createFinding(projectId: string, data: {
+    title: string;
+    description?: string;
+    sumber?: string[];
+    fitur?: string;
+    platform?: string[];
+  }) {
+    const tagsJson = JSON.stringify({
+      sumber: data.sumber || [],
+      fitur: data.fitur || "",
+      platform: data.platform || [],
+    });
+
+    if (isSupabaseConfigured && supabase) {
+      const { data: finding, error } = await supabase
+        .from("findings")
+        .insert({
+          project_id: projectId,
+          title: data.title,
+          description: data.description || "",
+          tags: tagsJson,
+          feasibility_x: 50,
+          feasibility_y: 50,
+          feasibility_quadrant: "QUICK_WINS",
+          feasibility_impact: "HIGH",
+          feasibility_effort: "LOW",
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return finding;
+    }
+
+    return prisma.finding.create({
+      data: {
+        projectId,
+        title: data.title,
+        description: data.description || "",
+        tags: tagsJson,
+        feasibilityX: 50,
+        feasibilityY: 50,
+        feasibilityQuadrant: "QUICK_WINS",
+        feasibilityImpact: "HIGH",
+        feasibilityEffort: "LOW",
+      },
+    });
+  },
+
+  async updateFinding(id: string, data: {
+    title?: string;
+    description?: string;
+    sumber?: string[];
+    fitur?: string;
+    platform?: string[];
+  }) {
+    const tagsJson = JSON.stringify({
+      sumber: data.sumber || [],
+      fitur: data.fitur || "",
+      platform: data.platform || [],
+    });
+
+    if (isSupabaseConfigured && supabase) {
+      const { data: finding, error } = await supabase
+        .from("findings")
+        .update({
+          ...(data.title !== undefined && { title: data.title }),
+          ...(data.description !== undefined && { description: data.description }),
+          tags: tagsJson,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return finding;
+    }
+
+    return prisma.finding.update({
+      where: { id },
+      data: {
+        ...(data.title !== undefined && { title: data.title }),
+        ...(data.description !== undefined && { description: data.description }),
+        tags: tagsJson,
+      },
+    });
+  },
+
+  async deleteFinding(id: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("findings").delete().eq("id", id);
+      if (error) throw error;
+      return { success: true };
+    }
+    await prisma.finding.delete({ where: { id } });
+    return { success: true };
+  },
+
+  // ── Project ID lookup (for Supabase) ─────────────────────────────────────────
+
+  async getProjectIdBySlug(slug: string): Promise<string | null> {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase.from("projects").select("id").eq("slug", slug).single();
+      return data?.id ?? null;
+    }
+    const p = await prisma.project.findUnique({ where: { slug }, select: { id: true } });
+    return p?.id ?? null;
+  },
+
+  // ── Group / Participant CRUD ──────────────────────────────────────────────────
+
+  async createGroup(projectId: string, name: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("groups")
+        .insert({ project_id: projectId, name, is_active: true })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    return prisma.group.create({ data: { projectId, name } });
+  },
+
+  async deleteGroup(id: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("groups").delete().eq("id", id);
+      if (error) throw error;
+      return { success: true };
+    }
+    await prisma.group.delete({ where: { id } });
+    return { success: true };
+  },
+
+  async createParticipant(groupId: string, name: string, roleTitle?: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("participants")
+        .insert({ group_id: groupId, name, role_title: roleTitle || "", is_active: true })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    return prisma.participant.create({ data: { groupId, name, roleTitle: roleTitle || "" } });
+  },
+
+  async deleteParticipant(id: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("participants").delete().eq("id", id);
+      if (error) throw error;
+      return { success: true };
+    }
+    await prisma.participant.delete({ where: { id } });
+    return { success: true };
+  },
+
+  // ── Viability Aspect CRUD ────────────────────────────────────────────────────
+
+  async createAspect(projectId: string, name: string, description?: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("viability_aspects")
+        .insert({ project_id: projectId, name, description: description || "", is_active: true })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    return prisma.viabilityAspect.create({ data: { projectId, name, description: description || "" } });
+  },
+
+  async deleteAspect(id: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("viability_aspects").delete().eq("id", id);
+      if (error) throw error;
+      return { success: true };
+    }
+    await prisma.viabilityAspect.delete({ where: { id } });
+    return { success: true };
+  },
+
+  // ── Parameters (L1/L2/L3) CRUD ───────────────────────────────────────────────
+
+  async createParameterL1(projectId: string, name: string, scoringRules?: any[]) {
+    const rules = JSON.stringify(
+      scoringRules ?? [
+        { minPercent: 66, score: 3 },
+        { minPercent: 33, score: 2 },
+        { minPercent: 0, score: 1 },
+      ]
+    );
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("parameters_l1")
+        .insert({ project_id: projectId, name, scoring_rules: rules })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    return prisma.parameterL1.create({ data: { projectId, name, scoringRules: rules } });
+  },
+
+  async createParameterL2(l1Id: string, name: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("parameters_l2")
+        .insert({ l1_id: l1Id, name })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    return prisma.parameterL2.create({ data: { l1Id, name } });
+  },
+
+  async createParameterL3(l2Id: string, name: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("parameters_l3")
+        .insert({ l2_id: l2Id, name })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    return prisma.parameterL3.create({ data: { l2Id, name } });
+  },
+
+  // ── Users CRUD ───────────────────────────────────────────────────────────────
+
+  async getUsers() {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, name, email, role, is_active, created_at")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []).map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        isActive: u.is_active,
+        createdAt: u.created_at,
+      }));
+    }
+    return prisma.user.findMany({
+      select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    });
+  },
+
+  async createUser(data: { name: string; email: string; passwordHash: string; role?: string }) {
+    const email = data.email.toLowerCase().trim();
+    if (isSupabaseConfigured && supabase) {
+      const { data: existing } = await supabase.from("users").select("id").eq("email", email).single();
+      if (existing) throw new Error("Email already registered");
+      const { data: user, error } = await supabase
+        .from("users")
+        .insert({
+          name: data.name,
+          email,
+          password_hash: data.passwordHash,
+          role: data.role === "ADMIN" ? "ADMIN" : "FACILITATOR",
+          is_active: true,
+        })
+        .select("id, name, email, role, is_active, created_at")
+        .single();
+      if (error) throw error;
+      return { id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.is_active, createdAt: user.created_at };
+    }
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) throw new Error("Email already registered");
+    return prisma.user.create({
+      data: { name: data.name, email, passwordHash: data.passwordHash, role: data.role === "ADMIN" ? "ADMIN" : "FACILITATOR", isActive: true },
+      select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
+    });
+  },
 };

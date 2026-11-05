@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
-import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
 export async function GET() {
@@ -32,53 +31,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const formattedSlug = slug
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9-]/g, "-")
-      .replace(/-+/g, "-");
-
-    const existing = await prisma.project.findUnique({
-      where: { slug: formattedSlug },
-    });
-
-    if (existing) {
-      return NextResponse.json(
-        { error: "A project with this slug already exists" },
-        { status: 400 }
-      );
-    }
-
-    const project = await prisma.project.create({
-      data: {
-        name,
-        slug: formattedSlug,
-        description: description || "",
-        isActive: isActive !== undefined ? isActive : true,
-        frameworkWeights: {
-          create: [
-            { name: "Desirability", weight: 33.34 },
-            { name: "Viability", weight: 33.33 },
-            { name: "Feasibility", weight: 33.33 },
-          ],
-        },
-        viabilityAspects: {
-          create: [
-            { name: "Market Demand", description: "Customer need and adoption" },
-            { name: "Revenue / Business Value", description: "Financial viability" },
-            { name: "Operational Scalability", description: "Process supportability" },
-          ],
-        },
-      },
-      include: {
-        frameworkWeights: true,
-        viabilityAspects: true,
-      },
-    });
-
+    const project = await dbService.createProject({ name, slug, description, isActive });
     return NextResponse.json({ success: true, project });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to create project:", error);
+    if (error?.message?.includes("already exists")) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     return NextResponse.json(
       { error: "Failed to create project" },
       { status: 500 }
