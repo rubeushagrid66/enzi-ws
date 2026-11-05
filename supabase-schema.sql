@@ -144,12 +144,11 @@ ALTER TABLE finding_parameter_values DISABLE ROW LEVEL SECURITY;
 ALTER TABLE viability_votes DISABLE ROW LEVEL SECURITY;
 
 -- 3. Seed Initial Demo Users (admin123 and facilitator123)
--- bcrypt hash for "admin123": $2a$10$9K2z/E6s8Oq6v6HkR8Mh6O5Q9vKkGqTqE7zO3z9l9GqR9vKkGqTqE (or verified hash)
 INSERT INTO users (name, email, password_hash, role)
 VALUES 
-  ('Enzi Lead Admin', 'admin@enzi.io', '$2a$10$tZ2N6o66cRz1r2d9U6E7wO0aN0I8fF6XfQ1Cg8c1A7P3Y2Y7B6Zey', 'ADMIN'),
-  ('Workshop Facilitator', 'facilitator@enzi.io', '$2a$10$tZ2N6o66cRz1r2d9U6E7wO0aN0I8fF6XfQ1Cg8c1A7P3Y2Y7B6Zey', 'FACILITATOR')
-ON CONFLICT (email) DO NOTHING;
+  ('Enzi Lead Admin', 'admin@enzi.io', '$2a$10$6qunsWXdTmBZudw39PHtE.x68Aqsr8caFU2jWGpwS.TggWhAfqU52', 'ADMIN'),
+  ('Workshop Facilitator', 'facilitator@enzi.io', '$2a$10$Jtxy/dp7asEw5AAC45GstOY/0KW4O0x0AA7N6wtKriVmFVxtedeaa', 'FACILITATOR')
+ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash;
 
 -- 4. Seed Initial Project
 INSERT INTO projects (id, name, slug, description, is_active)
