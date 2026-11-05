@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
 import { getFeasibilityFromCoordinates } from "@/lib/scoring";
 
@@ -29,16 +29,14 @@ export async function PATCH(
       Number(y)
     );
 
-    const updated = await prisma.finding.update({
-      where: { id },
-      data: {
-        feasibilityX: Number(x),
-        feasibilityY: Number(y),
-        feasibilityQuadrant: quadrant,
-        feasibilityImpact: impactLabel,
-        feasibilityEffort: effortLabel,
-      },
-    });
+    const updated = await dbService.updateFindingFeasibility(
+      id,
+      Number(x),
+      Number(y),
+      quadrant,
+      impactLabel,
+      effortLabel
+    );
 
     return NextResponse.json({
       success: true,

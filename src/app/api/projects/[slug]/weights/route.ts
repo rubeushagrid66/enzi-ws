@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
 import { normalizeWeights, WeightInput } from "@/lib/scoring";
 
@@ -24,9 +24,7 @@ export async function POST(
       );
     }
 
-    const project = await prisma.project.findUnique({
-      where: { slug },
-    });
+    const project = await dbService.getProjectBySlug(slug);
 
     if (!project) {
       return NextResponse.json(
@@ -38,29 +36,7 @@ export async function POST(
     // Auto-calibrate weights to equal 100%
     const normalized = normalizeWeights(rawWeights);
 
-    // Upsert each weight
-    for (const nw of normalized) {
-      await prisma.frameworkWeight.upsert({
-        where: {
-          projectId_name: {
-            projectId: project.id,
-            name: nw.name,
-          },
-        },
-        update: {
-          weight: nw.weight,
-        },
-        create: {
-          projectId: project.id,
-          name: nw.name,
-          weight: nw.weight,
-        },
-      });
-    }
-
-    const updatedWeights = await prisma.frameworkWeight.findMany({
-      where: { projectId: project.id },
-    });
+    const updatedWeights = await dbService.updateWeights(project.id, normalized);
 
     return NextResponse.json({
       success: true,

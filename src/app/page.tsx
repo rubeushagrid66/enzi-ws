@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { dbService } from "@/lib/db-service";
 import Navbar from "@/components/Navbar";
 import {
   Sparkles,
@@ -16,19 +16,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const projects = await prisma.project.findMany({
-    where: { isActive: true },
-    include: {
-      frameworkWeights: true,
-      _count: {
-        select: {
-          findings: true,
-          groups: true,
-        },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const projects = await dbService.getProjects();
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -95,11 +83,11 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => {
+            {projects.map((project: any) => {
               const weights = project.frameworkWeights || [];
-              const dWeight = weights.find((w) => w.name.toLowerCase().includes("desir"))?.weight ?? 33.3;
-              const vWeight = weights.find((w) => w.name.toLowerCase().includes("viab"))?.weight ?? 33.3;
-              const fWeight = weights.find((w) => w.name.toLowerCase().includes("feas"))?.weight ?? 33.3;
+              const dWeight = weights.find((w: any) => w.name.toLowerCase().includes("desir"))?.weight ?? 33.3;
+              const vWeight = weights.find((w: any) => w.name.toLowerCase().includes("viab"))?.weight ?? 33.3;
+              const fWeight = weights.find((w: any) => w.name.toLowerCase().includes("feas"))?.weight ?? 33.3;
 
               return (
                 <div
@@ -147,7 +135,7 @@ export default async function HomePage() {
 
                   <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
                     <span className="text-slate-500 font-medium">
-                      {project._count.findings} Findings • {project._count.groups} Groups
+                      {project._count?.findings ?? 0} Findings • {project._count?.groups ?? 0} Groups
                     </span>
 
                     <Link

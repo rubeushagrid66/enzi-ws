@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { dbService } from "@/lib/db-service";
 import { verifyPassword, signToken, COOKIE_NAME } from "@/lib/auth";
 
 export async function POST(request: Request) {
@@ -13,9 +13,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
-    });
+    const user = await dbService.getUserByEmail(email);
 
     if (!user || !user.isActive) {
       return NextResponse.json(

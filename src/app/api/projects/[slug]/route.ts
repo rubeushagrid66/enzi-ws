@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { dbService } from "@/lib/db-service";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import {
@@ -16,48 +17,7 @@ export async function GET(
   try {
     const { slug } = params;
 
-    const project = await prisma.project.findUnique({
-      where: { slug },
-      include: {
-        frameworkWeights: true,
-        viabilityAspects: {
-          orderBy: { createdAt: "asc" },
-        },
-        groups: {
-          include: {
-            participants: {
-              orderBy: { createdAt: "asc" },
-            },
-          },
-          orderBy: { createdAt: "asc" },
-        },
-        parametersL1: {
-          include: {
-            subCategories: {
-              include: {
-                segments: true,
-              },
-            },
-          },
-          orderBy: { createdAt: "asc" },
-        },
-        findings: {
-          include: {
-            parameterValues: {
-              include: {
-                segment: {
-                  include: {
-                    subCategory: true,
-                  },
-                },
-              },
-            },
-            viabilityVotes: true,
-          },
-          orderBy: { createdAt: "asc" },
-        },
-      },
-    });
+    const project = await dbService.getProjectBySlug(slug);
 
     if (!project) {
       return NextResponse.json(
@@ -80,7 +40,7 @@ export async function GET(
     }
 
     // Format L1 parameters for calculation
-    const parsedL1 = project.parametersL1.map((l1) => {
+    const parsedL1 = (project.parametersL1 || []).map((l1: any) => {
       let rules: ScoringRule[] = [];
       try {
         rules = JSON.parse(l1.scoringRules);
@@ -91,7 +51,7 @@ export async function GET(
         id: l1.id,
         name: l1.name,
         scoringRules: rules,
-        subCategories: l1.subCategories.map((sc) => ({
+        subCategories: (l1.subCategories || []).map((sc: any) => ({
           id: sc.id,
           name: sc.name,
         })),
@@ -99,13 +59,13 @@ export async function GET(
     });
 
     // Calculate DVF metrics for each finding
-    const findingsWithScores = project.findings.map((f) => {
+    const findingsWithScores = (project.findings || []).map((f: any) => {
       // 1. Desirability
-      const findingValues = f.parameterValues.map((pv) => ({
+      const findingValues = (f.parameterValues || []).map((pv: any) => ({
         l3Id: pv.l3Id,
         l3: pv.segment
           ? {
-              l2Id: pv.segment.subCategory.id,
+              l2Id: pv.segment.subCategory?.id,
             }
           : undefined,
       }));

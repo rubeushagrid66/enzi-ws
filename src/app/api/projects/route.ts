@@ -1,23 +1,11 @@
 import { NextResponse } from "next/server";
+import { dbService } from "@/lib/db-service";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
 export async function GET() {
   try {
-    const projects = await prisma.project.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        _count: {
-          select: {
-            findings: true,
-            groups: true,
-            viabilityAspects: true,
-          },
-        },
-        frameworkWeights: true,
-      },
-    });
-
+    const projects = await dbService.getProjects();
     return NextResponse.json({ projects });
   } catch (error) {
     console.error("Failed to fetch projects:", error);

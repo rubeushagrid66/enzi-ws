@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
 
 export async function POST(
@@ -23,24 +23,12 @@ export async function POST(
       );
     }
 
-    const vote = await prisma.viabilityVote.upsert({
-      where: {
-        findingId_participantId_aspectId: {
-          findingId,
-          participantId,
-          aspectId,
-        },
-      },
-      update: {
-        isValidated: Boolean(isValidated),
-      },
-      create: {
-        findingId,
-        participantId,
-        aspectId,
-        isValidated: Boolean(isValidated),
-      },
-    });
+    const vote = await dbService.upsertViabilityVote(
+      findingId,
+      participantId,
+      aspectId,
+      Boolean(isValidated)
+    );
 
     return NextResponse.json({ success: true, vote });
   } catch (error) {
