@@ -13,6 +13,8 @@ import {
   ArrowLeft,
   ArrowRight,
   Clock,
+  Plus,
+  Copy,
 } from "lucide-react";
 
 type Step = "desirability" | "viability" | "feasibility";
@@ -59,6 +61,85 @@ export default function WorkshopSession({
   const [lastPos, setLastPos] = useState<{ x: number; y: number } | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+
+  // Step 0 (finding picker): the shared findings pool + creating a new
+  // finding in this project. Selecting a pool finding COPIES it into
+  // this project — the copy is scored independently, the pool original
+  // is untouched and stays Unscored.
+  const [poolFindings, setPoolFindings] = useState<any[]>([]);
+  const [newFindingTitle, setNewFindingTitle] = useState("");
+  const [newFindingDesc, setNewFindingDesc] = useState("");
+  const [pickerStatus, setPickerStatus] = useState<string | null>(null);
+  const [pickerBusy, setPickerBusy] = useState(false);
+
+  const loadPool = useCallback(async () => {
+    try {
+      const res = await fetch("/api/global/findings", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      setPoolFindings((data.findings || []).filter((f: any) => !f.projectId));
+    } catch {
+      // Pool unavailable (e.g. before the global SQL is run): the
+      // picker simply stays empty; scoring the project's own findings
+      // still works.
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPool();
+  }, [loadPool]);
+
+  const handleSelectFromPool = async (poolFinding: any) => {
+    setPickerBusy(true);
+    setPickerStatus(null);
+    try {
+      const res = await fetch(`/api/projects/${slug}/findings/copy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ findingId: poolFinding.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Copy failed (${res.status})`);
+      await loadProject(true);
+      if (data.finding?.id) {
+        setSelectedFindingId(data.finding.id);
+        setStep("desirability");
+      }
+      setPickerStatus(`“${poolFinding.title}” copied into this workshop — it starts Unscored.`);
+    } catch (e: any) {
+      setPickerStatus(e.message || "Failed to copy finding from the pool.");
+    } finally {
+      setPickerBusy(false);
+    }
+  };
+
+  const handleCreateFinding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFindingTitle.trim()) return;
+    setPickerBusy(true);
+    setPickerStatus(null);
+    try {
+      const res = await fetch(`/api/projects/${slug}/findings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newFindingTitle.trim(), description: newFindingDesc.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Create failed (${res.status})`);
+      setNewFindingTitle("");
+      setNewFindingDesc("");
+      await loadProject(true);
+      if (data.finding?.id) {
+        setSelectedFindingId(data.finding.id);
+        setStep("desirability");
+      }
+      setPickerStatus("Finding created in this workshop — it starts Unscored.");
+    } catch (err: any) {
+      setPickerStatus(err.message || "Failed to create finding.");
+    } finally {
+      setPickerBusy(false);
+    }
+  };
 
   const loadProject = useCallback(
     async (silent = false) => {
@@ -307,10 +388,68 @@ export default function WorkshopSession({
               })}
               {findings.length === 0 && (
                 <li className="text-sm text-slate-500 italic">
-                  No findings yet — add them in the Admin Dashboard first.
+                  No findings in this workshop yet — pick one from the pool or create one below.
                 </li>
               )}
             </ul>
+
+            {/* Step 0 — finding picker: pool or new */}
+            <div className="mt-5 border-t border-slate-100 pt-4">
+              <h3 className="text-sm font-bold text-slate-900">Step 0 — Add a finding</h3>
+              <p className="mt-0.5 text-xs text-slate-600">
+                Select one from the shared pool, or create a new one for this workshop.
+                A pool finding is copied in — it starts Unscored and is scored here only.
+              </p>
+              {pickerStatus && (
+                <p role="status" className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700">
+                  {pickerStatus}
+                </p>
+              )}
+              {poolFindings.length > 0 && (
+                <ul className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1">
+                  {poolFindings.map((f: any) => (
+                    <li key={f.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-2.5">
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-slate-800">{f.title}</span>
+                        {f.description && <span className="block truncate text-xs text-slate-500">{f.description}</span>}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectFromPool(f)}
+                        disabled={pickerBusy}
+                        className="btn-secondary shrink-0 !px-2.5 !py-1.5 text-xs disabled:opacity-50"
+                      >
+                        <Copy className="h-3.5 w-3.5" /> Select
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <form onSubmit={handleCreateFinding} className="mt-3 space-y-2">
+                <label htmlFor="workshop-new-finding" className="sr-only">New finding title</label>
+                <input
+                  id="workshop-new-finding"
+                  type="text"
+                  required
+                  placeholder="New finding title (e.g. Tampilan Membingungkan)"
+                  value={newFindingTitle}
+                  onChange={(e) => setNewFindingTitle(e.target.value)}
+                  className="input w-full"
+                />
+                <label htmlFor="workshop-new-finding-desc" className="sr-only">New finding description</label>
+                <input
+                  id="workshop-new-finding-desc"
+                  type="text"
+                  placeholder="Description (optional)"
+                  value={newFindingDesc}
+                  onChange={(e) => setNewFindingDesc(e.target.value)}
+                  className="input w-full"
+                />
+                <button type="submit" disabled={pickerBusy} className="btn-primary w-full justify-center disabled:opacity-50">
+                  <Plus className="h-4 w-4" /> Create new finding in this workshop
+                </button>
+              </form>
+            </div>
           </section>
 
           {/* Scoring walkthrough */}

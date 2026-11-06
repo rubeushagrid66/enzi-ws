@@ -8,8 +8,66 @@ import { slugify } from "./slugify";
  * 2. Prisma ORM (using DATABASE_URL)
  */
 
+/** Thrown when an update/delete matches no row (stale slug, deleted
+ *  project). Routes map this to 404 instead of a generic 500. */
+export class NotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NotFoundError";
+  }
+}
+
+/** PostgREST "no rows" for .single(), and Prisma's record-not-found. */
+function isRowNotFound(error: any): boolean {
+  if (!error) return false;
+  if (error instanceof NotFoundError) return true;
+  if (error.code === "PGRST116" || error.code === "P2025") return true;
+  return /row.*not found|record.*not found|no rows/i.test(error.message || "");
+}
+
+function toNotFoundError(error: any, message: string): Error {
+  return isRowNotFound(error) ? new NotFoundError(message) : error;
+}
+
+/** Hint shown when a global structure is missing in Supabase. */
+export const GLOBAL_SQL_HINT =
+  "Global setup is not enabled yet — run docs/global-setup-sql.md in the Supabase SQL editor.";
+
+/** Parse a global_settings value (jsonb object from Supabase, or a JSON
+ *  string from Prisma) into a weights array, or null when unusable. */
+function parseGlobalWeights(value: any): Array<{ name: string; weight: number }> | null {
+  try {
+    const v = typeof value === "string" ? JSON.parse(value) : value;
+    if (!Array.isArray(v) || v.length === 0) return null;
+    const weights = v
+      .filter((w: any) => w && typeof w.name === "string" && Number.isFinite(Number(w.weight)))
+      .map((w: any) => ({ name: w.name, weight: Number(w.weight) }));
+    return weights.length > 0 ? weights : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Map raw Supabase parameters_l1 rows (with nested L2/L3) to the
+ *  shape the rest of the app uses. */
+function mapL1Rows(rows: any[]): any[] {
+  return (rows || []).map((l1: any) => ({
+    id: l1.id,
+    name: l1.name,
+    scoringRules: typeof l1.scoring_rules === "string" ? l1.scoring_rules : JSON.stringify(l1.scoring_rules || []),
+    subCategories: (l1.subCategories || []).map((l2: any) => ({
+      id: l2.id,
+      name: l2.name,
+      segments: l2.segments || [],
+    })),
+  }));
+}
+
 export const dbService = {
   async getProjects() {
+    // Home-page cards show the weights: once the global weights exist
+    // every project shows the same global D/V/F (see getGlobalWeights).
+    const globalWeights = await dbService.getGlobalWeights();
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase
         .from("projects")
@@ -35,7 +93,7 @@ export const dbService = {
           groups: p.groups?.[0]?.count ?? 0,
           viabilityAspects: p.viability_aspects?.[0]?.count ?? 0,
         },
-        frameworkWeights: (p.framework_weights || []).map((fw: any) => ({
+        frameworkWeights: globalWeights ?? (p.framework_weights || []).map((fw: any) => ({
           name: fw.name,
           weight: Number(fw.weight),
         })),
@@ -56,6 +114,9 @@ export const dbService = {
       },
     });
 
+    if (globalWeights) {
+      return projects.map((p: any) => ({ ...p, frameworkWeights: globalWeights }));
+    }
     return projects;
   },
 
@@ -69,15 +130,22 @@ export const dbService = {
 
       if (error || !project) return null;
 
-      // Parallel fetch related tables
-      const [weightsRes, aspectsRes, groupsRes, l1Res, findingsRes] =
+      // Parallel fetch related tables. Weights and the L1 tree are
+      // GLOBAL when the global setup exists (see docs/global-setup-sql.md):
+      // the global rows win, each project's own rows are the fallback
+      // for before the SQL is run — so existing scores never change.
+      const [weightsRes, aspectsRes, groupsRes, l1GlobalRes, l1ProjectRes, findingsRes, globalWeights] =
         await Promise.all([
           supabase.from("framework_weights").select("*").eq("project_id", project.id),
           supabase.from("viability_aspects").select("*").eq("project_id", project.id).order("created_at", { ascending: true }),
           supabase.from("groups").select("*, participants(*)").eq("project_id", project.id).order("created_at", { ascending: true }),
+          supabase.from("parameters_l1").select("*, subCategories:parameters_l2(*, segments:parameters_l3(*))").is("project_id", null).order("created_at", { ascending: true }),
           supabase.from("parameters_l1").select("*, subCategories:parameters_l2(*, segments:parameters_l3(*))").eq("project_id", project.id).order("created_at", { ascending: true }),
           supabase.from("findings").select("*, parameterValues:finding_parameter_values(*, segment:parameters_l3(*, subCategory:parameters_l2(*))), viabilityVotes:viability_votes(*)").eq("project_id", project.id).order("created_at", { ascending: true }),
+          dbService.getGlobalWeights(),
         ]);
+
+      const l1Rows = (l1GlobalRes.data?.length ?? 0) > 0 ? l1GlobalRes.data : l1ProjectRes.data;
 
       return {
         id: project.id,
@@ -85,7 +153,7 @@ export const dbService = {
         slug: project.slug,
         description: project.description,
         isActive: project.is_active,
-        frameworkWeights: (weightsRes.data || []).map((w: any) => ({
+        frameworkWeights: globalWeights ?? (weightsRes.data || []).map((w: any) => ({
           id: w.id,
           name: w.name,
           weight: Number(w.weight),
@@ -111,16 +179,7 @@ export const dbService = {
             isActive: p.is_active,
           })),
         })),
-        parametersL1: (l1Res.data || []).map((l1: any) => ({
-          id: l1.id,
-          name: l1.name,
-          scoringRules: typeof l1.scoring_rules === "string" ? l1.scoring_rules : JSON.stringify(l1.scoring_rules || []),
-          subCategories: (l1.subCategories || []).map((l2: any) => ({
-            id: l2.id,
-            name: l2.name,
-            segments: l2.segments || [],
-          })),
-        })),
+        parametersL1: mapL1Rows(l1Rows || []),
         findings: (findingsRes.data || []).map((f: any) => ({
           id: f.id,
           title: f.title,
@@ -156,8 +215,10 @@ export const dbService = {
       };
     }
 
-    // Prisma fallback
-    return prisma.project.findUnique({
+    // Prisma fallback — same global-first resolution as the Supabase
+    // branch above: global weights / global L1 tree win when present,
+    // the project's own rows are the fallback.
+    const project = await prisma.project.findUnique({
       where: { slug },
       include: {
         frameworkWeights: true,
@@ -189,6 +250,191 @@ export const dbService = {
         },
       },
     });
+    if (!project) return null;
+    const globalWeights = await dbService.getGlobalWeights();
+    if (globalWeights) (project as any).frameworkWeights = globalWeights;
+    const globalL1 = await prisma.parameterL1.findMany({
+      where: { projectId: null },
+      include: { subCategories: { include: { segments: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+    if (globalL1.length > 0) (project as any).parametersL1 = globalL1;
+    return project;
+  },
+
+  // ── Global settings (weights / parameters / findings pool) ────────────────
+
+  /** The global D/V/F weights, or null when the global setup does not
+   *  exist yet (callers fall back to the project's own weights). */
+  async getGlobalWeights(): Promise<Array<{ name: string; weight: number }> | null> {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from("global_settings")
+          .select("value")
+          .eq("key", "framework_weights")
+          .maybeSingle();
+        if (error || !data) return null;
+        return parseGlobalWeights(data.value);
+      } catch {
+        return null;
+      }
+    }
+    try {
+      const row = await prisma.globalSetting.findUnique({ where: { key: "framework_weights" } });
+      return row ? parseGlobalWeights(row.value) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  /** Save the global D/V/F weights. Throws a clear error naming the
+   *  SQL file when the global_settings table does not exist yet. */
+  async updateGlobalWeights(weights: Array<{ name: string; weight: number }>) {
+    const clean = weights.map((w) => ({ name: w.name, weight: Number(w.weight) }));
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase
+        .from("global_settings")
+        .upsert(
+          { key: "framework_weights", value: clean, updated_at: new Date().toISOString() },
+          { onConflict: "key" }
+        );
+      if (error) {
+        if (/global_settings|relation .* does not exist|PGRST205/i.test(error.message || "")) {
+          throw new Error(GLOBAL_SQL_HINT);
+        }
+        throw error;
+      }
+      return clean;
+    }
+    await prisma.globalSetting.upsert({
+      where: { key: "framework_weights" },
+      update: { value: JSON.stringify(clean) },
+      create: { key: "framework_weights", value: JSON.stringify(clean) },
+    });
+    return clean;
+  },
+
+  /** The global L1–L3 tree (project_id null rows), or [] when the
+   *  global setup does not exist yet. Callers fall back to the
+   *  project's own tree. */
+  async getGlobalParameters(): Promise<any[]> {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from("parameters_l1")
+          .select("*, subCategories:parameters_l2(*, segments:parameters_l3(*))")
+          .is("project_id", null)
+          .order("created_at", { ascending: true });
+        if (error || !data) return [];
+        return mapL1Rows(data);
+      } catch {
+        return [];
+      }
+    }
+    const rows = await prisma.parameterL1.findMany({
+      where: { projectId: null },
+      include: { subCategories: { include: { segments: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+    return rows.map((l1: any) => ({
+      id: l1.id,
+      name: l1.name,
+      scoringRules: l1.scoringRules,
+      subCategories: (l1.subCategories || []).map((l2: any) => ({
+        id: l2.id,
+        name: l2.name,
+        segments: l2.segments || [],
+      })),
+    }));
+  },
+
+  /** All findings: the global pool (project_id null) plus every
+   *  project's findings, each labelled with its origin. Used by the
+   *  admin findings pool tab and the workshop "select from pool" picker. */
+  async getAllFindings(): Promise<any[]> {
+    if (isSupabaseConfigured && supabase) {
+      const [findingsRes, projectsRes] = await Promise.all([
+        supabase.from("findings").select("*").order("created_at", { ascending: true }),
+        supabase.from("projects").select("id, slug, name"),
+      ]);
+      const byId = new Map((projectsRes.data || []).map((p: any) => [p.id, p]));
+      return (findingsRes.data || []).map((f: any) => {
+        const proj = f.project_id ? byId.get(f.project_id) : null;
+        return {
+          id: f.id,
+          title: f.title,
+          description: f.description,
+          tags: typeof f.tags === "string" ? f.tags : JSON.stringify(f.tags || []),
+          feasibilityX: f.feasibility_x != null ? Number(f.feasibility_x) : null,
+          feasibilityY: f.feasibility_y != null ? Number(f.feasibility_y) : null,
+          feasibilityQuadrant: f.feasibility_quadrant,
+          projectId: f.project_id ?? null,
+          projectSlug: proj?.slug ?? null,
+          projectName: proj?.name ?? null,
+        };
+      });
+    }
+    const rows = await prisma.finding.findMany({
+      include: { project: { select: { slug: true, name: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+    return rows.map((f: any) => ({
+      id: f.id,
+      title: f.title,
+      description: f.description,
+      tags: f.tags,
+      feasibilityX: f.feasibilityX,
+      feasibilityY: f.feasibilityY,
+      feasibilityQuadrant: f.feasibilityQuadrant,
+      projectId: f.projectId ?? null,
+      projectSlug: f.project?.slug ?? null,
+      projectName: f.project?.name ?? null,
+    }));
+  },
+
+  /** Pool findings only (project_id null). */
+  async getPoolFindings(): Promise<any[]> {
+    const all = await dbService.getAllFindings();
+    return all.filter((f: any) => !f.projectId);
+  },
+
+  async getFindingById(id: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase.from("findings").select("*").eq("id", id).maybeSingle();
+      if (error || !data) return null;
+      return data;
+    }
+    return prisma.finding.findUnique({ where: { id } });
+  },
+
+  /**
+   * Copy a finding into a project (or into the pool when targetProjectId
+   * is null). Only the listing is copied — title, description, tags.
+   * Votes, L3 mappings and matrix position are NOT copied: the copy
+   * starts Unscored and is scored independently in its own workshop.
+   */
+  async copyFinding(findingId: string, targetProjectId: string | null) {
+    const source = await dbService.getFindingById(findingId);
+    if (!source) throw new NotFoundError("Finding not found");
+    const tagsRaw = typeof source.tags === "string" ? source.tags : JSON.stringify(source.tags || []);
+    let parsed: any = {};
+    try {
+      parsed = JSON.parse(tagsRaw);
+    } catch {
+      parsed = {};
+    }
+    const data = {
+      title: source.title,
+      description: source.description || "",
+      sumber: Array.isArray(parsed.sumber) ? parsed.sumber : [],
+      fitur: parsed.fitur || "",
+      platform: Array.isArray(parsed.platform) ? parsed.platform : [],
+    };
+    // Reuse createFinding (same shape, null feasibility). For a pool
+    // target the SQL in docs/global-setup-sql.md must have run; the
+    // error then names that file.
+    return dbService.createFinding(targetProjectId, data);
   },
 
   async updateFindingFeasibility(
@@ -438,33 +684,54 @@ export const dbService = {
         .eq("slug", slug)
         .select()
         .single();
-      if (error) throw error;
+      // .single() on zero rows (stale slug — e.g. renamed in another
+      // tab) errors PGRST116: surface it as not-found, not a 500.
+      if (error) throw toNotFoundError(error, `Project not found (slug "${slug}" may have been renamed — refresh the project list)`);
       return project;
     }
-    return prisma.project.update({
-      where: { slug },
-      data: {
-        ...(data.name !== undefined && { name: data.name }),
-        ...(data.description !== undefined && { description: data.description }),
-        ...(data.isActive !== undefined && { isActive: data.isActive }),
-        ...(data.slug !== undefined && { slug: data.slug }),
-      },
-    });
+    try {
+      return await prisma.project.update({
+        where: { slug },
+        data: {
+          ...(data.name !== undefined && { name: data.name }),
+          ...(data.description !== undefined && { description: data.description }),
+          ...(data.isActive !== undefined && { isActive: data.isActive }),
+          ...(data.slug !== undefined && { slug: data.slug }),
+        },
+      });
+    } catch (error: any) {
+      throw toNotFoundError(error, `Project not found (slug "${slug}" may have been renamed — refresh the project list)`);
+    }
   },
 
   async deleteProject(slug: string) {
     if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.from("projects").delete().eq("slug", slug);
+      // A plain delete reports success even when zero rows match, so
+      // select the deleted rows to tell "already gone" apart.
+      const { data, error } = await supabase.from("projects").delete().eq("slug", slug).select("id");
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new NotFoundError(`Project not found (slug "${slug}" may have been renamed — refresh the project list)`);
+      }
       return { success: true };
     }
-    await prisma.project.delete({ where: { slug } });
+    try {
+      await prisma.project.delete({ where: { slug } });
+    } catch (error: any) {
+      throw toNotFoundError(error, `Project not found (slug "${slug}" may have been renamed — refresh the project list)`);
+    }
     return { success: true };
   },
 
   // ── Finding CRUD ─────────────────────────────────────────────────────────────
 
-  async createFinding(projectId: string, data: {
+  /**
+   * Create a finding. projectId null creates a POOL finding (global
+   * library, belongs to no project yet). Pool creation needs the SQL in
+   * docs/global-setup-sql.md (findings.project_id nullable); before it
+   * runs, the insert fails with a clear error naming that file.
+   */
+  async createFinding(projectId: string | null, data: {
     title: string;
     description?: string;
     sumber?: string[];
@@ -495,7 +762,12 @@ export const dbService = {
         })
         .select()
         .single();
-      if (error) throw error;
+      if (error) {
+        if (projectId === null && /null value.*project_id|not-null/i.test(error.message || "")) {
+          throw new Error(`Cannot create a pool finding yet. ${GLOBAL_SQL_HINT}`);
+        }
+        throw error;
+      }
       return finding;
     }
 
@@ -714,7 +986,9 @@ export const dbService = {
 
   // ── Parameters (L1/L2/L3) CRUD ───────────────────────────────────────────────
 
-  async createParameterL1(projectId: string, name: string, scoringRules?: any[]) {
+  /** projectId null creates a GLOBAL L1 (shared tree). Needs the SQL
+   *  in docs/global-setup-sql.md (parameters_l1.project_id nullable). */
+  async createParameterL1(projectId: string | null, name: string, scoringRules?: any[]) {
     const rules = JSON.stringify(
       scoringRules ?? [
         { minPercent: 66, score: 3 },
@@ -728,7 +1002,12 @@ export const dbService = {
         .insert({ project_id: projectId, name, scoring_rules: rules })
         .select()
         .single();
-      if (error) throw error;
+      if (error) {
+        if (projectId === null && /null value.*project_id|not-null/i.test(error.message || "")) {
+          throw new Error(`Cannot create a global parameter yet. ${GLOBAL_SQL_HINT}`);
+        }
+        throw error;
+      }
       return data;
     }
     return prisma.parameterL1.create({ data: { projectId, name, scoringRules: rules } });
