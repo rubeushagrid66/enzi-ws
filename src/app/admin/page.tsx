@@ -27,6 +27,26 @@ async function apiCall(url: string, options?: RequestInit) {
 const SUMBER_OPTIONS = ["Wawancara", "Survey"];
 const PLATFORM_OPTIONS = ["CMS", "DVC"];
 
+// Aspect → framework linkage: which DVF dimension an aspect's votes feed.
+const FRAMEWORK_OPTIONS = ["Desirability", "Viability", "Feasibility"] as const;
+const FRAMEWORK_BADGE_CLASS: Record<string, string> = {
+  Desirability: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  Viability: "bg-blue-100 text-blue-800 border-blue-200",
+  Feasibility: "bg-amber-100 text-amber-800 border-amber-200",
+};
+
+function AspectFrameworkBadge({ framework }: { framework?: string }) {
+  const fw = framework === "Desirability" || framework === "Feasibility" ? framework : "Viability";
+  return (
+    <span
+      title={`Linked to ${fw} — votes on this aspect feed the ${fw} score`}
+      className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-bold ${FRAMEWORK_BADGE_CLASS[fw]}`}
+    >
+      {fw === "Desirability" ? "D" : fw === "Feasibility" ? "F" : "V"} · {fw}
+    </span>
+  );
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -78,7 +98,8 @@ export default function AdminDashboardPage() {
   // Aspects
   const [newAspectName, setNewAspectName] = useState("");
   const [newAspectDesc, setNewAspectDesc] = useState("");
-  const [editingAspect, setEditingAspect] = useState<{ id: string; name: string; description: string } | null>(null);
+  const [newAspectFramework, setNewAspectFramework] = useState<string>("Viability");
+  const [editingAspect, setEditingAspect] = useState<{ id: string; name: string; description: string; framework: string } | null>(null);
 
   // Parameters L1/L2/L3
   const [newL1Name, setNewL1Name] = useState("");
@@ -431,10 +452,11 @@ export default function AdminDashboardPage() {
       await apiCall(`/api/projects/${selectedProjectSlug}/aspects`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newAspectName, description: newAspectDesc }),
+        body: JSON.stringify({ name: newAspectName, description: newAspectDesc, framework: newAspectFramework }),
       });
       setNewAspectName("");
       setNewAspectDesc("");
+      setNewAspectFramework("Viability");
       await loadProjectDetails(selectedProjectSlug);
     } catch (err: any) {
       setError(err.message || "Failed to create aspect");
@@ -449,7 +471,7 @@ export default function AdminDashboardPage() {
       await apiCall(`/api/projects/${selectedProjectSlug}/aspects/${editingAspect.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editingAspect.name.trim(), description: editingAspect.description }),
+        body: JSON.stringify({ name: editingAspect.name.trim(), description: editingAspect.description, framework: editingAspect.framework }),
       });
       setEditingAspect(null);
       await loadProjectDetails(selectedProjectSlug);
@@ -1044,7 +1066,7 @@ export default function AdminDashboardPage() {
               <div className="card space-y-5 p-6">
                 <div>
                   <h2 id="aspects-heading" className="text-base font-bold text-slate-900">Viability Aspects (Aspek)</h2>
-                  <p className="mt-0.5 text-sm text-slate-600">Define business/market aspects for the participant validation voting matrix.</p>
+                  <p className="mt-0.5 text-sm text-slate-600">Define aspects for the participant validation voting matrix, and link each one to the framework its votes feed — Desirability, Viability, or Feasibility.</p>
                 </div>
                 <form onSubmit={handleCreateAspect} className="space-y-3">
                   <div>
@@ -1055,6 +1077,14 @@ export default function AdminDashboardPage() {
                     <label htmlFor="new-aspect-desc" className="field-label">Description / Guidance</label>
                     <input id="new-aspect-desc" type="text" placeholder="Description / Guidance (e.g. Customer adoption and willingness to pay)" value={newAspectDesc} onChange={(e) => setNewAspectDesc(e.target.value)} className="input w-full" />
                   </div>
+                  <div>
+                    <label htmlFor="new-aspect-framework" className="field-label">Framework — which score do votes on this aspect feed?</label>
+                    <select id="new-aspect-framework" value={newAspectFramework} onChange={(e) => setNewAspectFramework(e.target.value)} className="input w-full">
+                      {FRAMEWORK_OPTIONS.map((fw) => (
+                        <option key={fw} value={fw}>{fw}</option>
+                      ))}
+                    </select>
+                  </div>
                   <button type="submit" className="btn-primary">Add Aspect</button>
                 </form>
                 <div className="space-y-2 border-t border-slate-100 pt-4">
@@ -1062,11 +1092,14 @@ export default function AdminDashboardPage() {
                   {activeProject?.viabilityAspects?.map((aspect: any) => (
                     <div key={aspect.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold text-slate-800">{aspect.name}</div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-slate-800">{aspect.name}</span>
+                          <AspectFrameworkBadge framework={aspect.framework} />
+                        </div>
                         {aspect.description && <div className="mt-0.5 text-xs text-slate-600">{aspect.description}</div>}
                       </div>
                       <span className="flex shrink-0 items-center gap-1">
-                        <button type="button" onClick={() => setEditingAspect({ id: aspect.id, name: aspect.name, description: aspect.description || "" })} aria-label={`Edit aspect ${aspect.name}`} className="btn-icon"><Edit2 className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => setEditingAspect({ id: aspect.id, name: aspect.name, description: aspect.description || "", framework: aspect.framework || "Viability" })} aria-label={`Edit aspect ${aspect.name}`} className="btn-icon"><Edit2 className="h-4 w-4" /></button>
                         <button type="button" onClick={() => handleDeleteAspect(aspect)} aria-label={`Delete aspect ${aspect.name}`} className="btn-icon-danger"><Trash2 className="h-4 w-4" /></button>
                       </span>
                     </div>
@@ -1331,6 +1364,14 @@ export default function AdminDashboardPage() {
             <div>
               <label htmlFor="edit-aspect-desc" className="field-label">Description / Guidance</label>
               <input id="edit-aspect-desc" type="text" value={editingAspect.description} onChange={(e) => setEditingAspect({ ...editingAspect, description: e.target.value })} className="input w-full" />
+            </div>
+            <div>
+              <label htmlFor="edit-aspect-framework" className="field-label">Framework — which score do votes on this aspect feed?</label>
+              <select id="edit-aspect-framework" value={editingAspect.framework} onChange={(e) => setEditingAspect({ ...editingAspect, framework: e.target.value })} className="input w-full">
+                {FRAMEWORK_OPTIONS.map((fw) => (
+                  <option key={fw} value={fw}>{fw}</option>
+                ))}
+              </select>
             </div>
             <div className="flex items-center justify-end gap-2 pt-2">
               <button type="button" onClick={() => setEditingAspect(null)} className="btn-secondary">Cancel</button>
