@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
-import { getSession, hashPassword } from "@/lib/auth";
+import { getSession, hashPassword, USER_ROLES } from "@/lib/auth";
 
 export async function GET() {
   try {
@@ -28,6 +28,12 @@ export async function POST(request: Request) {
     if (!name || !email || !password) {
       return NextResponse.json(
         { error: "Name, email, and password are required" },
+        { status: 400 }
+      );
+    }
+    if (role !== undefined && !(USER_ROLES as readonly string[]).includes(role)) {
+      return NextResponse.json(
+        { error: `role must be one of: ${USER_ROLES.join(", ")}` },
         { status: 400 }
       );
     }

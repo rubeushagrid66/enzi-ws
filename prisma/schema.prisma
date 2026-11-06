@@ -12,7 +12,7 @@ model User {
   name         String
   email        String   @unique
   passwordHash String
-  role         String   @default("FACILITATOR") // ADMIN | FACILITATOR
+  role         String   @default("FACILITATOR") // ADMIN | FACILITATOR | "Business & Ops" | "Product" | "Tech" — the last three see only aspects whose label matches their role
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -92,6 +92,7 @@ model Participant {
   groupId        String
   name           String
   roleTitle      String?
+  userId         String? // login User linked to this participant row (the "me" voter); null for facilitator-recorded participants
   isActive       Boolean         @default(true)
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
@@ -119,6 +120,8 @@ model ViabilityVote {
   participantId String
   aspectId      String
   isValidated   Boolean         @default(true)
+  score         Int? // 1, 2 or 3 — the voter's score for the aspect; null = no score (old boolean-only votes)
+  reason        String? // Alasan: the voter's reason for the score, per aspect
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   finding       Finding         @relation(fields: [findingId], references: [id], onDelete: Cascade)

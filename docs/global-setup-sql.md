@@ -95,3 +95,22 @@ The app keeps working exactly as before, on purpose:
   admin tab no longer depends on the selected project.
 - Viability Aspects stay per-project (the user did not ask to
   globalise them).
+
+## Step 5 — Viability scoring 1–3 with Alasan (run once)
+
+Each viability vote is now a 1–3 score with a per-aspect reason
+(Alasan), and each login user votes as their own participant row
+(`participants.user_id`). Until these columns exist, the code saves
+votes as the old boolean only — scores and reasons do not stick, and
+"me" participants are matched by name instead of by login id.
+
+```sql
+alter table viability_votes add column if not exists score int;
+alter table viability_votes add column if not exists reason text;
+alter table participants add column if not exists user_id text;
+```
+
+Notes: `score` is 1, 2 or 3 (null = no score yet). A vote with a
+score set counts as validated for the current Viability formula, so
+existing boolean-only votes keep counting exactly as before. The new
+1–3 scoring formula itself comes later and is not part of this step.

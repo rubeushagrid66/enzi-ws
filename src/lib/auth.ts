@@ -7,11 +7,22 @@ const JWT_SECRET =
   "enzi-workshop-platform-secret-key-super-secure-change-in-production-2026";
 const COOKIE_NAME = "enzi_auth_token";
 
+/** All login roles. The three label roles see only aspects whose label
+ *  matches their role; ADMIN and FACILITATOR see everything. */
+export const USER_ROLES = ["ADMIN", "FACILITATOR", "Business & Ops", "Product", "Tech"] as const;
+export type UserRole = (typeof USER_ROLES)[number];
+/** The roles that are also aspect labels (role === aspect label). */
+export const LABEL_ROLES = ["Business & Ops", "Product", "Tech"] as const;
+
+export function isLabelRole(role: string | null | undefined): role is (typeof LABEL_ROLES)[number] {
+  return role === "Business & Ops" || role === "Product" || role === "Tech";
+}
+
 export interface SessionUser {
   id: string;
   name: string;
   email: string;
-  role: "ADMIN" | "FACILITATOR";
+  role: UserRole;
 }
 
 /**

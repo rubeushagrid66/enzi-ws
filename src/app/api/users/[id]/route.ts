@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
-import { getSession, hashPassword } from "@/lib/auth";
+import { getSession, hashPassword, USER_ROLES } from "@/lib/auth";
 
 function adminOnly(session: Awaited<ReturnType<typeof getSession>>) {
   return session && session.role === "ADMIN";
@@ -17,6 +17,12 @@ export async function PUT(
     }
     const { name, role, password } = await request.json();
     if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    if (role !== undefined && !(USER_ROLES as readonly string[]).includes(role)) {
+      return NextResponse.json(
+        { error: `role must be one of: ${USER_ROLES.join(", ")}` },
+        { status: 400 }
+      );
+    }
     // Prevent demoting the last active ADMIN (including yourself).
     if (role && role !== "ADMIN") {
       const users = await dbService.getUsers();

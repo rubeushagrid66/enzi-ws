@@ -22,6 +22,7 @@ interface FindingDetailModalProps {
   allFindings: any[];
   project: any;
   isAdmin: boolean;
+  currentUser?: { id?: string; name: string; role: string } | null;
   onClose: () => void;
   onFindingUpdated: (updated: any) => void;
 }
@@ -31,6 +32,7 @@ export default function FindingDetailModal({
   allFindings,
   project,
   isAdmin,
+  currentUser,
   onClose,
   onFindingUpdated,
 }: FindingDetailModalProps) {
@@ -346,15 +348,16 @@ export default function FindingDetailModal({
               {!status.viabilityScored && (
                 <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                   <span className="font-bold">Not yet scored in the workshop.</span>{" "}
-                  Record each participant&apos;s validation below (workshop Step 2) — the
-                  Viability score is the share of validated votes.
+                  Score each aspect 1–3 below (workshop Step 2) with your Alasan
+                  per aspect — the Viability score is the share of scored
+                  (validated) aspects.
                 </div>
               )}
 
               <ViabilityVoteMatrix
                 project={project}
                 finding={localFinding}
-                isAdmin={isAdmin}
+                currentUser={currentUser}
                 onVotesChanged={handleVotesChanged}
               />
             </div>
