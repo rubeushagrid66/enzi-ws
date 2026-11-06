@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import AdminSidebar, { type AdminTab } from "@/components/AdminSidebar";
 import { Modal, ConfirmDialog } from "@/components/Modal";
+import { slugify } from "@/lib/slugify";
 import {
   Shield,
   AlertCircle,
@@ -184,21 +185,27 @@ export default function AdminDashboardPage() {
     try {
       setError(null);
       if (editingProjectSlug) {
-        await apiCall(`/api/projects/${editingProjectSlug}`, {
+        // Renaming moves the URL: the API returns the project with its
+        // new slug — switch the whole admin UI to it, don't keep pointing
+        // at the old slug (that URL stops working after the rename).
+        const result = await apiCall(`/api/projects/${editingProjectSlug}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: projectForm.name, description: projectForm.description, isActive: projectForm.isActive }),
         });
+        const newSlug = result.project?.slug || editingProjectSlug;
+        setProjectModalOpen(false);
+        await initData();
+        setSelectedProjectSlug(newSlug);
+        await loadProjectDetails(newSlug);
       } else {
         await apiCall("/api/projects", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: projectForm.name, slug: projectForm.slug, description: projectForm.description }),
         });
-      }
-      setProjectModalOpen(false);
-      await initData();
-      if (!editingProjectSlug) {
+        setProjectModalOpen(false);
+        await initData();
         // New projects sort first; select the new one explicitly.
         setSelectedProjectSlug(projectForm.slug);
         await loadProjectDetails(projectForm.slug);
@@ -734,16 +741,24 @@ export default function AdminDashboardPage() {
                               </div>
                             </td>
                             <td className="px-4 py-3">
-                              <span className={`rounded border px-2 py-0.5 text-xs font-bold ${
-                                f.feasibilityQuadrant === "QUICK_WINS" ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                                : f.feasibilityQuadrant === "BIG_BETS" ? "border-amber-200 bg-amber-50 text-amber-800"
-                                : f.feasibilityQuadrant === "AVOID" ? "border-rose-200 bg-rose-50 text-rose-800"
-                                : "border-blue-200 bg-blue-50 text-blue-800"
-                              }`}>
-                                {f.feasibilityQuadrant?.replace("_", " ") ?? "QUICK WINS"}
-                              </span>
+                              {f.scoringStatus?.scored ? (
+                                <span className={`rounded border px-2 py-0.5 text-xs font-bold ${
+                                  f.feasibilityQuadrant === "QUICK_WINS" ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                  : f.feasibilityQuadrant === "BIG_BETS" ? "border-amber-200 bg-amber-50 text-amber-800"
+                                  : f.feasibilityQuadrant === "AVOID" ? "border-rose-200 bg-rose-50 text-rose-800"
+                                  : "border-blue-200 bg-blue-50 text-blue-800"
+                                }`}>
+                                  {f.feasibilityQuadrant?.replace("_", " ") ?? "QUICK WINS"}
+                                </span>
+                              ) : (
+                                <span className="rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-800">
+                                  Awaiting scoring
+                                </span>
+                              )}
                             </td>
-                            <td className="px-4 py-3 text-center font-mono font-bold text-emerald-700">{f.scores?.composite ?? 0}</td>
+                            <td className="px-4 py-3 text-center font-mono font-bold text-emerald-700">
+                              {f.scores?.composite != null ? f.scores.composite : "—"}
+                            </td>
                             <td className="px-4 py-3 text-right">
                               <div className="flex items-center justify-end gap-1">
                                 <button type="button" onClick={() => openEditFinding(f)} aria-label={`Edit finding ${f.title}`} className="btn-icon">
@@ -1143,7 +1158,7 @@ export default function AdminDashboardPage() {
               <label htmlFor="project-name" className="field-label">Project Name</label>
               <input id="project-name" type="text" required placeholder="e.g. Enterprise Cash Management" value={projectForm.name} onChange={(e) => {
                 const name = e.target.value;
-                setProjectForm((f) => ({ ...f, name, slug: editingProjectSlug ? f.slug : name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") }));
+                setProjectForm((f) => ({ ...f, name, slug: editingProjectSlug ? f.slug : slugify(name) }));
               }} className="input w-full" />
             </div>
             <div>
@@ -1152,7 +1167,20 @@ export default function AdminDashboardPage() {
                 <span className="rounded-l-xl border border-r-0 border-slate-200 bg-slate-100 px-2.5 py-2 font-mono text-sm text-slate-500">/</span>
                 <input id="project-slug" type="text" required disabled={!!editingProjectSlug} placeholder="project-slug" value={projectForm.slug} onChange={(e) => setProjectForm((f) => ({ ...f, slug: e.target.value }))} className="input w-full rounded-l-none font-mono disabled:bg-slate-100" />
               </div>
-              {editingProjectSlug && <p className="mt-1 text-xs text-slate-500">The slug cannot be changed after creation.</p>}
+              {editingProjectSlug ? (
+                (() => {
+                  const preview = slugify(projectForm.name) || editingProjectSlug;
+                  return preview !== editingProjectSlug ? (
+                    <p className="mt-1 text-xs text-amber-700">
+                      Saving will move this project to <span className="font-mono font-bold">/{preview}</span> — the old link <span className="font-mono">/{editingProjectSlug}</span> will stop working.
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-500">The URL follows the project name — rename the project above to move it.</p>
+                  );
+                })()
+              ) : (
+                <p className="mt-1 text-xs text-slate-500">The URL is generated from the project name.</p>
+              )}
             </div>
             <div>
               <label htmlFor="project-desc" className="field-label">Description</label>
