@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
+import { revalidateProjectPages } from "@/lib/revalidate";
 
 export async function PUT(
   request: Request,
@@ -12,6 +13,7 @@ export async function PUT(
     const { name, roleTitle, groupId } = await request.json();
     if (!name) return NextResponse.json({ error: "Participant name is required" }, { status: 400 });
     const participant = await dbService.updateParticipant(params.id, { name, roleTitle, groupId });
+    revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, participant });
   } catch (error) {
     console.error("Error updating participant:", error);
@@ -27,6 +29,7 @@ export async function DELETE(
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     await dbService.deleteParticipant(params.id);
+    revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, message: "Participant deleted" });
   } catch (error) {
     console.error("Error deleting participant:", error);

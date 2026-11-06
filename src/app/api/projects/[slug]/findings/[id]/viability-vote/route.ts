@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
+import { revalidateProjectPages } from "@/lib/revalidate";
 
 export async function POST(
   request: Request,
@@ -30,6 +31,7 @@ export async function POST(
       Boolean(isValidated)
     );
 
+    revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, vote });
   } catch (error) {
     console.error("Error saving viability vote:", error);

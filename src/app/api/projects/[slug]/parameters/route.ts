@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
+import { revalidateProjectPages } from "@/lib/revalidate";
 
 export async function GET(
   _request: Request,
@@ -36,18 +37,21 @@ export async function POST(
       const projectId = await dbService.getProjectIdBySlug(params.slug);
       if (!projectId) return NextResponse.json({ error: "Project not found" }, { status: 404 });
       const item = await dbService.createParameterL1(projectId, name, scoringRules);
+      revalidateProjectPages(params.slug);
       return NextResponse.json({ success: true, item });
     } else if (level === "L2") {
       if (!name || !parentId) {
         return NextResponse.json({ error: "Name and parent L1 id required" }, { status: 400 });
       }
       const item = await dbService.createParameterL2(parentId, name);
+      revalidateProjectPages(params.slug);
       return NextResponse.json({ success: true, item });
     } else if (level === "L3") {
       if (!name || !parentId) {
         return NextResponse.json({ error: "Name and parent L2 id required" }, { status: 400 });
       }
       const item = await dbService.createParameterL3(parentId, name);
+      revalidateProjectPages(params.slug);
       return NextResponse.json({ success: true, item });
     }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
+import { revalidateProjectPages } from "@/lib/revalidate";
 import { WeightInput } from "@/lib/scoring";
 
 export async function POST(
@@ -51,6 +52,7 @@ export async function POST(
 
     const updatedWeights = await dbService.updateWeights(project.id, rawWeights);
 
+    revalidateProjectPages(slug);
     return NextResponse.json({
       success: true,
       weights: updatedWeights,

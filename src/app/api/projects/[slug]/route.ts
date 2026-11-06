@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
+import { revalidateProjectPages } from "@/lib/revalidate";
 import {
   calculateDesirabilityScore,
   calculateViabilityScore,
@@ -189,6 +190,7 @@ export async function PUT(
       isActive: body.isActive,
     });
 
+    revalidateProjectPages(slug);
     return NextResponse.json({ success: true, project: updated });
   } catch (error) {
     console.error("Failed to update project:", error);
@@ -209,6 +211,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     await dbService.deleteProject(params.slug);
+    revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, message: "Project deleted" });
   } catch (error) {
     console.error("Failed to delete project:", error);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
+import { revalidateProjectPages } from "@/lib/revalidate";
 
 export async function GET(
   _request: Request,
@@ -39,6 +40,7 @@ export async function POST(
     }
 
     const aspect = await dbService.createAspect(projectId, name, description);
+    revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, aspect });
   } catch (error) {
     console.error("Error creating aspect:", error);

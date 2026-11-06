@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
+import { revalidateProjectPages } from "@/lib/revalidate";
 
 export async function GET(
   _request: Request,
@@ -48,6 +49,7 @@ export async function POST(
       platform,
     });
 
+    revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, finding });
   } catch (error) {
     console.error("Error creating finding:", error);

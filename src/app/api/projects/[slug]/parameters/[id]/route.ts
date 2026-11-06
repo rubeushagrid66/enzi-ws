@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
+import { revalidateProjectPages } from "@/lib/revalidate";
 
 export async function PUT(
   request: Request,
@@ -17,6 +18,7 @@ export async function PUT(
       level === "L1" ? await dbService.updateParameterL1(params.id, name)
       : level === "L2" ? await dbService.updateParameterL2(params.id, name)
       : await dbService.updateParameterL3(params.id, name);
+    revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, item });
   } catch (error) {
     console.error("Error updating parameter:", error);
@@ -38,6 +40,7 @@ export async function DELETE(
     if (level === "L1") await dbService.deleteParameterL1(params.id);
     else if (level === "L2") await dbService.deleteParameterL2(params.id);
     else await dbService.deleteParameterL3(params.id);
+    revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, message: "Parameter deleted" });
   } catch (error) {
     console.error("Error deleting parameter:", error);

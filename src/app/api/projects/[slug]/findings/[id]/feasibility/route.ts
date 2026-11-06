@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
+import { revalidateProjectPages } from "@/lib/revalidate";
 import { getFeasibilityFromCoordinates } from "@/lib/scoring";
 
 export async function PATCH(
@@ -38,6 +39,7 @@ export async function PATCH(
       effortLabel
     );
 
+    revalidateProjectPages(params.slug);
     return NextResponse.json({
       success: true,
       finding: updated,

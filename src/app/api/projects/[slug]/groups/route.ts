@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
+import { revalidateProjectPages } from "@/lib/revalidate";
 
 export async function GET(
   _request: Request,
@@ -41,6 +42,7 @@ export async function POST(
         return NextResponse.json({ error: "Group name is required" }, { status: 400 });
       }
       const group = await dbService.createGroup(projectId, name);
+      revalidateProjectPages(params.slug);
       return NextResponse.json({ success: true, group });
     } else if (type === "PARTICIPANT") {
       if (!name || !groupId) {
@@ -50,6 +52,7 @@ export async function POST(
         );
       }
       const participant = await dbService.createParticipant(groupId, name, roleTitle);
+      revalidateProjectPages(params.slug);
       return NextResponse.json({ success: true, participant });
     }
 

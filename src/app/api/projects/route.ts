@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
+import { revalidateProjectPages } from "@/lib/revalidate";
 
 export async function GET() {
   try {
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
     }
 
     const project = await dbService.createProject({ name, slug, description, isActive });
+    revalidateProjectPages();
     return NextResponse.json({ success: true, project });
   } catch (error: any) {
     console.error("Failed to create project:", error);

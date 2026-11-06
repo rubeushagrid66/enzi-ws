@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
+import { revalidateProjectPages } from "@/lib/revalidate";
 
 export async function PUT(
   request: Request,
@@ -24,6 +25,7 @@ export async function PUT(
       platform,
     });
 
+    revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, finding });
   } catch (error) {
     console.error("Error updating finding:", error);
@@ -42,6 +44,7 @@ export async function DELETE(
     }
 
     await dbService.deleteFinding(params.id);
+    revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, message: "Finding deleted" });
   } catch (error) {
     console.error("Error deleting finding:", error);
