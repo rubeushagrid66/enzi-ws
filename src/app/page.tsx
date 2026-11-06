@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { dbService } from "@/lib/db-service";
 import Navbar from "@/components/Navbar";
-import AutoRefreshOnFocus from "@/components/AutoRefreshOnFocus";
 import {
   Sparkles,
   ArrowRight,
@@ -15,14 +14,12 @@ import {
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 export default async function HomePage() {
   const projects = await dbService.getProjects();
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <AutoRefreshOnFocus />
       <Navbar />
 
       {/* Hero Section */}
