@@ -204,7 +204,10 @@ export default function AdminDashboardPage() {
   const [usersList, setUsersList] = useState<any[]>([]);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<{ id: string; name: string; role: string } | null>(null);
-  const [userForm, setUserForm] = useState({ name: "", email: "", password: "", role: "FACILITATOR", groupId: "", groupName: "" });
+  const [userForm, setUserForm] = useState({ name: "", email: "", password: "", role: "FACILITATOR", groupId: "", groupName: "", projectId: "", projectName: "" });
+  // Groups of non-active projects, fetched on demand for the user
+  // form's Group dropdown (the project list itself carries no groups).
+  const [userFormGroups, setUserFormGroups] = useState<Record<string, any[]>>({});
 
   // Close the mobile drawer with Escape and return focus to the hamburger.
   useEffect(() => {
@@ -836,15 +839,60 @@ export default function AdminDashboardPage() {
   };
 
   // ── Users ───────────────────────────────────────────────────────────────────
+  // Project + groups backing the user form's dropdowns. The Group
+  // options follow the selected project, not the dashboard's active
+  // project; the active project's groups are already loaded, any other
+  // project's are fetched once (see the effect below) and cached.
+  const formProject = projects.find((p: any) => p.id === userForm.projectId) || null;
+  const formGroups: any[] = userForm.projectId
+    ? (userForm.projectId === activeProject?.id ? (activeProject?.groups || []) : (userFormGroups[userForm.projectId] || []))
+    : [];
+
+  // Fetch the groups of the user form's selected project when it is not
+  // the active project (whose groups are already loaded).
+  useEffect(() => {
+    if (!userModalOpen) return;
+    const pid = userForm.projectId;
+    if (!pid || pid === activeProject?.id || userFormGroups[pid]) return;
+    const proj = projects.find((p: any) => p.id === pid);
+    if (!proj) return;
+    let cancelled = false;
+    apiCall(`/api/projects/${proj.slug}`)
+      .then((d: any) => { if (!cancelled) setUserFormGroups((m) => ({ ...m, [pid]: d.project?.groups || [] })); })
+      .catch(() => { if (!cancelled) setUserFormGroups((m) => ({ ...m, [pid]: [] })); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userModalOpen, userForm.projectId, activeProject?.id]);
+
+  // Changing the Project clears a Group that does not belong to it.
+  // Groups load async for non-active projects, so this runs once they
+  // are known.
+  useEffect(() => {
+    if (!userModalOpen || !userForm.projectId || !userForm.groupId) return;
+    const groups = userForm.projectId === activeProject?.id
+      ? (activeProject?.groups || [])
+      : userFormGroups[userForm.projectId];
+    if (!groups) return; // not loaded yet
+    if (!groups.some((g: any) => g.id === userForm.groupId)) {
+      setUserForm((f) => ({ ...f, groupId: "", groupName: "" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userModalOpen, userForm.projectId, userForm.groupId, activeProject?.id, userFormGroups]);
+
   const openCreateUser = () => {
     setEditingUser(null);
-    setUserForm({ name: "", email: "", password: "", role: "FACILITATOR", groupId: "", groupName: "" });
+    // New users default to the active project.
+    setUserForm({ name: "", email: "", password: "", role: "FACILITATOR", groupId: "", groupName: "", projectId: activeProject?.id ?? "", projectName: activeProject?.name ?? "" });
     setUserModalOpen(true);
   };
 
   const openEditUser = (u: any) => {
     setEditingUser({ id: u.id, name: u.name, role: u.role });
-    setUserForm({ name: u.name, email: u.email, password: "", role: u.role, groupId: u.groupId ?? "", groupName: u.groupName ?? "" });
+    // No stored project yet, but a group in the active project implies it.
+    const impliedProjectId = !u.projectId && u.groupId && (activeProject?.groups || []).some((g: any) => g.id === u.groupId)
+      ? activeProject.id
+      : "";
+    setUserForm({ name: u.name, email: u.email, password: "", role: u.role, groupId: u.groupId ?? "", groupName: u.groupName ?? "", projectId: u.projectId ?? impliedProjectId, projectName: u.projectName ?? (impliedProjectId ? activeProject?.name ?? "" : "") });
     setUserModalOpen(true);
   };
 
@@ -853,7 +901,7 @@ export default function AdminDashboardPage() {
     try {
       setError(null);
       if (editingUser) {
-        const body: any = { name: userForm.name, role: userForm.role, groupId: userForm.groupId || null };
+        const body: any = { name: userForm.name, role: userForm.role, groupId: userForm.groupId || null, projectId: userForm.projectId || null };
         if (userForm.password) body.password = userForm.password;
         await apiCall(`/api/users/${editingUser.id}`, {
           method: "PUT",
@@ -865,7 +913,7 @@ export default function AdminDashboardPage() {
         await apiCall("/api/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: userForm.name, email: userForm.email, password: userForm.password, role: userForm.role, groupId: userForm.groupId || null }),
+          body: JSON.stringify({ name: userForm.name, email: userForm.email, password: userForm.password, role: userForm.role, groupId: userForm.groupId || null, projectId: userForm.projectId || null }),
         });
       }
       setUserModalOpen(false);
@@ -1478,7 +1526,7 @@ export default function AdminDashboardPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h2 id="users-heading" className="text-base font-bold text-slate-900">User Management</h2>
-                    <p className="mt-0.5 text-sm text-slate-600">Global — users and roles are not tied to any project. Create and manage facilitator and admin credentials. Optionally assign a user to a group in the selected project so their votes land in that group.</p>
+                    <p className="mt-0.5 text-sm text-slate-600">Create and manage facilitator and admin credentials. Assign each user to a project (and a group within it) so their scores land in the right workshop — label-role users (Tech, Product, Business &amp; Ops) can only score in their assigned project, while admins and facilitators work across projects. A user with no project assigned can score anywhere.</p>
                   </div>
                   <button type="button" onClick={openCreateUser} className="btn-primary"><Plus className="h-4 w-4" /> Create User</button>
                 </div>
@@ -1492,6 +1540,9 @@ export default function AdminDashboardPage() {
                       </div>
                       <span className="flex items-center gap-2">
                         <span className="rounded border border-slate-200 bg-white px-2 py-0.5 font-mono text-xs font-bold text-slate-700">{u.role}</span>
+                        {u.projectName && (
+                          <span className="rounded border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800" title="Assigned project">{u.projectName}</span>
+                        )}
                         {u.groupName && (
                           <span className="rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800" title="Assigned group">{u.groupName}</span>
                         )}
@@ -1648,13 +1699,31 @@ export default function AdminDashboardPage() {
               </select>
             </div>
             <div>
-              <label htmlFor="user-group" className="field-label">Group — {activeProject?.name || "selected project"}</label>
+              <label htmlFor="user-project" className="field-label">Project</label>
+              <select id="user-project" value={userForm.projectId} onChange={(e) => {
+                const projectId = e.target.value;
+                const projectName = projects.find((p: any) => p.id === projectId)?.name ?? "";
+                // Clearing the project also clears the group (a group
+                // belongs to a project); picking another project clears
+                // a group that does not belong to it (see the effect
+                // above, which runs once that project's groups load).
+                setUserForm((f) => ({ ...f, projectId, projectName, groupId: projectId === "" ? "" : f.groupId, groupName: projectId === "" ? "" : f.groupName }));
+              }} className="input w-full">
+                <option value="">— No project —</option>
+                {projects.map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">Label-role users can only score in their assigned project. Leave empty for no project.</p>
+            </div>
+            <div>
+              <label htmlFor="user-group" className="field-label">Group — {formProject?.name || "selected project"}</label>
               <select id="user-group" value={userForm.groupId} onChange={(e) => setUserForm((f) => ({ ...f, groupId: e.target.value }))} className="input w-full">
                 <option value="">— No group —</option>
-                {(activeProject?.groups || []).map((g: any) => (
+                {formGroups.map((g: any) => (
                   <option key={g.id} value={g.id}>{g.name}</option>
                 ))}
-                {userForm.groupId && !(activeProject?.groups || []).some((g: any) => g.id === userForm.groupId) && (
+                {userForm.groupId && !formGroups.some((g: any) => g.id === userForm.groupId) && (
                   <option value={userForm.groupId}>{userForm.groupName ? `${userForm.groupName} (other project)` : "Assigned group (other project)"}</option>
                 )}
               </select>
