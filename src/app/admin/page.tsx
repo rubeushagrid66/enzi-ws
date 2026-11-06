@@ -15,12 +15,19 @@ import {
   ExternalLink,
   Sparkles,
   Menu,
+  Copy,
 } from "lucide-react";
 
 async function apiCall(url: string, options?: RequestInit) {
   const res = await fetch(url, options);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  if (!res.ok) {
+    // Carry the HTTP status so callers can react to a 404 (stale slug)
+    // differently from a real failure.
+    const err = new Error(data.error || `Request failed (${res.status})`) as Error & { status?: number };
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 
@@ -34,6 +41,35 @@ const FRAMEWORK_BADGE_CLASS: Record<string, string> = {
   Viability: "bg-blue-100 text-blue-800 border-blue-200",
   Feasibility: "bg-amber-100 text-amber-800 border-amber-200",
 };
+
+/**
+ * Pool rows carry tags as a JSON string ({sumber, fitur, platform}),
+ * while project-detail rows already carry the parsed fields. Normalise
+ * both into the same shape for the pool table and the edit form.
+ */
+function findingMeta(f: any) {
+  let sumber: string[] = Array.isArray(f.sumber) ? f.sumber : [];
+  let fitur = typeof f.fitur === "string" ? f.fitur : "";
+  let platform: string[] = Array.isArray(f.platform) ? f.platform : [];
+  if (typeof f.tags === "string") {
+    try {
+      const parsed = JSON.parse(f.tags);
+      sumber = Array.isArray(parsed.sumber) ? parsed.sumber : [];
+      fitur = typeof parsed.fitur === "string" ? parsed.fitur : "";
+      platform = Array.isArray(parsed.platform) ? parsed.platform : [];
+    } catch {
+      // Leave the defaults: unparseable tags render as nothing.
+    }
+  }
+  const tagsList: Array<{ category: string; value: string }> =
+    f.tagsList ||
+    [
+      ...sumber.map((s) => ({ category: "Sumber", value: s })),
+      ...(fitur ? [{ category: "Fitur", value: fitur }] : []),
+      ...platform.map((p) => ({ category: "Platform", value: p })),
+    ];
+  return { sumber, fitur, platform, tagsList };
+}
 
 function AspectFrameworkBadge({ framework }: { framework?: string }) {
   const fw = framework === "Desirability" || framework === "Feasibility" ? framework : "Viability";
@@ -74,17 +110,25 @@ export default function AdminDashboardPage() {
   const [editingProjectSlug, setEditingProjectSlug] = useState<string | null>(null);
   const [projectForm, setProjectForm] = useState({ name: "", slug: "", description: "", isActive: true });
 
-  // Framework Weights
+  // Framework Weights — GLOBAL: one weighting for all projects.
   const [weightInputs, setWeightInputs] = useState<Array<{ name: string; weight: number }>>([
     { name: "Desirability", weight: 40 },
     { name: "Viability", weight: 30 },
     { name: "Feasibility", weight: 30 },
   ]);
   const [weightSaveStatus, setWeightSaveStatus] = useState<string | null>(null);
+  const [weightsSource, setWeightsSource] = useState<string | null>(null);
+
+  // Global findings pool + global L1–L3 tree (shared by all projects).
+  const [poolFindings, setPoolFindings] = useState<any[]>([]);
+  const [globalParams, setGlobalParams] = useState<any[]>([]);
+  const [globalSetupNote, setGlobalSetupNote] = useState<string | null>(null);
 
   // Finding form (create + edit)
   const [findingModalOpen, setFindingModalOpen] = useState(false);
   const [editingFindingId, setEditingFindingId] = useState<string | null>(null);
+  // Where a new finding goes: the shared pool, or the selected project.
+  const [findingTarget, setFindingTarget] = useState<"pool" | "project">("pool");
   const [findingForm, setFindingForm] = useState({ title: "", description: "", sumber: [] as string[], fitur: "", platform: [] as string[] });
 
   // Groups and Participants
@@ -134,11 +178,31 @@ export default function AdminDashboardPage() {
       if (!res.ok) throw new Error("Failed to load project details");
       const data = await res.json();
       setActiveProject(data.project);
-      if (data.project?.frameworkWeights) {
-        setWeightInputs(data.project.frameworkWeights.map((w: any) => ({ name: w.name, weight: w.weight })));
-      }
     } catch (err: any) {
       setError(err.message || "Failed to load project details");
+    }
+  };
+
+  // Global setup: weights, L1–L3 tree, findings pool. These are shared
+  // by all projects and do not depend on the selected project.
+  const loadGlobalData = async () => {
+    try {
+      const [w, p, f] = await Promise.all([
+        apiCall("/api/global/weights"),
+        apiCall("/api/global/parameters"),
+        apiCall("/api/global/findings"),
+      ]);
+      if (w.weights) {
+        setWeightInputs(w.weights.map((x: any) => ({ name: x.name, weight: x.weight })));
+        setWeightsSource(w.source || null);
+      }
+      setGlobalParams(p.parameters || []);
+      setPoolFindings(f.findings || []);
+      // Surface the "run the SQL" note once, from whichever endpoint
+      // reported it (weights and parameters share the same setup).
+      setGlobalSetupNote(w.note || p.note || null);
+    } catch (err: any) {
+      setError(err.message || "Failed to load global setup");
     }
   };
 
@@ -169,6 +233,7 @@ export default function AdminDashboardPage() {
         setSelectedProjectSlug(firstSlug);
         await loadProjectDetails(firstSlug);
       }
+      await loadGlobalData();
       if (userData.user.role === "ADMIN") await reloadUsers();
     } catch (e: any) {
       setError(e.message || "Failed to load admin data");
@@ -232,6 +297,13 @@ export default function AdminDashboardPage() {
         await loadProjectDetails(projectForm.slug);
       }
     } catch (err: any) {
+      // A 404 means the slug this tab was editing no longer exists
+      // (renamed in another tab, or the project was deleted). Refresh
+      // the list first so the UI never stays pointed at a dead slug,
+      // then show the server's message instead of a generic one.
+      if (err?.status === 404) {
+        await initData();
+      }
       setError(err.message || "Failed to save project");
     }
   };
@@ -265,21 +337,21 @@ export default function AdminDashboardPage() {
     );
   };
 
-  // Framework Weights — saved exactly as entered, no auto-calibration.
+  // Framework Weights — GLOBAL, saved exactly as entered, no
+  // auto-calibration. One weighting for the whole platform.
   const totalRawWeight = weightInputs.reduce((sum, w) => sum + (Number(w.weight) || 0), 0);
 
   const handleSaveWeights = async () => {
-    if (!selectedProjectSlug) return;
     try {
       setError(null);
       setWeightSaveStatus("Saving weights...");
-      await apiCall(`/api/projects/${selectedProjectSlug}/weights`, {
+      await apiCall("/api/global/weights", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ weights: weightInputs }),
       });
-      setWeightSaveStatus("Weights saved!");
-      await loadProjectDetails(selectedProjectSlug);
+      setWeightSaveStatus("Global weights saved — they now apply to all projects!");
+      await loadGlobalData();
       setTimeout(() => setWeightSaveStatus(null), 3000);
     } catch (e: any) {
       setWeightSaveStatus("Failed to save weights");
@@ -287,38 +359,66 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // ── Findings ────────────────────────────────────────────────────────────────
+  // ── Findings (GLOBAL pool) ──────────────────────────────────────────────────
+  // The pool is a library: pool findings belong to no project, project
+  // findings belong to one project. A finding is never shared live —
+  // copying it into a project creates an independent row that is
+  // scored on its own (see handleCopyFindingToProject).
   const openCreateFinding = () => {
     setEditingFindingId(null);
+    setFindingTarget("pool");
     setFindingForm({ title: "", description: "", sumber: [], fitur: "", platform: [] });
     setFindingModalOpen(true);
   };
 
   const openEditFinding = (f: any) => {
     setEditingFindingId(f.id);
+    setFindingTarget(f.projectId ? "project" : "pool");
+    const meta = findingMeta(f);
     setFindingForm({
       title: f.title || "",
       description: f.description || "",
-      sumber: f.sumber || [],
-      fitur: f.fitur || "",
-      platform: f.platform || [],
+      sumber: meta.sumber,
+      fitur: meta.fitur,
+      platform: meta.platform,
     });
     setFindingModalOpen(true);
   };
 
   const handleSaveFinding = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!findingForm.title || !selectedProjectSlug) return;
+    if (!findingForm.title) return;
     try {
       setError(null);
       const body = JSON.stringify(findingForm);
       if (editingFindingId) {
-        await apiCall(`/api/projects/${selectedProjectSlug}/findings/${editingFindingId}`, {
-          method: "PUT",
+        // Edit keeps the finding where it is (pool stays pool).
+        const row = poolFindings.find((x: any) => x.id === editingFindingId);
+        if (row && !row.projectId) {
+          await apiCall(`/api/global/findings/${editingFindingId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body,
+          });
+        } else {
+          // Project finding: edit it under its own project, whichever
+          // project is currently selected in the sidebar.
+          const slug = row?.projectSlug || selectedProjectSlug;
+          if (!slug) return;
+          await apiCall(`/api/projects/${slug}/findings/${editingFindingId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body,
+          });
+        }
+      } else if (findingTarget === "pool") {
+        await apiCall("/api/global/findings", {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           body,
         });
       } else {
+        if (!selectedProjectSlug) return;
         await apiCall(`/api/projects/${selectedProjectSlug}/findings`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -326,7 +426,8 @@ export default function AdminDashboardPage() {
         });
       }
       setFindingModalOpen(false);
-      await loadProjectDetails(selectedProjectSlug);
+      await loadGlobalData();
+      if (selectedProjectSlug) await loadProjectDetails(selectedProjectSlug);
     } catch (err: any) {
       setError(err.message || "Failed to save finding");
     }
@@ -335,13 +436,55 @@ export default function AdminDashboardPage() {
   const handleDeleteFinding = (f: any) => {
     askConfirm("Delete finding?", `“${f.title}” will be permanently deleted.`, "Delete finding", async () => {
       try {
-        await apiCall(`/api/projects/${selectedProjectSlug}/findings/${f.id}`, { method: "DELETE" });
+        if (!f.projectId) {
+          await apiCall(`/api/global/findings/${f.id}`, { method: "DELETE" });
+        } else {
+          await apiCall(`/api/projects/${f.projectSlug}/findings/${f.id}`, { method: "DELETE" });
+        }
         setConfirm(null);
-        await loadProjectDetails(selectedProjectSlug);
+        await loadGlobalData();
+        if (selectedProjectSlug) await loadProjectDetails(selectedProjectSlug);
       } catch (err: any) {
         setError(err.message || "Failed to delete finding");
       }
     });
+  };
+
+  /** Copy a pool finding into the selected project. The copy is a new,
+   *  independent row (no votes, mappings or position) that starts
+   *  Unscored; the pool original is untouched. */
+  const handleCopyFindingToProject = async (f: any) => {
+    if (!selectedProjectSlug) {
+      setError("Select a project in the sidebar first, then copy this finding into it.");
+      return;
+    }
+    try {
+      setError(null);
+      await apiCall(`/api/projects/${selectedProjectSlug}/findings/copy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ findingId: f.id }),
+      });
+      await loadGlobalData();
+      await loadProjectDetails(selectedProjectSlug);
+    } catch (err: any) {
+      setError(err.message || "Failed to copy finding into project");
+    }
+  };
+
+  /** Copy a project's finding into the shared pool. */
+  const handleCopyFindingToPool = async (f: any) => {
+    try {
+      setError(null);
+      await apiCall("/api/global/findings/copy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ findingId: f.id }),
+      });
+      await loadGlobalData();
+    } catch (err: any) {
+      setError(err.message || "Failed to copy finding to pool");
+    }
   };
 
   // ── Groups & Participants ───────────────────────────────────────────────────
@@ -492,19 +635,24 @@ export default function AdminDashboardPage() {
     });
   };
 
-  // ── Parameters L1/L2/L3 ─────────────────────────────────────────────────────
+  // ── Parameters L1/L2/L3 — GLOBAL tree (shared by all projects) ────────────
+  const refreshAfterParamChange = async () => {
+    await loadGlobalData();
+    if (selectedProjectSlug) await loadProjectDetails(selectedProjectSlug);
+  };
+
   const handleCreateL1 = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newL1Name) return;
     try {
       setError(null);
-      await apiCall(`/api/projects/${selectedProjectSlug}/parameters`, {
+      await apiCall("/api/global/parameters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ level: "L1", name: newL1Name }),
       });
       setNewL1Name("");
-      await loadProjectDetails(selectedProjectSlug);
+      await refreshAfterParamChange();
     } catch (err: any) {
       setError(err.message || "Failed to create parameter");
     }
@@ -515,13 +663,13 @@ export default function AdminDashboardPage() {
     if (!newL2Name || !newL2ParentL1Id) return;
     try {
       setError(null);
-      await apiCall(`/api/projects/${selectedProjectSlug}/parameters`, {
+      await apiCall("/api/global/parameters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ level: "L2", name: newL2Name, parentId: newL2ParentL1Id }),
       });
       setNewL2Name("");
-      await loadProjectDetails(selectedProjectSlug);
+      await refreshAfterParamChange();
     } catch (err: any) {
       setError(err.message || "Failed to create parameter");
     }
@@ -532,13 +680,13 @@ export default function AdminDashboardPage() {
     if (!newL3Name || !newL3ParentL2Id) return;
     try {
       setError(null);
-      await apiCall(`/api/projects/${selectedProjectSlug}/parameters`, {
+      await apiCall("/api/global/parameters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ level: "L3", name: newL3Name, parentId: newL3ParentL2Id }),
       });
       setNewL3Name("");
-      await loadProjectDetails(selectedProjectSlug);
+      await refreshAfterParamChange();
     } catch (err: any) {
       setError(err.message || "Failed to create parameter");
     }
@@ -549,13 +697,13 @@ export default function AdminDashboardPage() {
     if (!editingParam || !editingParam.name.trim()) return;
     try {
       setError(null);
-      await apiCall(`/api/projects/${selectedProjectSlug}/parameters/${editingParam.id}`, {
+      await apiCall(`/api/global/parameters/${editingParam.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ level: editingParam.level, name: editingParam.name.trim() }),
       });
       setEditingParam(null);
-      await loadProjectDetails(selectedProjectSlug);
+      await refreshAfterParamChange();
     } catch (err: any) {
       setError(err.message || "Failed to update parameter");
     }
@@ -565,9 +713,9 @@ export default function AdminDashboardPage() {
     const childNote = level === "L1" ? " Its subcategories and segments will be deleted too." : level === "L2" ? " Its segments will be deleted too." : "";
     askConfirm("Delete parameter?", `“${item.name}” (${level}) will be permanently deleted.${childNote}`, "Delete parameter", async () => {
       try {
-        await apiCall(`/api/projects/${selectedProjectSlug}/parameters/${item.id}?level=${level}`, { method: "DELETE" });
+        await apiCall(`/api/global/parameters/${item.id}?level=${level}`, { method: "DELETE" });
         setConfirm(null);
-        await loadProjectDetails(selectedProjectSlug);
+        await refreshAfterParamChange();
       } catch (err: any) {
         setError(err.message || "Failed to delete parameter");
       }
@@ -631,9 +779,11 @@ export default function AdminDashboardPage() {
   };
 
   const sidebarCounts: Record<string, number | undefined> = {
-    findings: activeProject?.findings?.length,
+    // Findings & Parameters are global pools: count the whole pool,
+    // not just the selected project's slice.
+    findings: poolFindings.length,
     groups: activeProject?.groups?.length,
-    parameters: activeProject?.parametersL1?.length,
+    parameters: globalParams.length,
     aspects: activeProject?.viabilityAspects?.length,
     projects: projects.length,
     users: usersList.length,
@@ -719,13 +869,16 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* TAB: FINDINGS */}
+          {/* TAB: FINDINGS — GLOBAL pool */}
           {activeTab === "findings" && (
             <section aria-labelledby="findings-heading" className="space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 id="findings-heading" className="section-title">Findings (User Needs &amp; Pain Points)</h2>
-                  <p className="section-sub">Manage workshop findings with structured tagging (Sumber, Platform, Feature) and scoring linkage.</p>
+                  <h2 id="findings-heading" className="section-title">Findings Pool (User Needs &amp; Pain Points)</h2>
+                  <p className="section-sub">Shared library for all projects. A finding is copied into a project before scoring — the copy is scored independently, so moving it in one workshop never moves it in another.</p>
+                  {globalSetupNote && (
+                    <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{globalSetupNote}</p>
+                  )}
                 </div>
                 <button type="button" onClick={openCreateFinding} className="btn-primary">
                   <Plus className="h-4 w-4" /> Add Finding
@@ -735,67 +888,79 @@ export default function AdminDashboardPage() {
               <div className="card overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[640px] border-collapse text-left text-sm">
-                    <caption className="sr-only">Workshop findings for the selected project</caption>
+                    <caption className="sr-only">All findings: the shared pool and every project's findings</caption>
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
                         <th scope="col" className="px-4 py-3 font-bold text-slate-700">Finding Title</th>
                         <th scope="col" className="px-4 py-3 font-bold text-slate-700">Tags</th>
-                        <th scope="col" className="px-4 py-3 font-bold text-slate-700">Quadrant</th>
-                        <th scope="col" className="px-4 py-3 text-center font-bold text-slate-700">DVF Score</th>
+                        <th scope="col" className="px-4 py-3 font-bold text-slate-700">Origin</th>
                         <th scope="col" className="px-4 py-3 text-right font-bold text-slate-700">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {activeProject?.findings?.length > 0 ? (
-                        activeProject.findings.map((f: any) => (
-                          <tr key={f.id} className="transition hover:bg-slate-50">
-                            <td className="px-4 py-3">
-                              <div className="font-bold text-slate-900">{f.title}</div>
-                              {f.description && <div className="mt-0.5 line-clamp-1 text-xs text-slate-600">{f.description}</div>}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-wrap gap-1">
-                                {f.tagsList?.map((t: any, i: number) => (
-                                  <span key={i} className="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
-                                    {t.category}: {t.value}
-                                  </span>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              {f.scoringStatus?.scored ? (
-                                <span className={`rounded border px-2 py-0.5 text-xs font-bold ${
-                                  f.feasibilityQuadrant === "QUICK_WINS" ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                                  : f.feasibilityQuadrant === "BIG_BETS" ? "border-amber-200 bg-amber-50 text-amber-800"
-                                  : f.feasibilityQuadrant === "AVOID" ? "border-rose-200 bg-rose-50 text-rose-800"
-                                  : "border-blue-200 bg-blue-50 text-blue-800"
-                                }`}>
-                                  {f.feasibilityQuadrant?.replace("_", " ") ?? "QUICK WINS"}
-                                </span>
-                              ) : (
-                                <span className="rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-800">
-                                  Awaiting scoring
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-center font-mono font-bold text-emerald-700">
-                              {f.scores?.composite != null ? f.scores.composite : "—"}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <button type="button" onClick={() => openEditFinding(f)} aria-label={`Edit finding ${f.title}`} className="btn-icon">
-                                  <Edit2 className="h-4 w-4" />
-                                </button>
-                                <button type="button" onClick={() => handleDeleteFinding(f)} aria-label={`Delete finding ${f.title}`} className="btn-icon-danger">
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
+                      {poolFindings.length > 0 ? (
+                        poolFindings.map((f: any) => {
+                          const meta = findingMeta(f);
+                          const isPool = !f.projectId;
+                          return (
+                            <tr key={f.id} className="transition hover:bg-slate-50">
+                              <td className="px-4 py-3">
+                                <div className="font-bold text-slate-900">{f.title}</div>
+                                {f.description && <div className="mt-0.5 line-clamp-1 text-xs text-slate-600">{f.description}</div>}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-wrap gap-1">
+                                  {meta.tagsList.map((t: any, i: number) => (
+                                    <span key={i} className="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                                      {t.category}: {t.value}
+                                    </span>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                {isPool ? (
+                                  <span className="rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800">Pool</span>
+                                ) : (
+                                  <span className="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700">{f.projectName || f.projectSlug || "Project"}</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  {isPool ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyFindingToProject(f)}
+                                      aria-label={`Copy ${f.title} into ${activeProject?.name || "selected project"}`}
+                                      title={`Copy into ${activeProject?.name || "selected project"} (starts Unscored)`}
+                                      className="btn-icon"
+                                    >
+                                      <Copy className="h-4 w-4" />
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyFindingToPool(f)}
+                                      aria-label={`Copy ${f.title} to the pool`}
+                                      title="Copy to the pool (starts Unscored)"
+                                      className="btn-icon"
+                                    >
+                                      <Copy className="h-4 w-4" />
+                                    </button>
+                                  )}
+                                  <button type="button" onClick={() => openEditFinding(f)} aria-label={`Edit finding ${f.title}`} className="btn-icon">
+                                    <Edit2 className="h-4 w-4" />
+                                  </button>
+                                  <button type="button" onClick={() => handleDeleteFinding(f)} aria-label={`Delete finding ${f.title}`} className="btn-icon-danger">
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
                       ) : (
                         <tr>
-                          <td colSpan={5} className="py-8 text-center italic text-slate-600">No findings created yet. Click “Add Finding” above.</td>
+                          <td colSpan={4} className="py-8 text-center italic text-slate-600">No findings yet. Click “Add Finding” above.</td>
                         </tr>
                       )}
                     </tbody>
@@ -814,8 +979,14 @@ export default function AdminDashboardPage() {
                     <Sparkles className="h-4 w-4" /> Framework Weighting
                   </div>
                   <h2 id="weights-heading" className="mt-1 text-xl font-bold text-slate-900">DVF Framework Allocation</h2>
+                  <p className="mt-1 text-sm font-semibold text-emerald-700">Global — applies to all projects.</p>
                   <p className="mt-1 text-sm text-slate-600">Enter any number for Desirability, Viability, and Feasibility. Weights are saved exactly as you type them — nothing is recalculated or forced to total 100.</p>
                   <p className="mt-1 text-sm text-slate-600">The composite DVF score uses these weights as-is, so if the total is not 100 the composite will not be out of 100 either.</p>
+                  {weightsSource && weightsSource !== "global" && (
+                    <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                      Showing the {weightsSource.replace("project:", "")} project's weights for now. {globalSetupNote || "Run docs/global-setup-sql.md in the Supabase SQL editor to make weights global."}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-5 pt-2">
@@ -955,7 +1126,10 @@ export default function AdminDashboardPage() {
             <section aria-labelledby="parameters-heading" className="space-y-6">
               <div>
                 <h2 id="parameters-heading" className="section-title">L1-L3 Parameters &amp; Rules</h2>
-                <p className="section-sub">Build the parameter hierarchy used for Desirability scoring.</p>
+                <p className="section-sub">Global — one hierarchy used by all projects for Desirability scoring.</p>
+                {globalSetupNote && (
+                  <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{globalSetupNote}</p>
+                )}
               </div>
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <div className="card space-y-5 p-5">
@@ -976,7 +1150,7 @@ export default function AdminDashboardPage() {
                         <label htmlFor="l2-parent" className="field-label">Parent L1 category</label>
                         <select id="l2-parent" value={newL2ParentL1Id} onChange={(e) => setNewL2ParentL1Id(e.target.value)} required className="input w-full">
                           <option value="">Select Parent L1 Category...</option>
-                          {activeProject?.parametersL1?.map((l1: any) => (<option key={l1.id} value={l1.id}>{l1.name}</option>))}
+                          {globalParams.map((l1: any) => (<option key={l1.id} value={l1.id}>{l1.name}</option>))}
                         </select>
                       </div>
                       <div className="flex flex-col gap-2 sm:flex-row">
@@ -994,7 +1168,7 @@ export default function AdminDashboardPage() {
                         <label htmlFor="l3-parent" className="field-label">Parent L2 subcategory</label>
                         <select id="l3-parent" value={newL3ParentL2Id} onChange={(e) => setNewL3ParentL2Id(e.target.value)} required className="input w-full">
                           <option value="">Select Parent L2 Subcategory...</option>
-                          {activeProject?.parametersL1?.flatMap((l1: any) =>
+                          {globalParams.flatMap((l1: any) =>
                             (l1.subCategories || []).map((l2: any) => (
                               <option key={l2.id} value={l2.id}>{l1.name} → {l2.name}</option>
                             ))
@@ -1013,7 +1187,7 @@ export default function AdminDashboardPage() {
                 <div className="card space-y-4 p-5">
                   <h3 className="text-sm font-bold text-slate-900">Configured Hierarchy (L1 → L2 → L3)</h3>
                   <div className="max-h-[500px] space-y-4 overflow-y-auto pr-1">
-                    {activeProject?.parametersL1?.length > 0 ? activeProject.parametersL1.map((l1: any) => (
+                    {globalParams.length > 0 ? globalParams.map((l1: any) => (
                       <div key={l1.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">L1: {l1.name}</span>
@@ -1155,7 +1329,7 @@ export default function AdminDashboardPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h2 id="users-heading" className="text-base font-bold text-slate-900">User Management</h2>
-                    <p className="mt-0.5 text-sm text-slate-600">Create and manage facilitator and admin credentials.</p>
+                    <p className="mt-0.5 text-sm text-slate-600">Global — users and roles are not tied to any project. Create and manage facilitator and admin credentials.</p>
                   </div>
                   <button type="button" onClick={openCreateUser} className="btn-primary"><Plus className="h-4 w-4" /> Create User</button>
                 </div>
@@ -1237,6 +1411,21 @@ export default function AdminDashboardPage() {
       {findingModalOpen && (
         <Modal title={editingFindingId ? "Edit Finding" : "Create New Finding"} onClose={() => setFindingModalOpen(false)} wide>
           <form onSubmit={handleSaveFinding} className="space-y-3">
+            {!editingFindingId && (
+              <fieldset>
+                <legend className="field-label">Where should this finding live?</legend>
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex cursor-pointer items-center gap-1.5">
+                    <input type="radio" name="finding-target" checked={findingTarget === "pool"} onChange={() => setFindingTarget("pool")} className="h-4 w-4 accent-emerald-600" />
+                    <span className="text-sm text-slate-700">Shared pool (usable in any workshop)</span>
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-1.5">
+                    <input type="radio" name="finding-target" checked={findingTarget === "project"} onChange={() => setFindingTarget("project")} className="h-4 w-4 accent-emerald-600" />
+                    <span className="text-sm text-slate-700">This project only ({activeProject?.name || "selected project"})</span>
+                  </label>
+                </div>
+              </fieldset>
+            )}
             <div>
               <label htmlFor="finding-title" className="field-label">Finding Title (User Need / Pain Point)</label>
               <input id="finding-title" type="text" required placeholder="e.g. Tampilan Membingungkan" value={findingForm.title} onChange={(e) => setFindingForm((f) => ({ ...f, title: e.target.value }))} className="input w-full" />
