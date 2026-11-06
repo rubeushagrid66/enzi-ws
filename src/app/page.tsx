@@ -152,11 +152,11 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <p>Enzi Workshop Platform • Desirability, Viability & Feasibility (DVF) Engine</p>
           <div className="flex items-center gap-4">
-            <Link href="/admin" className="hover:text-slate-800 transition">
-              Admin Portal
+            <Link href="/admin/login" className="hover:text-slate-800 transition">
+              Admin Login
             </Link>
             <Link href="/admin/login" className="hover:text-slate-800 transition">
-              Facilitator Login
+              User login
             </Link>
           </div>
         </div>
