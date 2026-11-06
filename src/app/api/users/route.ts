@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    const { name, email, password, role } = await request.json();
+    const { name, email, password, role, groupId } = await request.json();
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -37,9 +37,14 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    // groupId: null/empty = no group; otherwise the group must exist.
+    const cleanGroupId = typeof groupId === "string" && groupId.trim() !== "" ? groupId.trim() : null;
+    if (cleanGroupId && !(await dbService.getGroupById(cleanGroupId))) {
+      return NextResponse.json({ error: "Group not found" }, { status: 400 });
+    }
 
     const passwordHash = await hashPassword(password);
-    const user = await dbService.createUser({ name, email, passwordHash, role });
+    const user = await dbService.createUser({ name, email, passwordHash, role, groupId: cleanGroupId });
     return NextResponse.json({ success: true, user });
   } catch (error: any) {
     console.error("Error creating user:", error);

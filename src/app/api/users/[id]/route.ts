@@ -15,13 +15,22 @@ export async function PUT(
     if (!adminOnly(session)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
-    const { name, role, password } = await request.json();
+    const { name, role, password, groupId } = await request.json();
     if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
     if (role !== undefined && !(USER_ROLES as readonly string[]).includes(role)) {
       return NextResponse.json(
         { error: `role must be one of: ${USER_ROLES.join(", ")}` },
         { status: 400 }
       );
+    }
+    // groupId: undefined = leave untouched; null/"" = clear; a string
+    // must be an existing group.
+    const groupIdChanged = groupId !== undefined;
+    const cleanGroupId = groupIdChanged
+      ? (typeof groupId === "string" && groupId.trim() !== "" ? groupId.trim() : null)
+      : undefined;
+    if (cleanGroupId && !(await dbService.getGroupById(cleanGroupId))) {
+      return NextResponse.json({ error: "Group not found" }, { status: 400 });
     }
     // Prevent demoting the last active ADMIN (including yourself).
     if (role && role !== "ADMIN") {
@@ -32,7 +41,17 @@ export async function PUT(
       }
     }
     const passwordHash = password ? await hashPassword(password) : undefined;
-    const user = await dbService.updateUser(params.id, { name, role, passwordHash });
+    const user = await dbService.updateUser(params.id, { name, role, passwordHash, groupId: cleanGroupId });
+    // Best-effort: when the assigned group changed, move the user's
+    // participant in that group's project into the new group so the
+    // "Me" chip follows immediately. Never fails the user save.
+    if (groupIdChanged && cleanGroupId) {
+      try {
+        await dbService.moveUserParticipantToGroup(params.id, user.name, cleanGroupId);
+      } catch {
+        // The /me flow moves/creates the participant on next use.
+      }
+    }
     return NextResponse.json({ success: true, user });
   } catch (error) {
     console.error("Error updating user:", error);

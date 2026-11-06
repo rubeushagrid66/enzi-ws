@@ -618,8 +618,9 @@ export default function WorkshopSession({
                         the Viability score (the share of scored aspects); scores on
                         Desirability- or Feasibility-linked aspects feed those scores
                         instead — see the group headings on the matrix. If your role
-                        is Business &amp; Ops, Product or Tech you only see your own
-                        label&apos;s aspects.
+                        is Business &amp; Ops, Product or Tech you can only score
+                        your own label&apos;s aspects in your own group (marked Me) —
+                        every other group and aspect is view-only.
                       </p>
                     </div>
                     <ViabilityVoteMatrix

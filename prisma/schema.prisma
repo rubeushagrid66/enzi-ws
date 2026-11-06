@@ -13,6 +13,7 @@ model User {
   email        String   @unique
   passwordHash String
   role         String   @default("FACILITATOR") // ADMIN | FACILITATOR | "Business & Ops" | "Product" | "Tech" — the last three see only aspects whose label matches their role
+  groupId      String? // Assigned group (a group's id) — the user's "me" participant lives in this group, so their votes land there. Null = no group assigned.
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

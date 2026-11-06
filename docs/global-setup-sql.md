@@ -114,3 +114,22 @@ Notes: `score` is 1, 2 or 3 (null = no score yet). A vote with a
 score set counts as validated for the current Viability formula, so
 existing boolean-only votes keep counting exactly as before. The new
 1–3 scoring formula itself comes later and is not part of this step.
+
+## Step 6 — User group assignment (run once)
+
+Each login user can be assigned to a group from the dashboard Users
+tab ("Group" field). The assigned group is where that user's "me"
+participant lives, so their votes land in that group (the group chips
+in the scoring table mark it with "• Me"). Until this column exists,
+the field does not stick and the participant falls back to name
+matching or the project's first group.
+
+```sql
+alter table users add column if not exists group_id text;
+```
+
+Notes: `group_id` is null when no group is assigned. It references a
+group id; groups are per-project, so a user assigned to a group in one
+project keeps that assignment when another project is selected — the
+participant is only moved when the assigned group belongs to the
+project being scored.
