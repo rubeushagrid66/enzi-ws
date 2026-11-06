@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Users2 } from "lucide-react";
+import { normalizeFramework } from "@/lib/scoring";
 
 /**
  * Participant voting matrix (aspects validation), shared by the finding
@@ -11,7 +12,18 @@ import { Users2 } from "lucide-react";
  * validate / not-validated answer as that participant — votes are
  * stored per participantId, never as the facilitator. Toggling is
  * last-write-wins per (finding, participant, aspect).
+ *
+ * Aspect → framework linkage: aspects are grouped under the framework
+ * their votes feed (Desirability, Viability, Feasibility), so it is
+ * obvious which dimension each vote scores. Aspects without a framework
+ * count as Viability.
  */
+const FRAMEWORK_ORDER = ["Desirability", "Viability", "Feasibility"] as const;
+const FRAMEWORK_HEADER_CLASS: Record<string, string> = {
+  Desirability: "bg-emerald-100 text-emerald-800",
+  Viability: "bg-blue-100 text-blue-800",
+  Feasibility: "bg-amber-100 text-amber-800",
+};
 export default function ViabilityVoteMatrix({
   project,
   finding,
@@ -23,6 +35,17 @@ export default function ViabilityVoteMatrix({
   isAdmin: boolean;
   onVotesChanged?: (updatedFinding: any) => void;
 }) {
+  // Aspects grouped by the framework their votes feed, in D/V/F order
+  // (creation order within a group). The score for a dimension only
+  // counts votes on its own linked aspects.
+  const groupedAspects = FRAMEWORK_ORDER.map((fw) => ({
+    framework: fw,
+    aspects: (project.viabilityAspects || []).filter(
+      (a: any) => normalizeFramework(a.framework) === fw
+    ),
+  })).filter((g) => g.aspects.length > 0);
+  const orderedAspects = groupedAspects.flatMap((g) => g.aspects);
+
   const [votingState, setVotingState] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
     for (const v of finding.viabilityVotes || []) {
@@ -94,6 +117,8 @@ export default function ViabilityVoteMatrix({
           <p className="text-xs text-slate-500 mt-0.5">
             Record each participant&apos;s own answer per aspect — check the
             box when they validate it, leave it empty when they don&apos;t.
+            Votes feed the framework their aspect is linked to
+            (Desirability, Viability, or Feasibility).
             {isAdmin ? " Click to toggle votes live." : " Read-only view."}
           </p>
         </div>
@@ -109,8 +134,20 @@ export default function ViabilityVoteMatrix({
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70">
-                <th scope="col" className="py-2.5 px-3 font-bold text-slate-700">Group / Participant</th>
-                {project.viabilityAspects?.map((aspect: any) => (
+                <th scope="col" rowSpan={2} className="py-2.5 px-3 font-bold text-slate-700 align-bottom">Group / Participant</th>
+                {groupedAspects.map((g) => (
+                  <th
+                    key={g.framework}
+                    scope="colgroup"
+                    colSpan={g.aspects.length}
+                    className={`py-1.5 px-3 text-center text-[10px] font-bold uppercase tracking-wider ${FRAMEWORK_HEADER_CLASS[g.framework]}`}
+                  >
+                    {g.framework} aspects
+                  </th>
+                ))}
+              </tr>
+              <tr className="border-b border-slate-200 bg-slate-50/70">
+                {orderedAspects.map((aspect: any) => (
                   <th
                     key={aspect.id}
                     scope="col"
@@ -127,7 +164,7 @@ export default function ViabilityVoteMatrix({
                 <React.Fragment key={group.id}>
                   <tr className="bg-slate-100/60 font-semibold text-slate-800">
                     <td
-                      colSpan={1 + (project.viabilityAspects?.length || 0)}
+                      colSpan={1 + (orderedAspects.length || 0)}
                       className="py-2 px-3 text-xs uppercase tracking-wider text-slate-600"
                     >
                       {group.name}
@@ -145,7 +182,7 @@ export default function ViabilityVoteMatrix({
                           </div>
                         )}
                       </td>
-                      {project.viabilityAspects?.map((aspect: any) => {
+                      {orderedAspects.map((aspect: any) => {
                         const voteKey = `${participant.id}:${aspect.id}`;
                         const isChecked = Boolean(votingState[voteKey]);
                         return (
@@ -154,7 +191,7 @@ export default function ViabilityVoteMatrix({
                               type="checkbox"
                               checked={isChecked}
                               disabled={!isAdmin}
-                              aria-label={`${participant.name} validates ${aspect.name}`}
+                              aria-label={`${participant.name} validates ${aspect.name} (feeds ${normalizeFramework(aspect.framework)})`}
                               onChange={() =>
                                 handleToggleVote(participant.id, aspect.id)
                               }

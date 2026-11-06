@@ -377,8 +377,9 @@ export default function WorkshopSession({
                       <p className="mt-1 text-sm text-slate-600">
                         Discuss with the group which L1–L3 segments this finding belongs
                         to, tick them, and add the specific note for each (e.g. the
-                        feature it refers to). The Desirability score is computed from
-                        this mapping only.
+                        feature it refers to). The Desirability score is the average of
+                        this mapping and the validation of Desirability-linked aspects
+                        (voted on in Step 2) — whichever inputs exist.
                       </p>
                     </div>
 
@@ -443,9 +444,13 @@ export default function WorkshopSession({
                     <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                       <p className="text-sm text-slate-600">
                         {st.desirabilityScored ? (
-                          <>Current Desirability score: <span className="font-extrabold text-emerald-700">{selectedFinding.scores?.desirability} / 100</span></>
+                          <>Current Desirability score: <span className="font-extrabold text-emerald-700">{selectedFinding.scores?.desirability} / 100</span>
+                            {selectedFinding.scores?.desirabilityDetails?.inputs?.length > 0 && (
+                              <> ({selectedFinding.scores.desirabilityDetails.inputs.map((i: any) => `${i.label} ${i.score}`).join(" · ")})</>
+                            )}
+                          </>
                         ) : (
-                          "Not scored yet — save a mapping to score Desirability."
+                          "Not scored yet — save a mapping or record votes on Desirability-linked aspects to score Desirability."
                         )}
                       </p>
                       <button
@@ -470,8 +475,10 @@ export default function WorkshopSession({
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">
                         Go participant by participant and record each person&apos;s own
-                        answer per aspect. The Viability score is the share of
-                        validated votes.
+                        answer per aspect. Votes on Viability-linked aspects feed the
+                        Viability score (the share of validated votes); votes on
+                        Desirability- or Feasibility-linked aspects feed those scores
+                        instead — see the group headings on the matrix.
                       </p>
                     </div>
                     <ViabilityVoteMatrix
@@ -504,7 +511,9 @@ export default function WorkshopSession({
                       <p className="mt-1 text-sm text-slate-600">
                         Discuss impact vs. effort as a group, drag the card to the
                         position everyone agrees on, then confirm it. The Feasibility
-                        score comes from the quadrant the card lands in.
+                        score is the average of the quadrant the card lands in and the
+                        validation of Feasibility-linked aspects (voted on in Step 2) —
+                        whichever inputs exist.
                       </p>
                     </div>
                     <FeasibilityMatrix
@@ -527,9 +536,13 @@ export default function WorkshopSession({
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <p className="text-sm text-slate-600">
                         {st.feasibilityScored ? (
-                          <>Placed: <span className="font-bold text-slate-900">{selectedFinding.feasibilityQuadrant?.replace("_", " ")}</span> — Feasibility score {selectedFinding.scores?.feasibility} / 100</>
+                          <>Placed: <span className="font-bold text-slate-900">{selectedFinding.feasibilityQuadrant?.replace("_", " ")}</span> — Feasibility score {selectedFinding.scores?.feasibility} / 100
+                            {selectedFinding.scores?.feasibilityDetails?.inputs?.length > 0 && (
+                              <> ({selectedFinding.scores.feasibilityDetails.inputs.map((i: any) => `${i.label} ${i.score}`).join(" · ")})</>
+                            )}
+                          </>
                         ) : (
-                          "Not placed yet — drag the card to a position first."
+                          "Not placed yet — drag the card to a position first, or record votes on Feasibility-linked aspects."
                         )}
                       </p>
                       <button

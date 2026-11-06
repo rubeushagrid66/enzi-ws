@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
+import { FRAMEWORKS } from "@/lib/scoring";
 
 export async function GET(
   _request: Request,
@@ -29,9 +30,15 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { name, description } = await request.json();
+    const { name, description, framework } = await request.json();
     if (!name) {
       return NextResponse.json({ error: "Aspect name is required" }, { status: 400 });
+    }
+    if (framework !== undefined && !FRAMEWORKS.includes(framework)) {
+      return NextResponse.json(
+        { error: "framework must be Desirability, Viability or Feasibility" },
+        { status: 400 }
+      );
     }
 
     const projectId = await dbService.getProjectIdBySlug(params.slug);
@@ -39,7 +46,7 @@ export async function POST(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    const aspect = await dbService.createAspect(projectId, name, description);
+    const aspect = await dbService.createAspect(projectId, name, description, framework ?? "Viability");
     revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, aspect });
   } catch (error) {

@@ -177,9 +177,18 @@ export default function FindingDetailModal({
               {!status.desirabilityScored && (
                 <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                   <span className="font-bold">Not yet scored in the workshop.</span>{" "}
-                  Map this finding to L1–L3 parameters in the workshop (Step 1) — the
-                  Desirability score is computed from those mappings, not from the
-                  Sumber/Platform tags.
+                  Map this finding to L1–L3 parameters in the workshop (Step 1) or
+                  record votes on Desirability-linked aspects — the Desirability
+                  score is computed from those, not from the Sumber/Platform tags.
+                </div>
+              )}
+              {desirability.inputs && desirability.inputs.length > 0 && (
+                <div role="note" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                  <span className="font-bold">How this score is built (average of available inputs): </span>
+                  {desirability.inputs.map((i: any) => `${i.label} ${i.score}`).join("  ·  ")}
+                  {desirability.inputs.length > 1 && (
+                    <> = <span className="font-extrabold">{scores.desirability}</span></>
+                  )}
                 </div>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -297,6 +306,9 @@ export default function FindingDetailModal({
                   </div>
                   <p className="mt-1 text-xs text-blue-700">
                     {viability.totalValidatedVotes ?? 0} of {viability.totalPossibleVotes ?? 0} total possible votes
+                    {viability.aspectsCounted != null && (
+                      <> · counts Viability-linked aspects only ({viability.aspectsCounted} of {project.viabilityAspects?.length ?? 0})</>
+                    )}
                   </p>
                 </div>
 
@@ -398,8 +410,18 @@ export default function FindingDetailModal({
               {!status.feasibilityScored && (
                 <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                   <span className="font-bold">Not yet placed in the workshop.</span>{" "}
-                  Drag the card to the position the group agrees on (workshop Step 3) —
-                  the Feasibility score comes from its quadrant.
+                  Drag the card to the position the group agrees on (workshop Step 3)
+                  or record votes on Feasibility-linked aspects — the Feasibility
+                  score comes from its quadrant and/or those votes.
+                </div>
+              )}
+              {feasibility.inputs && feasibility.inputs.length > 0 && (
+                <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  <span className="font-bold">How this score is built (average of available inputs): </span>
+                  {feasibility.inputs.map((i: any) => `${i.label} ${i.score}`).join("  ·  ")}
+                  {feasibility.inputs.length > 1 && (
+                    <> = <span className="font-extrabold">{scores.feasibility}</span></>
+                  )}
                 </div>
               )}
 

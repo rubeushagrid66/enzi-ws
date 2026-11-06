@@ -92,6 +92,7 @@ model ViabilityAspect {
   id             String          @id @default(cuid())
   projectId      String
   name           String          // e.g. "Market Demand", "Operational Capacity", "Tech Readiness"
+  framework      String          @default("Viability") // Desirability | Viability | Feasibility — the framework dimension this aspect's votes feed
   description    String?
   isActive       Boolean         @default(true)
   createdAt      DateTime        @default(now())
