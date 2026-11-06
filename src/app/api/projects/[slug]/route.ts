@@ -5,9 +5,11 @@ import { revalidateProjectPages } from "@/lib/revalidate";
 import {
   calculateDesirabilityScore,
   calculateViabilityScore,
+  calculateAspectValidation,
   getFeasibilityFromCoordinates,
   calculateCompositeDVF,
   getFindingScoringStatus,
+  normalizeFramework,
   ScoringRule,
 } from "@/lib/scoring";
 import { slugify } from "@/lib/slugify";
@@ -100,15 +102,35 @@ export async function GET(
       return { sumber, fitur, platform, tagsList };
     };
 
+    // Aspect → framework linkage: each aspect feeds the dimension it is
+    // linked to. Aspects without a framework (created before the linkage
+    // existed) count as Viability, so existing behaviour is unchanged
+    // until an aspect is re-linked.
+    const aspectIdsFor = (dim: string) =>
+      (project.viabilityAspects || [])
+        .filter((a: any) => normalizeFramework(a.framework) === dim)
+        .map((a: any) => a.id);
+    const dAspectIds = aspectIdsFor("Desirability");
+    const vAspectIds = aspectIdsFor("Viability");
+    const fAspectIds = aspectIdsFor("Feasibility");
+
     // Calculate DVF metrics for each finding. Scores are workshop-made:
     // a dimension only has a number once the workshop produced data for
     // it. Otherwise the dimension (and the composite) is null — "Pending
     // scoring" — never a 0 that looks like a real score.
+    // Blend rule: within a dimension, the score is the average of the
+    // inputs available for it (L3 mapping and/or linked-aspect
+    // validation for D, V-linked votes for V, quadrant and/or
+    // linked-aspect validation for F).
     const findingsWithScores = (project.findings || []).map((f: any) => {
       const { sumber, fitur, platform, tagsList } = parseFindingMeta(f.tags);
-      const scoringStatus = getFindingScoringStatus(f);
+      const scoringStatus = getFindingScoringStatus(
+        f,
+        project.viabilityAspects
+      );
 
-      // 1. Desirability — explicit L3 mappings only (workshop mapping).
+      // 1. Desirability — explicit L3 mappings, blended with validation
+      // of Desirability-linked aspects when the workshop voted on them.
       const findingValues = (f.parameterValues || []).map((pv: any) => ({
         l3Id: pv.l3Id,
         l3: pv.segment
@@ -117,22 +139,42 @@ export async function GET(
             }
           : undefined,
       }));
+      const dAspectValidation = calculateAspectValidation(
+        dAspectIds,
+        project.groups,
+        f.viabilityVotes
+      );
       const desirabilityData = scoringStatus.desirabilityScored
-        ? calculateDesirabilityScore(parsedL1, findingValues)
-        : null;
-
-      // 2. Viability — participant votes only.
-      const viabilityData = scoringStatus.viabilityScored
-        ? calculateViabilityScore(
-            project.viabilityAspects.length,
-            project.groups,
-            f.viabilityVotes
+        ? calculateDesirabilityScore(
+            parsedL1,
+            findingValues,
+            dAspectValidation?.score ?? null
           )
         : null;
 
-      // 3. Feasibility — a placed matrix position only.
+      // 2. Viability — participant votes on Viability-linked aspects only.
+      const viabilityData = scoringStatus.viabilityScored
+        ? calculateViabilityScore(
+            vAspectIds.length,
+            project.groups,
+            f.viabilityVotes,
+            vAspectIds
+          )
+        : null;
+
+      // 3. Feasibility — placed matrix position, blended with validation
+      // of Feasibility-linked aspects when the workshop voted on them.
+      const fAspectValidation = calculateAspectValidation(
+        fAspectIds,
+        project.groups,
+        f.viabilityVotes
+      );
       const feasibilityData = scoringStatus.feasibilityScored
-        ? getFeasibilityFromCoordinates(f.feasibilityX, f.feasibilityY)
+        ? getFeasibilityFromCoordinates(
+            f.feasibilityX,
+            f.feasibilityY,
+            fAspectValidation?.score ?? null
+          )
         : null;
 
       // 4. Composite DVF — only when all three dimensions are scored.

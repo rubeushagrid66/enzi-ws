@@ -93,6 +93,10 @@ export const dbService = {
         viabilityAspects: (aspectsRes.data || []).map((a: any) => ({
           id: a.id,
           name: a.name,
+          // The framework column only exists after the SQL in
+          // docs/aspect-framework-sql.md is run; until then every aspect
+          // reads as Viability, exactly as before.
+          framework: a.framework ?? "Viability",
           description: a.description,
           isActive: a.is_active,
         })),
@@ -673,17 +677,29 @@ export const dbService = {
 
   // ── Viability Aspect CRUD ────────────────────────────────────────────────────
 
-  async createAspect(projectId: string, name: string, description?: string) {
+  async createAspect(projectId: string, name: string, description?: string, framework?: string) {
+    const fw = framework === "Desirability" || framework === "Feasibility" ? framework : "Viability";
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase
+      // The framework column may not exist yet in Supabase (it is added
+      // by docs/aspect-framework-sql.md). If the insert fails on that
+      // column, retry without it so aspect creation never breaks.
+      let res = await supabase
         .from("viability_aspects")
-        .insert({ project_id: projectId, name, description: description || "", is_active: true })
+        .insert({ project_id: projectId, name, description: description || "", is_active: true, framework: fw })
         .select()
         .single();
-      if (error) throw error;
-      return data;
+      if (res.error && /framework/i.test(res.error.message || "")) {
+        console.warn("viability_aspects.framework column missing — saving aspect without framework; run docs/aspect-framework-sql.md to enable linkage.");
+        res = await supabase
+          .from("viability_aspects")
+          .insert({ project_id: projectId, name, description: description || "", is_active: true })
+          .select()
+          .single();
+      }
+      if (res.error) throw res.error;
+      return { ...res.data, framework: res.data.framework ?? fw };
     }
-    return prisma.viabilityAspect.create({ data: { projectId, name, description: description || "" } });
+    return prisma.viabilityAspect.create({ data: { projectId, name, description: description || "", framework: fw } });
   },
 
   async deleteAspect(id: string) {
@@ -767,17 +783,32 @@ export const dbService = {
     return prisma.participant.update({ where: { id }, data });
   },
 
-  async updateAspect(id: string, data: { name?: string; description?: string }) {
+  async updateAspect(id: string, data: { name?: string; description?: string; framework?: string }) {
+    const fw = data.framework === "Desirability" || data.framework === "Feasibility" ? data.framework : data.framework === "Viability" ? "Viability" : undefined;
     if (isSupabaseConfigured && supabase) {
-      const { data: a, error } = await supabase.from("viability_aspects").update({
+      const withFramework = {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.description !== undefined && { description: data.description }),
+        ...(fw !== undefined && { framework: fw }),
         updated_at: new Date().toISOString(),
-      }).eq("id", id).select().single();
-      if (error) throw error;
-      return a;
+      };
+      let res = await supabase.from("viability_aspects").update(withFramework).eq("id", id).select().single();
+      if (res.error && fw !== undefined && /framework/i.test(res.error.message || "")) {
+        console.warn("viability_aspects.framework column missing — saving aspect without framework; run docs/aspect-framework-sql.md to enable linkage.");
+        const { framework: _omit, ...withoutFramework } = withFramework as any;
+        res = await supabase.from("viability_aspects").update(withoutFramework).eq("id", id).select().single();
+      }
+      if (res.error) throw res.error;
+      return { ...res.data, framework: res.data.framework ?? fw ?? "Viability" };
     }
-    return prisma.viabilityAspect.update({ where: { id }, data });
+    return prisma.viabilityAspect.update({
+      where: { id },
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.description !== undefined && { description: data.description }),
+        ...(fw !== undefined && { framework: fw }),
+      },
+    });
   },
 
   async updateParameterL1(id: string, name: string) {
