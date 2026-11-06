@@ -16,10 +16,14 @@ import { normalizeFramework } from "@/lib/scoring";
  * - Each aspect lists the selected group's participants and their votes
  *   (score + Alasan, or "Not scored yet"). Empty groups show a note.
  * - Editing: only in MY group, and only on aspects my role may score
- *   (label-role users: aspects whose label equals their role; ADMIN /
- *   FACILITATOR: any aspect). The server enforces vote-as-yourself +
- *   label match on the vote API, so the UI rules below mirror it and
- *   never widen it. Other groups are always read-only, for every role.
+ *   (label-role users: aspects whose label equals their role;
+ *   FACILITATOR: any aspect, in their own group). Other groups are
+ *   read-only for every role — except ADMIN, who can edit any
+ *   participant's score and Alasan in any group (an admin is never
+ *   blocked by not belonging to a group). The server enforces
+ *   vote-as-yourself + label match on the vote API, and lets ADMIN /
+ *   FACILITATOR vote for a named participant, so the UI rules below
+ *   mirror it and never widen it.
  * - Public (logged-out) viewers are read-only.
  *
  * A score counts as validated for the current Viability formula
@@ -54,6 +58,7 @@ export default function ViabilityVoteMatrix({
   onVotesChanged?: (updatedFinding: any) => void;
 }) {
   const myLabel = isLabelRole(currentUser?.role) ? currentUser!.role : null;
+  const isAdmin = currentUser?.role === "ADMIN";
   const groups = (project.groups || []).filter((g: any) => g.isActive !== false);
 
   // "Me": the participant row the viewer votes as, plus its group.
@@ -154,26 +159,29 @@ export default function ViabilityVoteMatrix({
   const canVote = Boolean(currentUser) && meId !== null;
   // Editable only in my own group, and only on aspects my role may
   // score (label roles: matching label only; ADMIN/FACILITATOR: any).
+  // ADMIN additionally edits any participant's row in any group.
   const canEditAspect = (aspect: any) =>
     canVote && isMyGroup && (!myLabel || aspect.label === myLabel);
 
-  // My scores / reasons, keyed by aspect id. Synced from the finding
-  // only when a different finding is shown (or "me" resolves) — never
-  // while typing, so a background refresh cannot clobber the Alasan
-  // input mid-keystroke.
-  const [myScores, setMyScores] = useState<Record<string, number | null>>({});
-  const [myReasons, setMyReasons] = useState<Record<string, string>>({});
+  // Scores / reasons, keyed by `${aspectId}:${participantId}` — one
+  // entry per row in the table. The "me" row uses the viewer's own
+  // participant id; an admin editing someone else's row uses that
+  // participant's id. Synced from the finding only when a different
+  // finding is shown — never while typing, so a background refresh
+  // cannot clobber an Alasan input mid-keystroke.
+  const voteKey = (aspectId: string, participantId: string) => `${aspectId}:${participantId}`;
+  const [scores, setScores] = useState<Record<string, number | null>>({});
+  const [reasons, setReasons] = useState<Record<string, string>>({});
   useEffect(() => {
-    const scores: Record<string, number | null> = {};
-    const reasons: Record<string, string> = {};
+    const nextScores: Record<string, number | null> = {};
+    const nextReasons: Record<string, string> = {};
     for (const v of finding.viabilityVotes || []) {
-      if (v.participantId !== meId) continue;
-      scores[v.aspectId] = v.score != null ? Number(v.score) : null;
-      reasons[v.aspectId] = v.reason || "";
+      nextScores[voteKey(v.aspectId, v.participantId)] = v.score != null ? Number(v.score) : null;
+      nextReasons[voteKey(v.aspectId, v.participantId)] = v.reason || "";
     }
-    setMyScores(scores);
-    setMyReasons(reasons);
-  }, [finding.id, meId]); // eslint-disable-line react-hooks/exhaustive-deps
+    setScores(nextScores);
+    setReasons(nextReasons);
+  }, [finding.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -198,8 +206,9 @@ export default function ViabilityVoteMatrix({
   }, [project.slug, finding.id, onVotesChanged]);
 
   const postVote = useCallback(
-    async (aspectId: string, score: number | null, reason: string) => {
-      setSaving((s) => ({ ...s, [aspectId]: true }));
+    async (aspectId: string, participantId: string, score: number | null, reason: string) => {
+      const key = voteKey(aspectId, participantId);
+      setSaving((s) => ({ ...s, [key]: true }));
       setSaveError(null);
       try {
         const res = await fetch(
@@ -207,7 +216,7 @@ export default function ViabilityVoteMatrix({
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ aspectId, score, reason }),
+            body: JSON.stringify({ aspectId, participantId, score, reason }),
           }
         );
         if (!res.ok) {
@@ -218,42 +227,45 @@ export default function ViabilityVoteMatrix({
       } catch (e: any) {
         setSaveError(e.message || "Failed to save score");
         // Revert the optimistic local state from the finding prop.
-        const mine = (finding.viabilityVotes || []).find(
-          (v: any) => v.participantId === meId && v.aspectId === aspectId
+        const saved = (finding.viabilityVotes || []).find(
+          (v: any) => v.participantId === participantId && v.aspectId === aspectId
         );
-        setMyScores((prev) => ({ ...prev, [aspectId]: mine?.score != null ? Number(mine.score) : null }));
-        setMyReasons((prev) => ({ ...prev, [aspectId]: mine?.reason || "" }));
+        setScores((prev) => ({ ...prev, [key]: saved?.score != null ? Number(saved.score) : null }));
+        setReasons((prev) => ({ ...prev, [key]: saved?.reason || "" }));
       } finally {
-        setSaving((s) => ({ ...s, [aspectId]: false }));
+        setSaving((s) => ({ ...s, [key]: false }));
       }
     },
-    [project.slug, finding, meId, refreshFinding]
+    [project.slug, finding, refreshFinding]
   );
 
-  const handleScoreClick = (aspectId: string, score: number) => {
-    if (!canVote || saving[aspectId]) return;
-    const next = myScores[aspectId] === score ? null : score;
-    setMyScores((prev) => ({ ...prev, [aspectId]: next }));
-    postVote(aspectId, next, myReasons[aspectId] || "");
+  const handleScoreClick = (aspectId: string, participantId: string, score: number) => {
+    const key = voteKey(aspectId, participantId);
+    if (!currentUser || saving[key]) return;
+    const next = scores[key] === score ? null : score;
+    setScores((prev) => ({ ...prev, [key]: next }));
+    postVote(aspectId, participantId, next, reasons[key] || "");
   };
 
-  const handleReasonChange = (aspectId: string, value: string) => {
-    setMyReasons((prev) => ({ ...prev, [aspectId]: value }));
-    if (reasonTimers.current[aspectId]) clearTimeout(reasonTimers.current[aspectId]);
-    reasonTimers.current[aspectId] = setTimeout(() => {
-      postVote(aspectId, myScores[aspectId] ?? null, value);
+  const handleReasonChange = (aspectId: string, participantId: string, value: string) => {
+    const key = voteKey(aspectId, participantId);
+    setReasons((prev) => ({ ...prev, [key]: value }));
+    if (reasonTimers.current[key]) clearTimeout(reasonTimers.current[key]);
+    reasonTimers.current[key] = setTimeout(() => {
+      postVote(aspectId, participantId, scores[key] ?? null, value);
     }, 700);
   };
 
-  const handleReasonBlur = (aspectId: string) => {
-    if (reasonTimers.current[aspectId]) {
-      clearTimeout(reasonTimers.current[aspectId]);
-      delete reasonTimers.current[aspectId];
+  const handleReasonBlur = (aspectId: string, participantId: string) => {
+    const key = voteKey(aspectId, participantId);
+    if (reasonTimers.current[key]) {
+      clearTimeout(reasonTimers.current[key]);
+      delete reasonTimers.current[key];
     }
     // Save on blur only if a score exists (a reason without a score
     // has nothing to attach to yet).
-    if (myScores[aspectId] != null) {
-      postVote(aspectId, myScores[aspectId], myReasons[aspectId] || "");
+    if (scores[key] != null) {
+      postVote(aspectId, participantId, scores[key], reasons[key] || "");
     }
   };
 
@@ -285,6 +297,9 @@ export default function ViabilityVoteMatrix({
             Scores and reasons are visible to everyone.
             {myLabel
               ? ` You are signed in as ${myLabel} — you can only score ${myLabel} aspects, in your own group.`
+              : ""}
+            {isAdmin
+              ? " You are signed in as Admin — you can edit any participant's score and reason in any group."
               : ""}
             {!currentUser ? " Sign in to score." : ""}
             {meFailed ? " Your voter profile could not be resolved — read-only for now." : ""}
@@ -364,8 +379,6 @@ export default function ViabilityVoteMatrix({
                   </tr>
                   {g.aspects.map((aspect: any) => {
                     const editable = canEditAspect(aspect);
-                    const myScore = myScores[aspect.id] ?? null;
-                    const myReason = myReasons[aspect.id] || "";
                     const fw = normalizeFramework(aspect.framework);
                     return (
                       <React.Fragment key={aspect.id}>
@@ -390,7 +403,7 @@ export default function ViabilityVoteMatrix({
                                   Not your label — view only
                                 </span>
                               )}
-                              {!isMyGroup && currentUser && (
+                              {!isMyGroup && currentUser && !isAdmin && (
                                 <span className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-400">
                                   View only
                                 </span>
@@ -404,6 +417,14 @@ export default function ViabilityVoteMatrix({
                         {orderedParticipants.map((p: any) => {
                           const isMe = p.id === meId;
                           const vote = (votesByAspect[aspect.id] || {})[p.id];
+                          // Admin edits any participant's row in any
+                          // group; everyone else only their own row, in
+                          // their own group, on aspects their role may
+                          // score. The vote API enforces the same rule.
+                          const rowEditable = isAdmin || (isMe && editable);
+                          const key = voteKey(aspect.id, p.id);
+                          const rowScore = scores[key] ?? null;
+                          const rowReason = reasons[key] || "";
                           return (
                             <tr key={`${aspect.id}:${p.id}`} className="hover:bg-slate-50/80 transition align-top">
                               <td className="py-2.5 px-3">
@@ -418,18 +439,18 @@ export default function ViabilityVoteMatrix({
                                 )}
                               </td>
                               <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                                {isMe && editable ? (
+                                {rowEditable ? (
                                   <span className="inline-flex items-center gap-1" role="group" aria-label={`Score for ${aspect.name}`}>
                                     {[1, 2, 3].map((n) => (
                                       <button
                                         key={n}
                                         type="button"
-                                        disabled={saving[aspect.id]}
-                                        aria-pressed={myScore === n}
+                                        disabled={saving[key]}
+                                        aria-pressed={rowScore === n}
                                         aria-label={`Score ${n} for ${aspect.name}`}
-                                        onClick={() => handleScoreClick(aspect.id, n)}
+                                        onClick={() => handleScoreClick(aspect.id, p.id, n)}
                                         className={`h-8 w-8 rounded-lg border text-sm font-extrabold transition disabled:opacity-60 ${
-                                          myScore === n
+                                          rowScore === n
                                             ? "border-blue-600 bg-blue-600 text-white"
                                             : "border-slate-300 bg-white text-slate-700 hover:border-blue-400"
                                         }`}
@@ -437,12 +458,12 @@ export default function ViabilityVoteMatrix({
                                         {n}
                                       </button>
                                     ))}
-                                    {myScore != null && (
+                                    {rowScore != null && (
                                       <button
                                         type="button"
-                                        disabled={saving[aspect.id]}
+                                        disabled={saving[key]}
                                         aria-label={`Clear score for ${aspect.name}`}
-                                        onClick={() => handleScoreClick(aspect.id, myScore)}
+                                        onClick={() => handleScoreClick(aspect.id, p.id, rowScore)}
                                         className="ml-1 text-[11px] font-semibold text-slate-500 hover:text-rose-600 disabled:opacity-60"
                                       >
                                         Clear
@@ -454,20 +475,20 @@ export default function ViabilityVoteMatrix({
                                 )}
                               </td>
                               <td className="py-2.5 px-3 min-w-[180px]">
-                                {isMe && editable ? (
+                                {rowEditable ? (
                                   <input
                                     type="text"
-                                    value={myReason}
+                                    value={rowReason}
                                     maxLength={500}
                                     placeholder="Alasan untuk skor ini…"
                                     aria-label={`Alasan for ${aspect.name}`}
-                                    onChange={(e) => handleReasonChange(aspect.id, e.target.value)}
-                                    onBlur={() => handleReasonBlur(aspect.id)}
+                                    onChange={(e) => handleReasonChange(aspect.id, p.id, e.target.value)}
+                                    onBlur={() => handleReasonBlur(aspect.id, p.id)}
                                     className="input w-full !py-1.5 !text-xs"
                                   />
                                 ) : (
                                   <span className="text-slate-600">
-                                    {isMe ? myReason || vote?.reason || "—" : vote?.reason || "—"}
+                                    {vote?.reason || "—"}
                                   </span>
                                 )}
                               </td>
