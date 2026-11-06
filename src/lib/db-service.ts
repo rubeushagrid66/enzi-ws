@@ -418,19 +418,33 @@ export const dbService = {
     const source = await dbService.getFindingById(findingId);
     if (!source) throw new NotFoundError("Finding not found");
     const tagsRaw = typeof source.tags === "string" ? source.tags : JSON.stringify(source.tags || []);
+    // Tags exist in two shapes: the current object form and the legacy
+    // array form [{ value, category }]. Both must be read, or a copy of
+    // a legacy finding silently loses its Sumber / Fitur / Platform.
     let parsed: any = {};
     try {
       parsed = JSON.parse(tagsRaw);
     } catch {
       parsed = {};
     }
-    const data = {
-      title: source.title,
-      description: source.description || "",
-      sumber: Array.isArray(parsed.sumber) ? parsed.sumber : [],
-      fitur: parsed.fitur || "",
-      platform: Array.isArray(parsed.platform) ? parsed.platform : [],
-    };
+    let data: { title: string; description: string; sumber: string[]; fitur: string; platform: string[] };
+    if (Array.isArray(parsed)) {
+      data = { title: source.title, description: source.description || "", sumber: [], fitur: "", platform: [] };
+      for (const t of parsed) {
+        if (!t || typeof t.value !== "string") continue;
+        if (t.category === "Sumber") data.sumber.push(t.value);
+        else if (t.category === "Platform") data.platform.push(t.value === "CMS Portal" ? "CMS" : t.value);
+        else if (t.category === "Feature" || t.category === "Fitur") data.fitur = t.value;
+      }
+    } else {
+      data = {
+        title: source.title,
+        description: source.description || "",
+        sumber: Array.isArray(parsed.sumber) ? parsed.sumber : [],
+        fitur: parsed.fitur || "",
+        platform: Array.isArray(parsed.platform) ? parsed.platform.map((p: any) => (p === "CMS Portal" ? "CMS" : p)) : [],
+      };
+    }
     // Reuse createFinding (same shape, null feasibility). For a pool
     // target the SQL in docs/global-setup-sql.md must have run; the
     // error then names that file.
