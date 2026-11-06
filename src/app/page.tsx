@@ -34,7 +34,7 @@ export default async function HomePage() {
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight max-w-4xl mx-auto">
-            Prioritize with Confidence using{" "}
+            Bewize Workshop using{" "}
             <span className="text-emerald-600">DVF Framework</span>
           </h1>
 
