@@ -30,6 +30,35 @@ function toNotFoundError(error: any, message: string): Error {
   return isRowNotFound(error) ? new NotFoundError(message) : error;
 }
 
+/** The `users` columns that only exist after the global-setup SQL steps
+ *  (group_id: Step 6, project_id: Step 7). PostgREST names the missing
+ *  column in its error, so a fallback must drop ONLY that column — the
+ *  old "drop both" fallback hid the group assignment as soon as Step 7
+ *  lagged behind Step 6. Returns the reduced column list, or null when
+ *  the error is not about these columns. */
+function withoutMissingUserCols(cols: string[], errorMessage: string): string[] | null {
+  const missing = (errorMessage.match(/group_id|project_id/gi) || []).map((s) => s.toLowerCase());
+  if (missing.length === 0) return null;
+  const drop = new Set(missing);
+  const next = cols.filter((c) => !drop.has(c));
+  return next.length === cols.length ? null : next;
+}
+
+/** Run a users SELECT, retrying with only the PostgREST-named missing
+ *  column dropped (up to two retries, so both columns can fall away). */
+async function usersSelectWithFallback(run: (cols: string) => PromiseLike<any>): Promise<any> {
+  let cols = ["id", "name", "email", "role", "is_active", "group_id", "project_id", "created_at"];
+  let res = await run(cols.join(", "));
+  for (let attempt = 0; attempt < 2 && res.error; attempt++) {
+    const reduced = withoutMissingUserCols(cols, res.error.message || "");
+    if (!reduced) break;
+    console.warn(`users column missing (${cols.filter((c) => !reduced.includes(c)).join(", ")}) — continuing without it; run docs/global-setup-sql.md (Steps 6–7).`);
+    cols = reduced;
+    res = await run(cols.join(", "));
+  }
+  return res;
+}
+
 /** Hint shown when a global structure is missing in Supabase. */
 export const GLOBAL_SQL_HINT =
   "Global setup is not enabled yet — run docs/global-setup-sql.md in the Supabase SQL editor.";
@@ -682,19 +711,10 @@ export const dbService = {
    *  missing means groupId / projectId null. */
   async getUserById(id: string) {
     if (isSupabaseConfigured && supabase) {
-      let res = await supabase
-        .from("users")
-        .select("id, name, email, role, is_active, group_id, project_id, created_at")
-        .eq("id", id)
-        .single();
-      if (res.error && /group_id|project_id/i.test(res.error.message || "")) {
-        console.warn("users.group_id/project_id column missing — reading user without group/project; run docs/global-setup-sql.md (Steps 6–7).");
-        res = await supabase
-          .from("users")
-          .select("id, name, email, role, is_active, created_at")
-          .eq("id", id)
-          .single();
-      }
+      const sb = supabase;
+      const res = await usersSelectWithFallback((cols) =>
+        sb.from("users").select(cols).eq("id", id).single()
+      );
       if (res.error || !res.data) return null;
       const u = res.data;
       return { id: u.id, name: u.name, email: u.email, role: u.role, isActive: u.is_active, groupId: u.group_id ?? null, projectId: u.project_id ?? null, createdAt: u.created_at };
@@ -1456,17 +1476,27 @@ export const dbService = {
       };
       // The group_id / project_id columns only exist after the SQL in
       // docs/global-setup-sql.md (Steps 6–7); missing means the group /
-      // project does not stick — retry without them so the save never breaks.
-      let res = await supabase.from("users")
-        .update({
-          ...base,
-          ...(groupId !== undefined ? { group_id: groupId } : {}),
-          ...(projectId !== undefined ? { project_id: projectId } : {}),
-        })
-        .eq("id", id).select("id, name, email, role, is_active, group_id, project_id, created_at").single();
-      if (res.error && (groupId !== undefined || projectId !== undefined) && /group_id|project_id/i.test(res.error.message || "")) {
-        console.warn("users.group_id/project_id column missing — saving user without group/project; run docs/global-setup-sql.md (Steps 6–7).");
-        res = await supabase.from("users").update(base).eq("id", id).select("id, name, email, role, is_active, created_at").single();
+      // project does not stick — retry without ONLY the missing column,
+      // so a missing project_id never also drops an existing group_id.
+      let payload: any = {
+        ...base,
+        ...(groupId !== undefined ? { group_id: groupId } : {}),
+        ...(projectId !== undefined ? { project_id: projectId } : {}),
+      };
+      let cols = ["id", "name", "email", "role", "is_active", "group_id", "project_id", "created_at"];
+      let res: any = await supabase.from("users")
+        .update(payload)
+        .eq("id", id).select(cols.join(", ")).single();
+      for (let attempt = 0; attempt < 2 && res.error; attempt++) {
+        const reduced = withoutMissingUserCols(cols, res.error.message || "");
+        if (!reduced) break;
+        const drop = new Set(cols.filter((c) => !reduced.includes(c)));
+        const nextPayload = Object.fromEntries(Object.entries(payload).filter(([k]) => !drop.has(k)));
+        if (Object.keys(nextPayload).length === Object.keys(payload).length && reduced.length === cols.length) break;
+        console.warn(`users column missing (${Array.from(drop).join(", ")}) — saving user without it; run docs/global-setup-sql.md (Steps 6–7).`);
+        payload = nextPayload;
+        cols = reduced;
+        res = await supabase.from("users").update(payload).eq("id", id).select(cols.join(", ")).single();
       }
       if (res.error) throw res.error;
       const u = res.data;
@@ -1536,17 +1566,10 @@ export const dbService = {
       }));
     };
     if (isSupabaseConfigured && supabase) {
-      let res: any = await supabase
-        .from("users")
-        .select("id, name, email, role, is_active, group_id, project_id, created_at")
-        .order("created_at", { ascending: false });
-      if (res.error && /group_id|project_id/i.test(res.error.message || "")) {
-        console.warn("users.group_id/project_id column missing — listing users without groups/projects; run docs/global-setup-sql.md (Steps 6–7).");
-        res = await supabase
-          .from("users")
-          .select("id, name, email, role, is_active, created_at")
-          .order("created_at", { ascending: false });
-      }
+      const sb = supabase;
+      const res: any = await usersSelectWithFallback((cols) =>
+        sb.from("users").select(cols).order("created_at", { ascending: false })
+      );
       if (res.error) throw res.error;
       const rows = (res.data || []).map((u: any) => ({
         id: u.id,
@@ -1603,18 +1626,28 @@ export const dbService = {
         role: normalizeUserRole(data.role),
         is_active: true,
       };
-      const extra: any = {
+      let extra: any = {
         ...(groupId ? { group_id: groupId } : {}),
         ...(projectId ? { project_id: projectId } : {}),
       };
-      let res = await supabase
+      let cols = ["id", "name", "email", "role", "is_active", "group_id", "project_id", "created_at"];
+      let res: any = await supabase
         .from("users")
         .insert({ ...base, ...extra })
-        .select("id, name, email, role, is_active, group_id, project_id, created_at")
+        .select(cols.join(", "))
         .single();
-      if (res.error && Object.keys(extra).length > 0 && /group_id|project_id/i.test(res.error.message || "")) {
-        console.warn("users.group_id/project_id column missing — creating user without group/project; run docs/global-setup-sql.md (Steps 6–7).");
-        res = await supabase.from("users").insert(base).select("id, name, email, role, is_active, created_at").single();
+      // Drop ONLY the column PostgREST names as missing, and retry — a
+      // missing project_id must not also drop a group_id that exists.
+      for (let attempt = 0; attempt < 2 && res.error; attempt++) {
+        const reduced = withoutMissingUserCols(cols, res.error.message || "");
+        if (!reduced) break;
+        const drop = new Set(cols.filter((c) => !reduced.includes(c)));
+        const nextExtra = Object.fromEntries(Object.entries(extra).filter(([k]) => !drop.has(k)));
+        if (Object.keys(nextExtra).length === Object.keys(extra).length && reduced.length === cols.length) break;
+        console.warn(`users column missing (${Array.from(drop).join(", ")}) — creating user without it; run docs/global-setup-sql.md (Steps 6–7).`);
+        extra = nextExtra;
+        cols = reduced;
+        res = await supabase.from("users").insert({ ...base, ...extra }).select(cols.join(", ")).single();
       }
       if (res.error) throw res.error;
       const user = res.data;
