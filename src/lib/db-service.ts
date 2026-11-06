@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from "./supabase";
 import { prisma } from "./prisma";
 import { slugify } from "./slugify";
+import { USER_ROLES, isLabelRole } from "./auth";
 
 /**
  * Unified Database Service supporting both:
@@ -45,6 +46,16 @@ export function normalizeAspectLabel(label: unknown): AspectLabel | null {
     ? (label as AspectLabel)
     : null;
 }
+
+/** Normalise a user-role input: a known role passes through, anything
+ *  else becomes FACILITATOR (the previous behaviour for non-ADMIN). */
+export function normalizeUserRole(role: unknown): string {
+  return typeof role === "string" && (USER_ROLES as readonly string[]).includes(role)
+    ? role
+    : "FACILITATOR";
+}
+
+export { isLabelRole };
 
 /** Parse a global_settings value (jsonb object from Supabase, or a JSON
  *  string from Prisma) into a weights array, or null when unusable. */
@@ -191,6 +202,9 @@ export const dbService = {
             id: p.id,
             name: p.name,
             roleTitle: p.role_title,
+            // The user_id column only exists after the SQL in
+            // docs/global-setup-sql.md (Step 5); missing means null.
+            userId: p.user_id ?? null,
             isActive: p.is_active,
           })),
         })),
@@ -225,6 +239,10 @@ export const dbService = {
             participantId: v.participant_id,
             aspectId: v.aspect_id,
             isValidated: v.is_validated,
+            // score/reason columns only exist after the SQL in
+            // docs/global-setup-sql.md (Step 5); missing means null.
+            score: v.score != null ? Number(v.score) : null,
+            reason: v.reason ?? null,
           })),
         })),
       };
@@ -512,32 +530,79 @@ export const dbService = {
     });
   },
 
+  /**
+   * Upsert a viability vote: a 1-3 score + an Alasan (reason) per aspect.
+   * `score` null clears the vote (and its reason). `isValidated` is kept
+   * in sync — true exactly when a score is set — so the current Viability
+   * formula (share of validated votes) keeps working unchanged until the
+   * user defines the new 1-3 formula. When `reason` is undefined the
+   * existing reason is kept; pass null to clear it.
+   */
   async upsertViabilityVote(
     findingId: string,
     participantId: string,
     aspectId: string,
-    isValidated: boolean
+    score: number | null,
+    reason?: string | null
   ) {
+    const cleanScore = score === 1 || score === 2 || score === 3 ? score : null;
+    const cleanReason =
+      reason === undefined ? undefined : typeof reason === "string" ? reason.trim().slice(0, 500) || null : null;
+    const isValidated = cleanScore !== null;
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase
+      // Keep the existing reason when the caller did not send one.
+      let keepReason: string | null = null;
+      if (cleanReason === undefined) {
+        const { data: existing } = await supabase
+          .from("viability_votes")
+          .select("reason")
+          .eq("finding_id", findingId)
+          .eq("participant_id", participantId)
+          .eq("aspect_id", aspectId)
+          .maybeSingle();
+        keepReason = existing?.reason ?? null;
+      }
+      const finalReason = cleanScore === null ? null : cleanReason === undefined ? keepReason : cleanReason;
+      const payload: any = {
+        finding_id: findingId,
+        participant_id: participantId,
+        aspect_id: aspectId,
+        is_validated: isValidated,
+        score: cleanScore,
+        reason: finalReason,
+        updated_at: new Date().toISOString(),
+      };
+      let res = await supabase
         .from("viability_votes")
-        .upsert(
-          {
-            finding_id: findingId,
-            participant_id: participantId,
-            aspect_id: aspectId,
-            is_validated: isValidated,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "finding_id,participant_id,aspect_id" }
-        )
+        .upsert(payload, { onConflict: "finding_id,participant_id,aspect_id" })
         .select()
         .single();
-
-      if (error) throw error;
-      return data;
+      if (res.error && /score|reason/i.test(res.error.message || "")) {
+        // The score/reason columns may not exist yet in Supabase (added
+        // by docs/global-setup-sql.md, Step 5). Retry with just the
+        // boolean so the vote still counts; the score/reason do not stick.
+        console.warn("viability_votes.score/reason columns missing — saving vote as boolean only; run docs/global-setup-sql.md (Step 5) to enable 1-3 scoring with Alasan.");
+        delete payload.score;
+        delete payload.reason;
+        res = await supabase
+          .from("viability_votes")
+          .upsert(payload, { onConflict: "finding_id,participant_id,aspect_id" })
+          .select()
+          .single();
+      }
+      if (res.error) throw res.error;
+      return {
+        ...res.data,
+        score: res.data.score != null ? Number(res.data.score) : null,
+        reason: res.data.reason ?? null,
+      };
     }
 
+    const existing = await prisma.viabilityVote.findUnique({
+      where: { findingId_participantId_aspectId: { findingId, participantId, aspectId } },
+    });
+    const finalReason =
+      cleanScore === null ? null : cleanReason === undefined ? existing?.reason ?? null : cleanReason;
     return prisma.viabilityVote.upsert({
       where: {
         findingId_participantId_aspectId: {
@@ -546,8 +611,8 @@ export const dbService = {
           aspectId,
         },
       },
-      update: { isValidated },
-      create: { findingId, participantId, aspectId, isValidated },
+      update: { isValidated, score: cleanScore, reason: finalReason },
+      create: { findingId, participantId, aspectId, isValidated, score: cleanScore, reason: finalReason },
     });
   },
 
@@ -953,17 +1018,78 @@ export const dbService = {
     return { success: true };
   },
 
-  async createParticipant(groupId: string, name: string, roleTitle?: string) {
+  async createParticipant(groupId: string, name: string, roleTitle?: string, userId?: string | null) {
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase
-        .from("participants")
-        .insert({ group_id: groupId, name, role_title: roleTitle || "", is_active: true })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      const payload: any = { group_id: groupId, name, role_title: roleTitle || "", is_active: true };
+      if (userId) payload.user_id = userId;
+      let res = await supabase.from("participants").insert(payload).select().single();
+      if (res.error && userId && /user_id/i.test(res.error.message || "")) {
+        // The user_id column may not exist yet (docs/global-setup-sql.md,
+        // Step 5). Retry without the link — the participant still works,
+        // it just is not tied to the login account yet.
+        console.warn("participants.user_id column missing — creating participant without login link; run docs/global-setup-sql.md (Step 5).");
+        delete payload.user_id;
+        res = await supabase.from("participants").insert(payload).select().single();
+      }
+      if (res.error) throw res.error;
+      return res.data;
     }
-    return prisma.participant.create({ data: { groupId, name, roleTitle: roleTitle || "" } });
+    return prisma.participant.create({ data: { groupId, name, roleTitle: roleTitle || "", userId: userId ?? null } });
+  },
+
+  /** Link an existing participant row to a login user. Returns true when
+   *  the link stuck, false when the user_id column does not exist yet. */
+  async linkParticipantToUser(id: string, userId: string): Promise<boolean> {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase
+        .from("participants")
+        .update({ user_id: userId, updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) {
+        if (/user_id/i.test(error.message || "")) return false;
+        throw error;
+      }
+      return true;
+    }
+    await prisma.participant.update({ where: { id }, data: { userId } });
+    return true;
+  },
+
+  /**
+   * Resolve the participant row the session user votes as ("me") in a
+   * project: the row already linked to their login id, else a row with
+   * their name (linked on the spot), else a newly created row — in the
+   * project's first active group, or a new group named after their role
+   * when the project has no groups. Never creates a duplicate for the
+   * same user: name matching finds an unlinked row first.
+   */
+  async resolveMeParticipant(projectSlug: string, session: { id: string; name: string; role: string }) {
+    const project = await dbService.getProjectBySlug(projectSlug);
+    if (!project) throw new NotFoundError("Project not found");
+    const allParticipants: any[] = (project.groups || []).flatMap((g: any) =>
+      (g.participants || []).map((p: any) => ({ ...p, groupId: g.id, groupName: g.name }))
+    );
+    const byUserId = allParticipants.find((p) => p.userId === session.id);
+    if (byUserId) return byUserId;
+    const byName = allParticipants.find((p) => p.name.trim().toLowerCase() === session.name.trim().toLowerCase());
+    if (byName) {
+      const linked = await dbService.linkParticipantToUser(byName.id, session.id);
+      return { ...byName, userId: linked ? session.id : byName.userId ?? null };
+    }
+    let group = (project.groups || []).find((g: any) => g.isActive) || project.groups?.[0];
+    if (!group) {
+      group = await dbService.createGroup(project.id, session.role);
+    }
+    const created = await dbService.createParticipant(group.id, session.name, session.role, session.id);
+    return {
+      id: created.id,
+      name: created.name,
+      roleTitle: created.role_title ?? created.roleTitle ?? session.role,
+      userId: created.user_id ?? created.userId ?? null,
+      groupId: group.id,
+      groupName: group.name,
+      isActive: true,
+    };
   },
 
   async deleteParticipant(id: string) {
@@ -1192,7 +1318,7 @@ export const dbService = {
     if (isSupabaseConfigured && supabase) {
       const { data: u, error } = await supabase.from("users").update({
         ...(data.name !== undefined && { name: data.name }),
-        ...(data.role !== undefined && { role: data.role === "ADMIN" ? "ADMIN" : "FACILITATOR" }),
+        ...(data.role !== undefined && { role: normalizeUserRole(data.role) }),
         ...(data.passwordHash !== undefined && { password_hash: data.passwordHash }),
         ...(data.isActive !== undefined && { is_active: data.isActive }),
         updated_at: new Date().toISOString(),
@@ -1204,7 +1330,7 @@ export const dbService = {
       where: { id },
       data: {
         ...(data.name !== undefined && { name: data.name }),
-        ...(data.role !== undefined && { role: data.role }),
+        ...(data.role !== undefined && { role: normalizeUserRole(data.role) }),
         ...(data.passwordHash !== undefined && { passwordHash: data.passwordHash }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
       },
@@ -1266,7 +1392,7 @@ export const dbService = {
           name: data.name,
           email,
           password_hash: data.passwordHash,
-          role: data.role === "ADMIN" ? "ADMIN" : "FACILITATOR",
+          role: normalizeUserRole(data.role),
           is_active: true,
         })
         .select("id, name, email, role, is_active, created_at")
@@ -1277,7 +1403,7 @@ export const dbService = {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) throw new Error("Email already registered");
     return prisma.user.create({
-      data: { name: data.name, email, passwordHash: data.passwordHash, role: data.role === "ADMIN" ? "ADMIN" : "FACILITATOR", isActive: true },
+      data: { name: data.name, email, passwordHash: data.passwordHash, role: normalizeUserRole(data.role), isActive: true },
       select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
     });
   },
