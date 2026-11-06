@@ -204,7 +204,7 @@ export default function AdminDashboardPage() {
   const [usersList, setUsersList] = useState<any[]>([]);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<{ id: string; name: string; role: string } | null>(null);
-  const [userForm, setUserForm] = useState({ name: "", email: "", password: "", role: "FACILITATOR" });
+  const [userForm, setUserForm] = useState({ name: "", email: "", password: "", role: "FACILITATOR", groupId: "", groupName: "" });
 
   // Close the mobile drawer with Escape and return focus to the hamburger.
   useEffect(() => {
@@ -838,13 +838,13 @@ export default function AdminDashboardPage() {
   // ── Users ───────────────────────────────────────────────────────────────────
   const openCreateUser = () => {
     setEditingUser(null);
-    setUserForm({ name: "", email: "", password: "", role: "FACILITATOR" });
+    setUserForm({ name: "", email: "", password: "", role: "FACILITATOR", groupId: "", groupName: "" });
     setUserModalOpen(true);
   };
 
   const openEditUser = (u: any) => {
     setEditingUser({ id: u.id, name: u.name, role: u.role });
-    setUserForm({ name: u.name, email: u.email, password: "", role: u.role });
+    setUserForm({ name: u.name, email: u.email, password: "", role: u.role, groupId: u.groupId ?? "", groupName: u.groupName ?? "" });
     setUserModalOpen(true);
   };
 
@@ -853,7 +853,7 @@ export default function AdminDashboardPage() {
     try {
       setError(null);
       if (editingUser) {
-        const body: any = { name: userForm.name, role: userForm.role };
+        const body: any = { name: userForm.name, role: userForm.role, groupId: userForm.groupId || null };
         if (userForm.password) body.password = userForm.password;
         await apiCall(`/api/users/${editingUser.id}`, {
           method: "PUT",
@@ -865,7 +865,7 @@ export default function AdminDashboardPage() {
         await apiCall("/api/users", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: userForm.name, email: userForm.email, password: userForm.password, role: userForm.role }),
+          body: JSON.stringify({ name: userForm.name, email: userForm.email, password: userForm.password, role: userForm.role, groupId: userForm.groupId || null }),
         });
       }
       setUserModalOpen(false);
@@ -1478,7 +1478,7 @@ export default function AdminDashboardPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h2 id="users-heading" className="text-base font-bold text-slate-900">User Management</h2>
-                    <p className="mt-0.5 text-sm text-slate-600">Global — users and roles are not tied to any project. Create and manage facilitator and admin credentials.</p>
+                    <p className="mt-0.5 text-sm text-slate-600">Global — users and roles are not tied to any project. Create and manage facilitator and admin credentials. Optionally assign a user to a group in the selected project so their votes land in that group.</p>
                   </div>
                   <button type="button" onClick={openCreateUser} className="btn-primary"><Plus className="h-4 w-4" /> Create User</button>
                 </div>
@@ -1492,6 +1492,9 @@ export default function AdminDashboardPage() {
                       </div>
                       <span className="flex items-center gap-2">
                         <span className="rounded border border-slate-200 bg-white px-2 py-0.5 font-mono text-xs font-bold text-slate-700">{u.role}</span>
+                        {u.groupName && (
+                          <span className="rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800" title="Assigned group">{u.groupName}</span>
+                        )}
                         <button type="button" onClick={() => openEditUser(u)} aria-label={`Edit user ${u.name}`} className="btn-icon"><Edit2 className="h-4 w-4" /></button>
                         <button type="button" onClick={() => handleDeleteUser(u)} disabled={u.id === currentUser?.id} aria-label={`Delete user ${u.name}`} title={u.id === currentUser?.id ? "You cannot delete your own account" : undefined} className="btn-icon-danger disabled:opacity-40">
                           <Trash2 className="h-4 w-4" />
@@ -1643,6 +1646,19 @@ export default function AdminDashboardPage() {
                 <option value="Product">Product (scores Product aspects only)</option>
                 <option value="Tech">Tech (scores Tech aspects only)</option>
               </select>
+            </div>
+            <div>
+              <label htmlFor="user-group" className="field-label">Group — {activeProject?.name || "selected project"}</label>
+              <select id="user-group" value={userForm.groupId} onChange={(e) => setUserForm((f) => ({ ...f, groupId: e.target.value }))} className="input w-full">
+                <option value="">— No group —</option>
+                {(activeProject?.groups || []).map((g: any) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+                {userForm.groupId && !(activeProject?.groups || []).some((g: any) => g.id === userForm.groupId) && (
+                  <option value={userForm.groupId}>{userForm.groupName ? `${userForm.groupName} (other project)` : "Assigned group (other project)"}</option>
+                )}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">Assign this user to a group so their votes land in that group (marked “Me” in the scoring table). Leave empty for no group.</p>
             </div>
             <div className="flex items-center justify-end gap-2 pt-2">
               <button type="button" onClick={() => setUserModalOpen(false)} className="btn-secondary">Cancel</button>
