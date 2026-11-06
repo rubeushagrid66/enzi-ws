@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
-import { dbService } from "@/lib/db-service";
+import { dbService, NotFoundError } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
+
+/** A missing project is a 404 with a clear message (e.g. the admin tab
+ *  was open before a rename moved the slug), never a generic 500. */
+function notFoundResponse() {
+  return NextResponse.json(
+    { error: "Project not found (it may have been renamed — refresh the project list and try again)" },
+    { status: 404 }
+  );
+}
 import {
   calculateDesirabilityScore,
   calculateViabilityScore,
@@ -268,6 +277,7 @@ export async function PUT(
     if (newSlug) revalidateProjectPages(newSlug);
     return NextResponse.json({ success: true, project: updated });
   } catch (error) {
+    if (error instanceof NotFoundError) return notFoundResponse();
     console.error("Failed to update project:", error);
     return NextResponse.json(
       { error: "Failed to update project" },
@@ -289,6 +299,7 @@ export async function DELETE(
     revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, message: "Project deleted" });
   } catch (error) {
+    if (error instanceof NotFoundError) return notFoundResponse();
     console.error("Failed to delete project:", error);
     return NextResponse.json({ error: "Failed to delete project" }, { status: 500 });
   }

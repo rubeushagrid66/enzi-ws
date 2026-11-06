@@ -1,0 +1,92 @@
+# Global setup — Supabase SQL (one-time)
+
+Findings & Tags, Framework & Weighting, and L1–L3 Parameters are now
+GLOBAL: one findings pool, one D/V/F weighting, and one parameter tree
+for the whole platform, used by every project. Users were already
+global. The code in this repo already reads and writes these global
+structures, but the columns/table themselves have to exist in Supabase
+first — run everything below once in the Supabase dashboard
+→ SQL Editor → Run.
+
+## Step 1 — Aspect → framework column (from the earlier linkage work)
+
+```sql
+alter table viability_aspects add column if not exists framework text not null default 'Viability';
+```
+
+## Step 2 — Allow pool findings and a global parameter tree
+
+Pool findings belong to no project yet (`project_id` NULL); the global
+parameter tree likewise has `project_id` NULL.
+
+```sql
+alter table findings alter column project_id drop not null;
+alter table parameters_l1 alter column project_id drop not null;
+```
+
+## Step 3 — Global settings table (holds the global DVF weights)
+
+```sql
+create table if not exists global_settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+```
+
+## Step 4 — Migration: B2B's tree and weights become the global ones
+
+The B2B Cash Management project (`slug = 'cash-management-system'`)
+is the source of truth. These statements are idempotent — running
+them twice changes nothing the second time.
+
+```sql
+-- The B2B parameter tree becomes the global tree (project_id NULL).
+update parameters_l1
+set project_id = null
+where project_id = (select id from projects where slug = 'cash-management-system');
+
+-- The B2B weights (40/30/30) become the global weights,
+-- but only if no global weights exist yet.
+insert into global_settings (key, value)
+select 'framework_weights',
+       jsonb_agg(
+         jsonb_build_object('name', name, 'weight', weight)
+         order by case name when 'Desirability' then 1 when 'Viability' then 2 else 3 end
+       )
+from framework_weights
+where project_id = (select id from projects where slug = 'cash-management-system')
+  and not exists (select 1 from global_settings where key = 'framework_weights')
+having count(*) > 0;
+```
+
+## Before this SQL is run
+
+The app keeps working exactly as before, on purpose:
+
+- Scoring falls back to each project's own weights and parameter tree,
+  so existing findings keep their exact scores.
+- The findings pool lists the projects' findings (with their project
+  shown); pool findings just can't be *created* yet, and copying a
+  finding into a project still works.
+- The admin Weights / Parameters tabs show a notice that the global
+  setup is not enabled yet, with a pointer to this file. Saving global
+  weights or creating global parameters / pool findings before the SQL
+  runs returns a clear error naming this file — nothing is silently lost.
+
+## After this SQL is run
+
+- Framework & Weighting in admin edits the one global D/V/F weighting;
+  every project's viewer, workshop, and home-page card uses it.
+- L1–L3 Parameters in admin edits the one global tree; every project
+  scores Desirability against it. (Other projects' old per-project
+  parameter rows stay in the database as an unused fallback.)
+- Findings & Tags in admin is the global pool: pool findings (no
+  project) plus every project's findings, each labelled with its
+  origin. Selecting a pool finding in a workshop *copies* it into that
+  project — the copy is scored independently, the pool original stays
+  Unscored.
+- Users & Roles were already global (no `project_id` on users); the
+  admin tab no longer depends on the selected project.
+- Viability Aspects stay per-project (the user did not ask to
+  globalise them).

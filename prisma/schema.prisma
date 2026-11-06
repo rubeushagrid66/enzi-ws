@@ -48,7 +48,9 @@ model FrameworkWeight {
 
 model Finding {
   id                  String                  @id @default(cuid())
-  projectId           String
+  // Nullable: findings in the global pool belong to no project yet.
+  // A pool finding is copied into a project before it can be scored.
+  projectId           String?
   title               String
   description         String?
   tags                String                  @default("[]") // JSON string: [{ category: string, value: string }]
@@ -60,9 +62,18 @@ model Finding {
   feasibilityEffort   String?                 // HIGH | LOW
   createdAt           DateTime                @default(now())
   updatedAt           DateTime                @updatedAt
-  project             Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project             Project?                @relation(fields: [projectId], references: [id], onDelete: Cascade)
   parameterValues     FindingParameterValue[]
   viabilityVotes      ViabilityVote[]
+}
+
+// Platform-wide settings (key/value JSON). Used for the GLOBAL DVF
+// framework weights (key 'framework_weights'). Supabase-only in
+// production; the local Prisma model mirrors the global_settings table.
+model GlobalSetting {
+  key       String   @id
+  value     String // JSON string
+  updatedAt DateTime @updatedAt
 }
 
 model Group {
@@ -118,13 +129,16 @@ model ViabilityVote {
 
 model ParameterL1 {
   id            String        @id @default(cuid())
-  projectId     String
+  // Nullable: the GLOBAL parameter tree has projectId null and is used
+  // by every project. Per-project rows remain as a fallback until the
+  // global tree exists (see docs/global-setup-sql.md).
+  projectId     String?
   name          String        // Category e.g. "Sumber", "Platform"
   isActive      Boolean       @default(true)
   scoringRules  String        @default("[]") // JSON string: [{ minPercent: number, score: number }]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
-  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project       Project?      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   subCategories ParameterL2[]
 }
 

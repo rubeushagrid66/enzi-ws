@@ -20,13 +20,16 @@ export interface AdminNavItem {
 }
 
 export const ADMIN_NAV: AdminNavItem[] = [
-  { id: "findings", label: "Findings & Tags", icon: Tag },
-  { id: "weights", label: "Framework & Weighting", icon: Sliders },
+  // "Global" = shared across all projects (findings pool, one D/V/F
+  // weighting, one L1–L3 tree, one user list). Groups, aspects and the
+  // projects themselves stay per-project.
+  { id: "findings", label: "Findings & Tags", icon: Tag, badge: "Global" },
+  { id: "weights", label: "Framework & Weighting", icon: Sliders, badge: "Global" },
   { id: "groups", label: "Groups & Participants", icon: Users2 },
-  { id: "parameters", label: "L1-L3 Parameters & Rules", icon: Layers },
+  { id: "parameters", label: "L1-L3 Parameters & Rules", icon: Layers, badge: "Global" },
   { id: "aspects", label: "Viability Aspects", icon: ListChecks },
   { id: "projects", label: "All Projects", icon: FolderGit2 },
-  { id: "users", label: "Users & Roles", icon: Shield },
+  { id: "users", label: "Users & Roles", icon: Shield, badge: "Global" },
 ];
 
 export default function AdminSidebar({
