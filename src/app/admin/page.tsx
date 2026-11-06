@@ -417,11 +417,13 @@ export default function AdminDashboardPage() {
     try {
       setError(null);
       const body = JSON.stringify(findingForm);
+      // The saved row, so the table can update instantly below.
+      let saved: any = null;
       if (editingFindingId) {
         // Edit keeps the finding where it is (pool stays pool).
         const row = poolFindings.find((x: any) => x.id === editingFindingId);
         if (row && !row.projectId) {
-          await apiCall(`/api/global/findings/${editingFindingId}`, {
+          saved = await apiCall(`/api/global/findings/${editingFindingId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body,
@@ -431,25 +433,75 @@ export default function AdminDashboardPage() {
           // project is currently selected in the sidebar.
           const slug = row?.projectSlug || selectedProjectSlug;
           if (!slug) return;
-          await apiCall(`/api/projects/${slug}/findings/${editingFindingId}`, {
+          saved = await apiCall(`/api/projects/${slug}/findings/${editingFindingId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body,
           });
         }
+        // Update the row in place from the save response — the
+        // background list refresh below is slow and was observed not
+        // to repaint the row, so without this the edit only appeared
+        // after a manual page reload.
+        const f = saved?.finding;
+        if (f) {
+          setPoolFindings((rows: any[]) =>
+            rows.map((x: any) =>
+              x.id === editingFindingId
+                ? { ...x, title: f.title ?? x.title, description: f.description ?? x.description, tags: f.tags ?? x.tags }
+                : x
+            )
+          );
+        }
       } else if (findingTarget === "pool") {
-        await apiCall("/api/global/findings", {
+        saved = await apiCall("/api/global/findings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body,
         });
+        const f = saved?.finding;
+        if (f) {
+          setPoolFindings((rows: any[]) => [
+            ...rows,
+            {
+              id: f.id,
+              title: f.title,
+              description: f.description,
+              tags: typeof f.tags === "string" ? f.tags : JSON.stringify(f.tags || {}),
+              feasibilityX: null,
+              feasibilityY: null,
+              feasibilityQuadrant: null,
+              projectId: null,
+              projectSlug: null,
+              projectName: null,
+            },
+          ]);
+        }
       } else {
         if (!selectedProjectSlug) return;
-        await apiCall(`/api/projects/${selectedProjectSlug}/findings`, {
+        saved = await apiCall(`/api/projects/${selectedProjectSlug}/findings`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body,
         });
+        const f = saved?.finding;
+        if (f) {
+          setPoolFindings((rows: any[]) => [
+            ...rows,
+            {
+              id: f.id,
+              title: f.title,
+              description: f.description,
+              tags: typeof f.tags === "string" ? f.tags : JSON.stringify(f.tags || {}),
+              feasibilityX: null,
+              feasibilityY: null,
+              feasibilityQuadrant: null,
+              projectId: f.project_id ?? null,
+              projectSlug: selectedProjectSlug,
+              projectName: activeProject?.name ?? selectedProjectSlug,
+            },
+          ]);
+        }
       }
       // Close the modal as soon as the save succeeds — the list refresh
       // (global data + project details) takes several more seconds, and
