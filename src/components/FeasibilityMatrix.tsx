@@ -106,6 +106,11 @@ export default function FeasibilityMatrix({
   };
 
   const currentInfo = computeQuadrant(posX, posY);
+  // A finding with no stored position has not been placed in the
+  // workshop yet. The card still shows at 50/50 as a neutral default so
+  // it can be dragged, but it has no quadrant and no score until the
+  // group drops it somewhere.
+  const isPlaced = finding.feasibilityX != null && finding.feasibilityY != null;
 
   // Save coordinates to backend. On success the parent updates its own
   // state from the returned finding, so the card stays where it was
@@ -192,12 +197,18 @@ export default function FeasibilityMatrix({
           <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
             Assigned Quadrant:
           </span>
-          <span
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-xs ${currentInfo.bgBadge}`}
-          >
-            <Sparkles className="h-3 w-3" />
-            {currentInfo.title} ({currentInfo.impact}, {currentInfo.effort})
-          </span>
+          {isPlaced ? (
+            <span
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-xs ${currentInfo.bgBadge}`}
+            >
+              <Sparkles className="h-3 w-3" />
+              {currentInfo.title} ({currentInfo.impact}, {currentInfo.effort})
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-amber-200 bg-amber-50 text-amber-800">
+              Not yet placed — drag the card to the agreed position
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -352,7 +363,7 @@ export default function FeasibilityMatrix({
               <div className="flex items-center gap-1.5">
                 <div className="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-xs border border-white" />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-black/70">
-                  {currentInfo.title}
+                  {isPlaced ? currentInfo.title : "Unplaced"}
                 </span>
               </div>
               {isAdmin && (

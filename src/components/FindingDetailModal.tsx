@@ -15,6 +15,7 @@ import {
   Check,
 } from "lucide-react";
 import FeasibilityMatrix from "./FeasibilityMatrix";
+import ViabilityVoteMatrix from "./ViabilityVoteMatrix";
 
 interface FindingDetailModalProps {
   finding: any;
@@ -43,62 +44,19 @@ export default function FindingDetailModal({
     "desirability"
   );
   const [localFinding, setLocalFinding] = useState(finding);
-  const [votingState, setVotingState] = useState<Record<string, boolean>>(() => {
-    const map: Record<string, boolean> = {};
-    for (const v of finding.viabilityVotes || []) {
-      map[`${v.participantId}:${v.aspectId}`] = v.isValidated;
-    }
-    return map;
-  });
-  const [isUpdatingVote, setIsUpdatingVote] = useState(false);
 
   const scores = localFinding.scores || {};
   const desirability = scores.desirabilityDetails || {};
   const viability = scores.viabilityDetails || {};
   const feasibility = scores.feasibilityDetails || {};
+  // Scoring status is derived from workshop data (see lib/scoring).
+  // A null score means "not yet scored in the workshop", never a 0.
+  const status = localFinding.scoringStatus || {};
+  const showNum = (v: number | null | undefined) => (v ?? null) === null ? "—" : v;
 
-  // Toggle vote handler
-  const handleToggleVote = async (participantId: string, aspectId: string) => {
-    if (!isAdmin) return;
-    const key = `${participantId}:${aspectId}`;
-    const nextVal = !votingState[key];
-
-    // Optimistic local update
-    setVotingState((prev) => ({ ...prev, [key]: nextVal }));
-    setIsUpdatingVote(true);
-
-    try {
-      const res = await fetch(
-        `/api/projects/${project.slug}/findings/${localFinding.id}/viability-vote`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            participantId,
-            aspectId,
-            isValidated: nextVal,
-          }),
-        }
-      );
-      if (res.ok) {
-        // Refresh project data to recalculate live scores
-        const projRes = await fetch(`/api/projects/${project.slug}`);
-        if (projRes.ok) {
-          const freshData = await projRes.json();
-          const updatedF = freshData.project.findings.find(
-            (f: any) => f.id === localFinding.id
-          );
-          if (updatedF) {
-            setLocalFinding(updatedF);
-            onFindingUpdated(updatedF);
-          }
-        }
-      }
-    } catch (e) {
-      console.error("Failed to update vote:", e);
-    } finally {
-      setIsUpdatingVote(false);
-    }
+  const handleVotesChanged = (updatedF: any) => {
+    setLocalFinding(updatedF);
+    onFindingUpdated(updatedF);
   };
 
   const handleFeasibilitySaved = (updatedData: any) => {
@@ -124,7 +82,9 @@ export default function FindingDetailModal({
                   Finding Detail
                 </span>
                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                  DVF Score: {scores.composite ?? 0} / 100
+                  {scores.composite != null
+                    ? `DVF Score: ${scores.composite} / 100`
+                    : `Pending scoring${status.pending?.length ? ` — needs: ${status.pending.join(", ")}` : ""}`}
                 </span>
               </div>
               <h2 id="finding-detail-title" className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
@@ -173,7 +133,7 @@ export default function FindingDetailModal({
               <Target className="h-4 w-4" />
               <span>Tab 1: Desirability</span>
               <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800">
-                {scores.desirability ?? 0}
+                {showNum(scores.desirability)}
               </span>
             </button>
 
@@ -188,7 +148,7 @@ export default function FindingDetailModal({
               <Users2 className="h-4 w-4" />
               <span>Tab 2: Viability</span>
               <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-800">
-                {scores.viability ?? 0}%
+                {scores.viability != null ? `${scores.viability}%` : "—"}
               </span>
             </button>
 
@@ -203,7 +163,7 @@ export default function FindingDetailModal({
               <Compass className="h-4 w-4" />
               <span>Tab 3: Feasibility (2x2 Matrix)</span>
               <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800">
-                {feasibility.quadrant?.replace("_", " ") ?? "Matrix"}
+                {feasibility.quadrant?.replace("_", " ") ?? "Not placed"}
               </span>
             </button>
           </div>
@@ -214,17 +174,27 @@ export default function FindingDetailModal({
           {/* TAB 1: DESIRABILITY */}
           {activeTab === "desirability" && (
             <div className="space-y-6">
+              {!status.desirabilityScored && (
+                <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  <span className="font-bold">Not yet scored in the workshop.</span>{" "}
+                  Map this finding to L1–L3 parameters in the workshop (Step 1) — the
+                  Desirability score is computed from those mappings, not from the
+                  Sumber/Platform tags.
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
                   <div className="text-xs font-medium text-emerald-700 uppercase tracking-wider">
                     Desirability Score
                   </div>
                   <div className="mt-1 text-3xl font-extrabold text-emerald-900">
-                    {scores.desirability ?? 0}
-                    <span className="text-sm font-normal text-emerald-600"> / 100</span>
+                    {showNum(scores.desirability)}
+                    {scores.desirability != null && (
+                      <span className="text-sm font-normal text-emerald-600"> / 100</span>
+                    )}
                   </div>
                   <p className="mt-1 text-xs text-emerald-700">
-                    Evaluated from L1-L3 occurrence & custom scoring rules
+                    Evaluated from workshop L1-L3 mapping & custom scoring rules
                   </p>
                 </div>
 
@@ -245,11 +215,13 @@ export default function FindingDetailModal({
                     Weighted Contribution
                   </div>
                   <div className="mt-1 text-3xl font-extrabold text-slate-900">
-                    {(
-                      ((scores.desirability ?? 0) *
-                        (project.weightsMap?.desirability ?? 33.3)) /
-                      100
-                    ).toFixed(1)}
+                    {scores.desirability != null
+                      ? (
+                          ((scores.desirability ?? 0) *
+                            (project.weightsMap?.desirability ?? 33.3)) /
+                          100
+                        ).toFixed(1)
+                      : "—"}
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
                     Points added to total DVF composite score
@@ -321,7 +293,7 @@ export default function FindingDetailModal({
                     Viability Score
                   </div>
                   <div className="mt-1 text-3xl font-extrabold text-blue-900">
-                    {scores.viability ?? 0}%
+                    {scores.viability != null ? `${scores.viability}%` : "—"}
                   </div>
                   <p className="mt-1 text-xs text-blue-700">
                     {viability.totalValidatedVotes ?? 0} of {viability.totalPossibleVotes ?? 0} total possible votes
@@ -345,11 +317,13 @@ export default function FindingDetailModal({
                     Weighted Contribution
                   </div>
                   <div className="mt-1 text-3xl font-extrabold text-slate-900">
-                    {(
-                      ((scores.viability ?? 0) *
-                        (project.weightsMap?.viability ?? 33.3)) /
-                      100
-                    ).toFixed(1)}
+                    {scores.viability != null
+                      ? (
+                          ((scores.viability ?? 0) *
+                            (project.weightsMap?.viability ?? 33.3)) /
+                          100
+                        ).toFixed(1)
+                      : "—"}
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
                     Points added to total DVF composite score
@@ -357,98 +331,20 @@ export default function FindingDetailModal({
                 </div>
               </div>
 
-              {/* Participant Voting Matrix */}
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
-                <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-slate-200">
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                      <Users2 className="h-4 w-4 text-blue-600" />
-                      <span>Participant Voting Matrix (Aspects Validation)</span>
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Checkboxes represent individual participant validation per aspect.
-                      {isAdmin ? " Click to toggle votes live." : " Read-only view."}
-                    </p>
-                  </div>
-                  {isUpdatingVote && (
-                    <span className="text-xs text-blue-600 font-semibold animate-pulse">
-                      Updating vote...
-                    </span>
-                  )}
+              {!status.viabilityScored && (
+                <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  <span className="font-bold">Not yet scored in the workshop.</span>{" "}
+                  Record each participant&apos;s validation below (workshop Step 2) — the
+                  Viability score is the share of validated votes.
                 </div>
+              )}
 
-                {project.groups && project.groups.length > 0 ? (
-                  <div className="mt-4 overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="border-b border-slate-200 bg-slate-50/70">
-                          <th className="py-2.5 px-3 font-bold text-slate-700">Group / Participant</th>
-                          {project.viabilityAspects?.map((aspect: any) => (
-                            <th
-                              key={aspect.id}
-                              className="py-2.5 px-3 font-bold text-slate-700 text-center"
-                              title={aspect.description || aspect.name}
-                            >
-                              <div>{aspect.name}</div>
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {project.groups.map((group: any) => (
-                          <React.Fragment key={group.id}>
-                            <tr className="bg-slate-100/60 font-semibold text-slate-800">
-                              <td
-                                colSpan={1 + (project.viabilityAspects?.length || 0)}
-                                className="py-2 px-3 text-xs uppercase tracking-wider text-slate-600"
-                              >
-                                {group.name}
-                              </td>
-                            </tr>
-                            {group.participants?.map((participant: any) => (
-                              <tr key={participant.id} className="hover:bg-slate-50/80 transition">
-                                <td className="py-2 px-3 pl-6">
-                                  <div className="font-medium text-slate-800">
-                                    {participant.name}
-                                  </div>
-                                  {participant.roleTitle && (
-                                    <div className="text-[10px] text-slate-400">
-                                      {participant.roleTitle}
-                                    </div>
-                                  )}
-                                </td>
-                                {project.viabilityAspects?.map((aspect: any) => {
-                                  const voteKey = `${participant.id}:${aspect.id}`;
-                                  const isChecked = Boolean(votingState[voteKey]);
-                                  return (
-                                    <td key={aspect.id} className="py-2 px-3 text-center">
-                                      <input
-                                        type="checkbox"
-                                        checked={isChecked}
-                                        disabled={!isAdmin}
-                                        onChange={() =>
-                                          handleToggleVote(participant.id, aspect.id)
-                                        }
-                                        className={`h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition ${
-                                          isAdmin ? "cursor-pointer" : "cursor-not-allowed opacity-80"
-                                        }`}
-                                      />
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ))}
-                          </React.Fragment>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-400 italic py-4">
-                    No participant groups configured for this project.
-                  </p>
-                )}
-              </div>
+              <ViabilityVoteMatrix
+                project={project}
+                finding={localFinding}
+                isAdmin={isAdmin}
+                onVotesChanged={handleVotesChanged}
+              />
             </div>
           )}
 
@@ -461,10 +357,10 @@ export default function FindingDetailModal({
                     Feasibility Quadrant
                   </div>
                   <div className="mt-1 text-2xl font-extrabold text-amber-900">
-                    {feasibility.quadrant?.replace("_", " ") ?? "QUICK WINS"}
+                    {feasibility.quadrant?.replace("_", " ") ?? "Not placed"}
                   </div>
                   <p className="mt-1 text-xs text-amber-700">
-                    Score: {scores.feasibility ?? 50} / 100
+                    Score: {scores.feasibility != null ? `${scores.feasibility} / 100` : "—"}
                   </p>
                 </div>
 
@@ -485,17 +381,27 @@ export default function FindingDetailModal({
                     Weighted Contribution
                   </div>
                   <div className="mt-1 text-3xl font-extrabold text-slate-900">
-                    {(
-                      ((scores.feasibility ?? 50) *
-                        (project.weightsMap?.feasibility ?? 33.3)) /
-                      100
-                    ).toFixed(1)}
+                    {scores.feasibility != null
+                      ? (
+                          ((scores.feasibility ?? 50) *
+                            (project.weightsMap?.feasibility ?? 33.3)) /
+                          100
+                        ).toFixed(1)
+                      : "—"}
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
                     Points added to total DVF composite score
                   </p>
                 </div>
               </div>
+
+              {!status.feasibilityScored && (
+                <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  <span className="font-bold">Not yet placed in the workshop.</span>{" "}
+                  Drag the card to the position the group agrees on (workshop Step 3) —
+                  the Feasibility score comes from its quadrant.
+                </div>
+              )}
 
               {/* Interactive 2x2 Feasibility Matrix */}
               <FeasibilityMatrix

@@ -7,8 +7,10 @@ import {
   calculateViabilityScore,
   getFeasibilityFromCoordinates,
   calculateCompositeDVF,
+  getFindingScoringStatus,
   ScoringRule,
 } from "@/lib/scoring";
+import { slugify } from "@/lib/slugify";
 
 export async function GET(
   request: Request,
@@ -98,11 +100,15 @@ export async function GET(
       return { sumber, fitur, platform, tagsList };
     };
 
-    // Calculate DVF metrics for each finding
+    // Calculate DVF metrics for each finding. Scores are workshop-made:
+    // a dimension only has a number once the workshop produced data for
+    // it. Otherwise the dimension (and the composite) is null — "Pending
+    // scoring" — never a 0 that looks like a real score.
     const findingsWithScores = (project.findings || []).map((f: any) => {
       const { sumber, fitur, platform, tagsList } = parseFindingMeta(f.tags);
+      const scoringStatus = getFindingScoringStatus(f);
 
-      // 1. Desirability
+      // 1. Desirability — explicit L3 mappings only (workshop mapping).
       const findingValues = (f.parameterValues || []).map((pv: any) => ({
         l3Id: pv.l3Id,
         l3: pv.segment
@@ -111,30 +117,32 @@ export async function GET(
             }
           : undefined,
       }));
-      const desirabilityData = calculateDesirabilityScore(parsedL1, findingValues, {
-        sumber,
-        platform,
-      });
+      const desirabilityData = scoringStatus.desirabilityScored
+        ? calculateDesirabilityScore(parsedL1, findingValues)
+        : null;
 
-      // 2. Viability
-      const viabilityData = calculateViabilityScore(
-        project.viabilityAspects.length,
-        project.groups,
-        f.viabilityVotes
-      );
+      // 2. Viability — participant votes only.
+      const viabilityData = scoringStatus.viabilityScored
+        ? calculateViabilityScore(
+            project.viabilityAspects.length,
+            project.groups,
+            f.viabilityVotes
+          )
+        : null;
 
-      // 3. Feasibility
-      const feasibilityData = getFeasibilityFromCoordinates(
-        f.feasibilityX ?? 50,
-        f.feasibilityY ?? 50
-      );
+      // 3. Feasibility — a placed matrix position only.
+      const feasibilityData = scoringStatus.feasibilityScored
+        ? getFeasibilityFromCoordinates(f.feasibilityX, f.feasibilityY)
+        : null;
 
-      // 4. Composite DVF
-      const compositeData = calculateCompositeDVF(weightsMap, {
-        desirability: desirabilityData.score,
-        viability: viabilityData.score,
-        feasibility: feasibilityData.score,
-      });
+      // 4. Composite DVF — only when all three dimensions are scored.
+      const compositeData = scoringStatus.scored
+        ? calculateCompositeDVF(weightsMap, {
+            desirability: desirabilityData!.score,
+            viability: viabilityData!.score,
+            feasibility: feasibilityData!.score,
+          })
+        : null;
 
       return {
         ...f,
@@ -142,15 +150,18 @@ export async function GET(
         fitur,
         platform,
         tagsList,
+        scoringStatus,
         scores: {
-          desirability: desirabilityData.score,
+          desirability: desirabilityData?.score ?? null,
           desirabilityDetails: desirabilityData,
-          viability: viabilityData.score,
+          viability: viabilityData?.score ?? null,
           viabilityDetails: viabilityData,
-          feasibility: feasibilityData.score,
+          feasibility: feasibilityData?.score ?? null,
           feasibilityDetails: feasibilityData,
-          composite: compositeData.compositeScore,
-          compositeFormula: compositeData.formula,
+          composite: compositeData?.compositeScore ?? null,
+          compositeFormula:
+            compositeData?.formula ??
+            "Pending scoring — complete Desirability, Viability and Feasibility in the workshop.",
         },
       };
     });
@@ -184,13 +195,35 @@ export async function PUT(
     const { slug } = params;
     const body = await request.json();
 
+    // Renaming a project moves its URL: the slug is recomputed from the
+    // new name. If another project already uses that slug, append -2,
+    // -3, ... until it is unique. A name that slugifies to nothing keeps
+    // the current slug. There is no slug history, so the old URL 404s
+    // after a rename.
+    let newSlug: string | undefined;
+    if (body.name) {
+      const current = await dbService.findProjectBySlug(slug);
+      const candidate = slugify(body.name) || slug;
+      if (candidate !== slug) {
+        newSlug = candidate;
+        let n = 2;
+        while (true) {
+          const clash = await dbService.findProjectBySlug(newSlug);
+          if (!clash || (current && clash.id === current.id)) break;
+          newSlug = `${candidate}-${n++}`;
+        }
+      }
+    }
+
     const updated = await dbService.updateProject(slug, {
       name: body.name,
       description: body.description,
       isActive: body.isActive,
+      ...(newSlug !== undefined && { slug: newSlug }),
     });
 
     revalidateProjectPages(slug);
+    if (newSlug) revalidateProjectPages(newSlug);
     return NextResponse.json({ success: true, project: updated });
   } catch (error) {
     console.error("Failed to update project:", error);
