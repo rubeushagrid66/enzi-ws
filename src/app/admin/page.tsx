@@ -46,17 +46,37 @@ const FRAMEWORK_BADGE_CLASS: Record<string, string> = {
  * Pool rows carry tags as a JSON string ({sumber, fitur, platform}),
  * while project-detail rows already carry the parsed fields. Normalise
  * both into the same shape for the pool table and the edit form.
+ *
+ * Two tag shapes exist in the database: the current object form and the
+ * legacy array form [{ value, category }] (category "Sumber" |
+ * "Platform" | "Feature"). The legacy form MUST be parsed too — before
+ * this fix, opening Edit on a legacy finding showed empty Sumber /
+ * Fitur / Platform, and saving silently overwrote the real tags with
+ * the empty ones. "CMS Portal" is the legacy label for the CMS platform.
  */
 function findingMeta(f: any) {
+  const normalizePlatform = (p: string) => (p === "CMS Portal" ? "CMS" : p);
   let sumber: string[] = Array.isArray(f.sumber) ? f.sumber : [];
   let fitur = typeof f.fitur === "string" ? f.fitur : "";
-  let platform: string[] = Array.isArray(f.platform) ? f.platform : [];
+  let platform: string[] = Array.isArray(f.platform) ? f.platform.map(normalizePlatform) : [];
   if (typeof f.tags === "string") {
     try {
       const parsed = JSON.parse(f.tags);
-      sumber = Array.isArray(parsed.sumber) ? parsed.sumber : [];
-      fitur = typeof parsed.fitur === "string" ? parsed.fitur : "";
-      platform = Array.isArray(parsed.platform) ? parsed.platform : [];
+      if (Array.isArray(parsed)) {
+        sumber = [];
+        fitur = "";
+        platform = [];
+        for (const t of parsed) {
+          if (!t || typeof t.value !== "string") continue;
+          if (t.category === "Sumber") sumber.push(t.value);
+          else if (t.category === "Platform") platform.push(normalizePlatform(t.value));
+          else if (t.category === "Feature" || t.category === "Fitur") fitur = t.value;
+        }
+      } else {
+        sumber = Array.isArray(parsed.sumber) ? parsed.sumber : [];
+        fitur = typeof parsed.fitur === "string" ? parsed.fitur : "";
+        platform = Array.isArray(parsed.platform) ? parsed.platform.map(normalizePlatform) : [];
+      }
     } catch {
       // Leave the defaults: unparseable tags render as nothing.
     }
@@ -385,9 +405,15 @@ export default function AdminDashboardPage() {
     setFindingModalOpen(true);
   };
 
+  // While a finding save is in flight the Save button shows "Saving…"
+  // and is disabled — without this, the several-second save looked
+  // exactly like a dead button (the modal stayed open, nothing changed).
+  const [savingFinding, setSavingFinding] = useState(false);
+
   const handleSaveFinding = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!findingForm.title) return;
+    if (!findingForm.title || savingFinding) return;
+    setSavingFinding(true);
     try {
       setError(null);
       const body = JSON.stringify(findingForm);
@@ -425,11 +451,18 @@ export default function AdminDashboardPage() {
           body,
         });
       }
+      // Close the modal as soon as the save succeeds — the list refresh
+      // (global data + project details) takes several more seconds, and
+      // waiting for it before closing is what made saves look broken.
+      // Both loaders catch their own errors, so the refresh is safe to
+      // run in the background.
       setFindingModalOpen(false);
-      await loadGlobalData();
-      if (selectedProjectSlug) await loadProjectDetails(selectedProjectSlug);
+      loadGlobalData();
+      if (selectedProjectSlug) loadProjectDetails(selectedProjectSlug);
     } catch (err: any) {
       setError(err.message || "Failed to save finding");
+    } finally {
+      setSavingFinding(false);
     }
   };
 
@@ -1462,7 +1495,7 @@ export default function AdminDashboardPage() {
             </fieldset>
             <div className="flex items-center justify-end gap-2 pt-3">
               <button type="button" onClick={() => setFindingModalOpen(false)} className="btn-secondary">Cancel</button>
-              <button type="submit" className="btn-primary">{editingFindingId ? "Save Changes" : "Create Finding"}</button>
+              <button type="submit" disabled={savingFinding} className="btn-primary disabled:opacity-60">{savingFinding ? "Saving…" : editingFindingId ? "Save Changes" : "Create Finding"}</button>
             </div>
           </form>
         </Modal>
