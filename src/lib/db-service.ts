@@ -120,18 +120,23 @@ export const dbService = {
   async getProjects() {
     // Home-page cards show the weights: once the global weights exist
     // every project shows the same global D/V/F (see getGlobalWeights).
-    const globalWeights = await dbService.getGlobalWeights();
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase
-        .from("projects")
-        .select(`
-          *,
-          findings(count),
-          groups(count),
-          viability_aspects(count),
-          framework_weights(*)
-        `)
-        .order("created_at", { ascending: false });
+      // The weights lookup and the projects list are independent — run
+      // them together instead of one after the other.
+      const [globalWeights, projectsRes] = await Promise.all([
+        dbService.getGlobalWeights(),
+        supabase
+          .from("projects")
+          .select(`
+            *,
+            findings(count),
+            groups(count),
+            viability_aspects(count),
+            framework_weights(*)
+          `)
+          .order("created_at", { ascending: false }),
+      ]);
+      const { data, error } = projectsRes;
 
       if (error) throw error;
       return (data || []).map((p: any) => ({
@@ -153,19 +158,22 @@ export const dbService = {
       }));
     }
 
-    const projects = await prisma.project.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        _count: {
-          select: {
-            findings: true,
-            groups: true,
-            viabilityAspects: true,
+    const [globalWeights, projects] = await Promise.all([
+      dbService.getGlobalWeights(),
+      prisma.project.findMany({
+        orderBy: { createdAt: "desc" },
+        include: {
+          _count: {
+            select: {
+              findings: true,
+              groups: true,
+              viabilityAspects: true,
+            },
           },
+          frameworkWeights: true,
         },
-        frameworkWeights: true,
-      },
-    });
+      }),
+    ]);
 
     if (globalWeights) {
       return projects.map((p: any) => ({ ...p, frameworkWeights: globalWeights }));
@@ -187,18 +195,22 @@ export const dbService = {
       // GLOBAL when the global setup exists (see docs/global-setup-sql.md):
       // the global rows win, each project's own rows are the fallback
       // for before the SQL is run — so existing scores never change.
-      const [weightsRes, aspectsRes, groupsRes, l1GlobalRes, l1ProjectRes, findingsRes, globalWeights] =
+      const [weightsRes, aspectsRes, groupsRes, l1Res, findingsRes, globalWeights] =
         await Promise.all([
           supabase.from("framework_weights").select("*").eq("project_id", project.id),
           supabase.from("viability_aspects").select("*").eq("project_id", project.id).order("created_at", { ascending: true }),
           supabase.from("groups").select("*, participants(*)").eq("project_id", project.id).order("created_at", { ascending: true }),
-          supabase.from("parameters_l1").select("*, subCategories:parameters_l2(*, segments:parameters_l3(*))").is("project_id", null).order("created_at", { ascending: true }),
-          supabase.from("parameters_l1").select("*, subCategories:parameters_l2(*, segments:parameters_l3(*))").eq("project_id", project.id).order("created_at", { ascending: true }),
+          // One query for both the global tree (project_id null) and
+          // the project's own tree; the global rows win below when
+          // present, exactly as before.
+          supabase.from("parameters_l1").select("*, subCategories:parameters_l2(*, segments:parameters_l3(*))").or(`project_id.is.null,project_id.eq.${project.id}`).order("created_at", { ascending: true }),
           supabase.from("findings").select("*, parameterValues:finding_parameter_values(*, segment:parameters_l3(*, subCategory:parameters_l2(*))), viabilityVotes:viability_votes(*)").eq("project_id", project.id).order("created_at", { ascending: true }),
           dbService.getGlobalWeights(),
         ]);
 
-      const l1Rows = (l1GlobalRes.data?.length ?? 0) > 0 ? l1GlobalRes.data : l1ProjectRes.data;
+      const l1All = l1Res.data || [];
+      const l1Global = l1All.filter((r: any) => !r.project_id);
+      const l1Rows = l1Global.length > 0 ? l1Global : l1All.filter((r: any) => r.project_id === project.id);
 
       return {
         id: project.id,
@@ -313,13 +325,15 @@ export const dbService = {
       },
     });
     if (!project) return null;
-    const globalWeights = await dbService.getGlobalWeights();
+    const [globalWeights, globalL1] = await Promise.all([
+      dbService.getGlobalWeights(),
+      prisma.parameterL1.findMany({
+        where: { projectId: null },
+        include: { subCategories: { include: { segments: true } } },
+        orderBy: { createdAt: "asc" },
+      }),
+    ]);
     if (globalWeights) (project as any).frameworkWeights = globalWeights;
-    const globalL1 = await prisma.parameterL1.findMany({
-      where: { projectId: null },
-      include: { subCategories: { include: { segments: true } } },
-      orderBy: { createdAt: "asc" },
-    });
     if (globalL1.length > 0) (project as any).parametersL1 = globalL1;
     return project;
   },
@@ -456,11 +470,6 @@ export const dbService = {
   },
 
   /** Pool findings only (project_id null). */
-  async getPoolFindings(): Promise<any[]> {
-    const all = await dbService.getAllFindings();
-    return all.filter((f: any) => !f.projectId);
-  },
-
   async getFindingById(id: string) {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase.from("findings").select("*").eq("id", id).maybeSingle();
@@ -1071,6 +1080,49 @@ export const dbService = {
     }
     const p = await prisma.project.findUnique({ where: { slug }, select: { id: true } });
     return p?.id ?? null;
+  },
+
+  /** Slim groups lookup for dropdowns (e.g. the Users form): one query
+   *  for the project's groups + participants. The full project fetch
+   *  is far too heavy just to list groups. */
+  async getGroupsBySlug(slug: string) {
+    const projectId = await dbService.getProjectIdBySlug(slug);
+    if (!projectId) return null;
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("groups")
+        .select("id, name, participants(id, name, role_title, user_id, is_active)")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data || []).map((g: any) => ({
+        id: g.id,
+        name: g.name,
+        participants: (g.participants || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          roleTitle: p.role_title ?? null,
+          userId: p.user_id ?? null,
+          isActive: p.is_active,
+        })),
+      }));
+    }
+    const groups = await prisma.group.findMany({
+      where: { projectId },
+      include: { participants: { orderBy: { createdAt: "asc" } } },
+      orderBy: { createdAt: "asc" },
+    });
+    return groups.map((g: any) => ({
+      id: g.id,
+      name: g.name,
+      participants: (g.participants || []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        roleTitle: p.roleTitle ?? null,
+        userId: p.userId ?? null,
+        isActive: p.isActive,
+      })),
+    }));
   },
 
   // ── Group / Participant CRUD ──────────────────────────────────────────────────
