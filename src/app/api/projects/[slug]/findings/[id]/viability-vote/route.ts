@@ -54,14 +54,33 @@ export async function POST(
     if (!me) {
       // Label-role user assigned to another project: no participant row
       // exists for them here, so they cannot vote in this project.
+      // The assignment may come from their project, or from their
+      // group (whose project implies it).
       const user = await dbService.getUserById(session.id).catch(() => null);
-      const assigned = user?.projectId ? await dbService.getProjectById(user.projectId).catch(() => null) : null;
+      let assigned: { name: string } | null = null;
+      if (user?.projectId) {
+        assigned = await dbService.getProjectById(user.projectId).catch(() => null);
+      } else if (user?.groupId) {
+        const g = await dbService.getGroupById(user.groupId).catch(() => null);
+        if (g) assigned = await dbService.getProjectById(g.projectId).catch(() => null);
+      }
       return NextResponse.json(
         { error: `This user is assigned to ${assigned?.name ?? "another project"} and cannot score in this project` },
         { status: 403 }
       );
     }
     let voterId = participantId || me.id;
+    if (participantId && !isLabelRole(session.role)) {
+      // ADMIN / FACILITATOR voting for a named participant: that
+      // participant must belong to this project, so a vote can never
+      // land on a participant from another project.
+      const inProject = (project.groups || []).some((g: any) =>
+        (g.participants || []).some((p: any) => p.id === participantId)
+      );
+      if (!inProject) {
+        return NextResponse.json({ error: "That participant does not belong to this project" }, { status: 400 });
+      }
+    }
     if (isLabelRole(session.role)) {
       if (voterId !== me.id) {
         return NextResponse.json({ error: "You can only record your own scores" }, { status: 400 });

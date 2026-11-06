@@ -21,8 +21,16 @@ export async function POST(
     if (!participant) {
       // Label-role user assigned to another project: they can look but
       // cannot score here (no participant row was created or linked).
+      // The assignment may come from their project, or from their
+      // group (whose project implies it).
       const user = await dbService.getUserById(session.id).catch(() => null);
-      const assigned = user?.projectId ? await dbService.getProjectById(user.projectId).catch(() => null) : null;
+      let assigned: { name: string } | null = null;
+      if (user?.projectId) {
+        assigned = await dbService.getProjectById(user.projectId).catch(() => null);
+      } else if (user?.groupId) {
+        const g = await dbService.getGroupById(user.groupId).catch(() => null);
+        if (g) assigned = await dbService.getProjectById(g.projectId).catch(() => null);
+      }
       return NextResponse.json(
         { error: `This user is assigned to ${assigned?.name ?? "another project"} and cannot score in this project` },
         { status: 403 }
