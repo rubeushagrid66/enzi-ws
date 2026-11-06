@@ -78,6 +78,14 @@ export default function Navbar({
               <span className="hidden sm:inline">Result Viewer</span>
             </Link>
           )}
+          {projectSlug && user && (
+            <Link
+              href={`/${projectSlug}/workshop`}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white shadow-xs hover:bg-emerald-700 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            >
+              <span className="hidden sm:inline">Workshop</span>
+            </Link>
+          )}
 
           <Link
             href="/admin"
