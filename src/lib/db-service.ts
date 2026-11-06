@@ -676,6 +676,49 @@ export const dbService = {
     });
   },
 
+  /** Fetch one user by id, including their assigned group. The group_id
+   *  column only exists after the SQL in docs/global-setup-sql.md
+   *  (Step 6); missing means groupId null. */
+  async getUserById(id: string) {
+    if (isSupabaseConfigured && supabase) {
+      let res = await supabase
+        .from("users")
+        .select("id, name, email, role, is_active, group_id, created_at")
+        .eq("id", id)
+        .single();
+      if (res.error && /group_id/i.test(res.error.message || "")) {
+        console.warn("users.group_id column missing — reading user without group; run docs/global-setup-sql.md (Step 6).");
+        res = await supabase
+          .from("users")
+          .select("id, name, email, role, is_active, created_at")
+          .eq("id", id)
+          .single();
+      }
+      if (res.error || !res.data) return null;
+      const u = res.data;
+      return { id: u.id, name: u.name, email: u.email, role: u.role, isActive: u.is_active, groupId: u.group_id ?? null, createdAt: u.created_at };
+    }
+    const u = await prisma.user.findUnique({ where: { id } });
+    if (!u) return null;
+    return { id: u.id, name: u.name, email: u.email, role: u.role, isActive: u.isActive, groupId: (u as any).groupId ?? null, createdAt: u.createdAt };
+  },
+
+  /** Fetch one group by id (id, name, projectId) or null when missing. */
+  async getGroupById(id: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("groups")
+        .select("id, name, project_id")
+        .eq("id", id)
+        .single();
+      if (error || !data) return null;
+      return { id: data.id, name: data.name, projectId: data.project_id };
+    }
+    const g = await prisma.group.findUnique({ where: { id } });
+    if (!g) return null;
+    return { id: g.id, name: g.name, projectId: g.projectId };
+  },
+
   // ── Project CRUD ────────────────────────────────────────────────────────────
 
   /** Lightweight slug lookup (id only) for uniqueness checks. */
@@ -1062,6 +1105,12 @@ export const dbService = {
    * project's first active group, or a new group named after their role
    * when the project has no groups. Never creates a duplicate for the
    * same user: name matching finds an unlinked row first.
+   *
+   * Assigned group (User.groupId, set in the dashboard Users tab):
+   * when the user has one AND that group belongs to this project, the
+   * participant must live in it — an existing row in another group is
+   * moved there, and a new row is created there. Otherwise the old
+   * behaviour above applies.
    */
   async resolveMeParticipant(projectSlug: string, session: { id: string; name: string; role: string }) {
     const project = await dbService.getProjectBySlug(projectSlug);
@@ -1069,14 +1118,25 @@ export const dbService = {
     const allParticipants: any[] = (project.groups || []).flatMap((g: any) =>
       (g.participants || []).map((p: any) => ({ ...p, groupId: g.id, groupName: g.name }))
     );
+    const user = await dbService.getUserById(session.id).catch(() => null);
+    const assignedGroup = user?.groupId
+      ? (project.groups || []).find((g: any) => g.id === user.groupId) || null
+      : null;
+    const moveToAssigned = async (p: any) => {
+      if (assignedGroup && p.groupId !== assignedGroup.id) {
+        await dbService.updateParticipant(p.id, { groupId: assignedGroup.id });
+        return { ...p, groupId: assignedGroup.id, groupName: assignedGroup.name };
+      }
+      return p;
+    };
     const byUserId = allParticipants.find((p) => p.userId === session.id);
-    if (byUserId) return byUserId;
+    if (byUserId) return moveToAssigned(byUserId);
     const byName = allParticipants.find((p) => p.name.trim().toLowerCase() === session.name.trim().toLowerCase());
     if (byName) {
       const linked = await dbService.linkParticipantToUser(byName.id, session.id);
-      return { ...byName, userId: linked ? session.id : byName.userId ?? null };
+      return moveToAssigned({ ...byName, userId: linked ? session.id : byName.userId ?? null });
     }
-    let group = (project.groups || []).find((g: any) => g.isActive) || project.groups?.[0];
+    let group = assignedGroup || (project.groups || []).find((g: any) => g.isActive) || project.groups?.[0];
     if (!group) {
       group = await dbService.createGroup(project.id, session.role);
     }
@@ -1219,6 +1279,47 @@ export const dbService = {
     return prisma.participant.update({ where: { id }, data });
   },
 
+  /** Best-effort: move the user's participant row in the given group's
+   *  project into that group (used when an admin changes a user's
+   *  assigned group). Finds the row by login id, else by name. Returns
+   *  the moved participant, or null when there is no row there yet
+   *  (the /me flow will create it in the assigned group on next use)
+   *  or when anything fails — it must never fail a user save. */
+  async moveUserParticipantToGroup(userId: string, userName: string, groupId: string) {
+    try {
+      const group = await dbService.getGroupById(groupId);
+      if (!group) return null;
+      let participants: any[] = [];
+      if (isSupabaseConfigured && supabase) {
+        const { data, error } = await supabase
+          .from("groups")
+          .select("id, participants(id, name, user_id)")
+          .eq("project_id", group.projectId);
+        if (error) return null;
+        participants = (data || []).flatMap((g: any) =>
+          (g.participants || []).map((p: any) => ({ ...p, groupId: g.id }))
+        );
+      } else {
+        const groups = await prisma.group.findMany({
+          where: { projectId: group.projectId },
+          include: { participants: true },
+        });
+        participants = groups.flatMap((g: any) =>
+          (g.participants || []).map((p: any) => ({ ...p, groupId: g.id }))
+        );
+      }
+      const row =
+        participants.find((p: any) => p.user_id === userId || p.userId === userId) ||
+        participants.find((p: any) => p.name.trim().toLowerCase() === userName.trim().toLowerCase());
+      if (!row) return null;
+      if (row.groupId === groupId) return row;
+      return await dbService.updateParticipant(row.id, { groupId });
+    } catch (err) {
+      console.warn("Could not move participant to assigned group:", (err as any)?.message || err);
+      return null;
+    }
+  },
+
   async updateAspect(id: string, data: { name?: string; description?: string; framework?: string; label?: string | null }) {
     const fw = data.framework === "Desirability" || data.framework === "Feasibility" ? data.framework : data.framework === "Viability" ? "Viability" : undefined;
     // label: undefined = leave untouched; null / "" = clear; a valid
@@ -1314,28 +1415,45 @@ export const dbService = {
     return { success: true };
   },
 
-  async updateUser(id: string, data: { name?: string; role?: string; passwordHash?: string; isActive?: boolean }) {
+  async updateUser(id: string, data: { name?: string; role?: string; passwordHash?: string; isActive?: boolean; groupId?: string | null }) {
+    // groupId: undefined = leave untouched; null / "" = clear; a string = set.
+    const groupId = data.groupId === undefined ? undefined : (data.groupId || null);
     if (isSupabaseConfigured && supabase) {
-      const { data: u, error } = await supabase.from("users").update({
+      const base: any = {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.role !== undefined && { role: normalizeUserRole(data.role) }),
         ...(data.passwordHash !== undefined && { password_hash: data.passwordHash }),
         ...(data.isActive !== undefined && { is_active: data.isActive }),
         updated_at: new Date().toISOString(),
-      }).eq("id", id).select("id, name, email, role, is_active, created_at").single();
-      if (error) throw error;
-      return { id: u.id, name: u.name, email: u.email, role: u.role, isActive: u.is_active, createdAt: u.created_at };
+      };
+      // The group_id column only exists after the SQL in
+      // docs/global-setup-sql.md (Step 6); missing means the group
+      // does not stick — retry without it so the save never breaks.
+      let res = await supabase.from("users")
+        .update(groupId !== undefined ? { ...base, group_id: groupId } : base)
+        .eq("id", id).select("id, name, email, role, is_active, group_id, created_at").single();
+      if (res.error && groupId !== undefined && /group_id/i.test(res.error.message || "")) {
+        console.warn("users.group_id column missing — saving user without group; run docs/global-setup-sql.md (Step 6).");
+        res = await supabase.from("users").update(base).eq("id", id).select("id, name, email, role, is_active, created_at").single();
+      }
+      if (res.error) throw res.error;
+      const u = res.data;
+      const group = u.group_id ? await dbService.getGroupById(u.group_id).catch(() => null) : null;
+      return { id: u.id, name: u.name, email: u.email, role: u.role, isActive: u.is_active, groupId: u.group_id ?? null, groupName: group?.name ?? null, createdAt: u.created_at };
     }
-    return prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id },
       data: {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.role !== undefined && { role: normalizeUserRole(data.role) }),
         ...(data.passwordHash !== undefined && { passwordHash: data.passwordHash }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
+        ...(groupId !== undefined && { groupId }),
       },
-      select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
+      select: { id: true, name: true, email: true, role: true, isActive: true, groupId: true, createdAt: true },
     });
+    const group = updated.groupId ? await dbService.getGroupById(updated.groupId).catch(() => null) : null;
+    return { ...updated, groupName: group?.name ?? null };
   },
 
   async deleteUser(id: string) {
@@ -1360,51 +1478,87 @@ export const dbService = {
   // ── Users CRUD ───────────────────────────────────────────────────────────────
 
   async getUsers() {
+    // Each user carries groupId + groupName (resolved in one batch
+    // query) so the dashboard can show the assigned group. The
+    // group_id column only exists after the SQL in
+    // docs/global-setup-sql.md (Step 6); missing means groupId null.
+    const resolveGroupNames = async (rows: any[], fetchNames: (ids: string[]) => Promise<Record<string, string>>) => {
+      const groupIds = Array.from(new Set(rows.map((u: any) => u.groupId).filter(Boolean)));
+      const names = groupIds.length > 0 ? await fetchNames(groupIds) : {};
+      return rows.map((u: any) => ({ ...u, groupName: names[u.groupId] ?? null }));
+    };
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase
+      let res: any = await supabase
         .from("users")
-        .select("id, name, email, role, is_active, created_at")
+        .select("id, name, email, role, is_active, group_id, created_at")
         .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data || []).map((u: any) => ({
+      if (res.error && /group_id/i.test(res.error.message || "")) {
+        console.warn("users.group_id column missing — listing users without groups; run docs/global-setup-sql.md (Step 6).");
+        res = await supabase
+          .from("users")
+          .select("id, name, email, role, is_active, created_at")
+          .order("created_at", { ascending: false });
+      }
+      if (res.error) throw res.error;
+      const rows = (res.data || []).map((u: any) => ({
         id: u.id,
         name: u.name,
         email: u.email,
         role: u.role,
         isActive: u.is_active,
+        groupId: u.group_id ?? null,
         createdAt: u.created_at,
       }));
+      return resolveGroupNames(rows, async (ids) => {
+        if (!supabase) return {};
+        const { data: groups } = await supabase.from("groups").select("id, name").in("id", ids);
+        return Object.fromEntries((groups || []).map((g: any) => [g.id, g.name]));
+      });
     }
-    return prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
+    const rows = await prisma.user.findMany({
+      select: { id: true, name: true, email: true, role: true, isActive: true, groupId: true, createdAt: true },
       orderBy: { createdAt: "desc" },
+    });
+    return resolveGroupNames(rows, async (ids) => {
+      const groups = await prisma.group.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } });
+      return Object.fromEntries(groups.map((g) => [g.id, g.name]));
     });
   },
 
-  async createUser(data: { name: string; email: string; passwordHash: string; role?: string }) {
+  async createUser(data: { name: string; email: string; passwordHash: string; role?: string; groupId?: string | null }) {
     const email = data.email.toLowerCase().trim();
+    const groupId = data.groupId || null;
     if (isSupabaseConfigured && supabase) {
       const { data: existing } = await supabase.from("users").select("id").eq("email", email).single();
       if (existing) throw new Error("Email already registered");
-      const { data: user, error } = await supabase
+      const base: any = {
+        name: data.name,
+        email,
+        password_hash: data.passwordHash,
+        role: normalizeUserRole(data.role),
+        is_active: true,
+      };
+      let res = await supabase
         .from("users")
-        .insert({
-          name: data.name,
-          email,
-          password_hash: data.passwordHash,
-          role: normalizeUserRole(data.role),
-          is_active: true,
-        })
-        .select("id, name, email, role, is_active, created_at")
+        .insert(groupId ? { ...base, group_id: groupId } : base)
+        .select("id, name, email, role, is_active, group_id, created_at")
         .single();
-      if (error) throw error;
-      return { id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.is_active, createdAt: user.created_at };
+      if (res.error && groupId && /group_id/i.test(res.error.message || "")) {
+        console.warn("users.group_id column missing — creating user without group; run docs/global-setup-sql.md (Step 6).");
+        res = await supabase.from("users").insert(base).select("id, name, email, role, is_active, created_at").single();
+      }
+      if (res.error) throw res.error;
+      const user = res.data;
+      const group = user.group_id ? await dbService.getGroupById(user.group_id).catch(() => null) : null;
+      return { id: user.id, name: user.name, email: user.email, role: user.role, isActive: user.is_active, groupId: user.group_id ?? null, groupName: group?.name ?? null, createdAt: user.created_at };
     }
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) throw new Error("Email already registered");
-    return prisma.user.create({
-      data: { name: data.name, email, passwordHash: data.passwordHash, role: normalizeUserRole(data.role), isActive: true },
-      select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
+    const created = await prisma.user.create({
+      data: { name: data.name, email, passwordHash: data.passwordHash, role: normalizeUserRole(data.role), isActive: true, ...(groupId ? { groupId } : {}) },
+      select: { id: true, name: true, email: true, role: true, isActive: true, groupId: true, createdAt: true },
     });
+    const group = created.groupId ? await dbService.getGroupById(created.groupId).catch(() => null) : null;
+    return { ...created, groupName: group?.name ?? null };
   },
 };
