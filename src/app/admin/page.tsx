@@ -129,6 +129,9 @@ function AspectLabelBadge({ label }: { label?: string | null }) {
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
+  // Access rule: only ADMIN edits config. Everyone else can edit
+  // Findings only; everything else in the admin area is view-only.
+  const isAdmin = currentUser?.role === "ADMIN";
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -930,7 +933,7 @@ export default function AdminDashboardPage() {
         onNewProject={openCreateProject}
         activeProject={activeProject}
         counts={sidebarCounts}
-        isAdmin={currentUser?.role === "ADMIN"}
+        isAdmin={isAdmin}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
@@ -963,6 +966,11 @@ export default function AdminDashboardPage() {
                   </span>
                 </div>
                 <p className="text-sm text-slate-600">Configure projects, findings, participants, parameters, and scoring logic.</p>
+                {!isAdmin && currentUser && (
+                  <p className="mt-1 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-800">
+                    You&apos;re signed in as {currentUser.name} ({currentUser.role}) — you can edit Findings; everything else here is view-only.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -1106,20 +1114,24 @@ export default function AdminDashboardPage() {
                         <label htmlFor={`weight-number-${item.name}`} className="text-sm font-bold text-slate-800">{item.name}</label>
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-slate-600">Input:</span>
-                          <input
-                            id={`weight-number-${item.name}`}
-                            type="number"
-                            value={item.weight}
-                            min={0}
-                            step="any"
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value) || 0;
-                              const next = [...weightInputs];
-                              next[idx].weight = val;
-                              setWeightInputs(next);
-                            }}
-                            className="input w-24 px-2 py-1 text-right font-bold"
-                          />
+                          {isAdmin ? (
+                            <input
+                              id={`weight-number-${item.name}`}
+                              type="number"
+                              value={item.weight}
+                              min={0}
+                              step="any"
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value) || 0;
+                                const next = [...weightInputs];
+                                next[idx].weight = val;
+                                setWeightInputs(next);
+                              }}
+                              className="input w-24 px-2 py-1 text-right font-bold"
+                            />
+                          ) : (
+                            <span className="px-2 py-1 text-right font-bold text-slate-900">{item.weight}</span>
+                          )}
                           <span className="font-semibold text-slate-600">%</span>
                         </div>
                       </div>
@@ -1150,7 +1162,7 @@ export default function AdminDashboardPage() {
                   <div>
                     {weightSaveStatus && <span className="text-sm font-semibold text-emerald-700">{weightSaveStatus}</span>}
                   </div>
-                  <button type="button" onClick={handleSaveWeights} className="btn-primary">Save Weights</button>
+                  {isAdmin && (<button type="button" onClick={handleSaveWeights} className="btn-primary">Save Weights</button>)}
                 </div>
               </div>
             </section>
@@ -1164,6 +1176,7 @@ export default function AdminDashboardPage() {
                 <p className="section-sub">Create groups, add participants, and edit or remove them.</p>
               </div>
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {isAdmin && (
                 <div className="card space-y-4 p-5">
                   <h3 className="text-sm font-bold text-slate-900">Create New Group</h3>
                   <form onSubmit={handleCreateGroup} className="flex flex-col gap-2 sm:flex-row">
@@ -1194,6 +1207,7 @@ export default function AdminDashboardPage() {
                     </form>
                   </div>
                 </div>
+                )}
 
                 <div className="card space-y-4 p-5">
                   <h3 className="text-sm font-bold text-slate-900">Active Groups &amp; Participants</h3>
@@ -1203,19 +1217,23 @@ export default function AdminDashboardPage() {
                         <div key={group.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
                           <div className="mb-2 flex items-center justify-between gap-2">
                             <span className="text-xs font-bold uppercase tracking-wider text-slate-800">{group.name} ({group.participants?.length || 0} participants)</span>
+                            {isAdmin && (
                             <span className="flex items-center gap-1">
                               <button type="button" onClick={() => setEditingGroup({ id: group.id, name: group.name })} aria-label={`Edit group ${group.name}`} className="btn-icon"><Edit2 className="h-4 w-4" /></button>
                               <button type="button" onClick={() => handleDeleteGroup(group)} aria-label={`Delete group ${group.name}`} className="btn-icon-danger"><Trash2 className="h-4 w-4" /></button>
                             </span>
+                            )}
                           </div>
                           <div className="space-y-1.5 border-l-2 border-slate-200 pl-2">
                             {group.participants?.map((p: any) => (
                               <div key={p.id} className="flex items-center justify-between gap-2 text-sm text-slate-700">
                                 <span className="min-w-0"><span className="font-medium">{p.name}</span>{p.roleTitle && <span className="text-xs text-slate-500"> — {p.roleTitle}</span>}</span>
+                                {isAdmin && (
                                 <span className="flex shrink-0 items-center gap-1">
                                   <button type="button" onClick={() => setEditingParticipant({ id: p.id, name: p.name, roleTitle: p.roleTitle || "", groupId: group.id })} aria-label={`Edit participant ${p.name}`} className="btn-icon !p-1"><Edit2 className="h-3.5 w-3.5" /></button>
                                   <button type="button" onClick={() => handleDeleteParticipant(p)} aria-label={`Delete participant ${p.name}`} className="btn-icon-danger !p-1"><Trash2 className="h-3.5 w-3.5" /></button>
                                 </span>
+                                )}
                               </div>
                             ))}
                             {(!group.participants || group.participants.length === 0) && <p className="text-xs italic text-slate-500">No participants yet.</p>}
@@ -1242,6 +1260,7 @@ export default function AdminDashboardPage() {
                 )}
               </div>
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {isAdmin && (
                 <div className="card space-y-5 p-5">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900">Add Level 1 Category</h3>
@@ -1293,6 +1312,7 @@ export default function AdminDashboardPage() {
                     </form>
                   </div>
                 </div>
+                )}
 
                 <div className="card space-y-4 p-5">
                   <h3 className="text-sm font-bold text-slate-900">Configured Hierarchy (L1 → L2 → L3)</h3>
@@ -1303,8 +1323,10 @@ export default function AdminDashboardPage() {
                           <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">L1: {l1.name}</span>
                           <span className="flex items-center gap-1">
                             <span className="mr-1 hidden font-mono text-xs text-slate-500 sm:inline">Rules: &gt;66%=3, &gt;33%=2, &lt;=33%=1</span>
+                            {isAdmin && (<>
                             <button type="button" onClick={() => setEditingParam({ level: "L1", id: l1.id, name: l1.name })} aria-label={`Edit L1 ${l1.name}`} className="btn-icon !p-1"><Edit2 className="h-3.5 w-3.5" /></button>
                             <button type="button" onClick={() => handleDeleteParam("L1", l1)} aria-label={`Delete L1 ${l1.name}`} className="btn-icon-danger !p-1"><Trash2 className="h-3.5 w-3.5" /></button>
+                            </>)}
                           </span>
                         </div>
                         <div className="mt-2.5 space-y-2 border-l-2 border-emerald-300 pl-3">
@@ -1312,20 +1334,24 @@ export default function AdminDashboardPage() {
                             <div key={l2.id} className="text-sm">
                               <div className="flex items-center justify-between gap-2">
                                 <span className="font-semibold text-slate-800">↳ L2: {l2.name}</span>
+                                {isAdmin && (
                                 <span className="flex items-center gap-1">
                                   <button type="button" onClick={() => setEditingParam({ level: "L2", id: l2.id, name: l2.name })} aria-label={`Edit L2 ${l2.name}`} className="btn-icon !p-1"><Edit2 className="h-3.5 w-3.5" /></button>
                                   <button type="button" onClick={() => handleDeleteParam("L2", l2)} aria-label={`Delete L2 ${l2.name}`} className="btn-icon-danger !p-1"><Trash2 className="h-3.5 w-3.5" /></button>
                                 </span>
+                                )}
                               </div>
                               {l2.segments?.length > 0 && (
                                 <div className="mt-1 space-y-1 pl-4 text-xs text-slate-600">
                                   {l2.segments.map((l3: any) => (
                                     <div key={l3.id} className="flex items-center justify-between gap-2">
                                       <span>• L3: {l3.name}</span>
+                                      {isAdmin && (
                                       <span className="flex items-center gap-1">
                                         <button type="button" onClick={() => setEditingParam({ level: "L3", id: l3.id, name: l3.name })} aria-label={`Edit L3 ${l3.name}`} className="btn-icon !p-1"><Edit2 className="h-3.5 w-3.5" /></button>
                                         <button type="button" onClick={() => handleDeleteParam("L3", l3)} aria-label={`Delete L3 ${l3.name}`} className="btn-icon-danger !p-1"><Trash2 className="h-3.5 w-3.5" /></button>
                                       </span>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -1352,6 +1378,7 @@ export default function AdminDashboardPage() {
                   <h2 id="aspects-heading" className="text-base font-bold text-slate-900">Viability Aspects (Aspek)</h2>
                   <p className="mt-0.5 text-sm text-slate-600">Define aspects for the participant validation voting matrix, and link each one to the framework its votes feed — Desirability, Viability, or Feasibility.</p>
                 </div>
+                {isAdmin && (
                 <form onSubmit={handleCreateAspect} className="space-y-3">
                   <div>
                     <label htmlFor="new-aspect-name" className="field-label">Aspect name</label>
@@ -1380,6 +1407,7 @@ export default function AdminDashboardPage() {
                   </div>
                   <button type="submit" className="btn-primary">Add Aspect</button>
                 </form>
+                )}
                 <div className="space-y-2 border-t border-slate-100 pt-4">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">Active Aspects ({activeProject?.viabilityAspects?.length || 0})</h3>
                   {activeProject?.viabilityAspects?.map((aspect: any) => (
@@ -1392,10 +1420,12 @@ export default function AdminDashboardPage() {
                         </div>
                         {aspect.description && <div className="mt-0.5 text-xs text-slate-600">{aspect.description}</div>}
                       </div>
+                      {isAdmin && (
                       <span className="flex shrink-0 items-center gap-1">
                         <button type="button" onClick={() => setEditingAspect({ id: aspect.id, name: aspect.name, description: aspect.description || "", framework: aspect.framework || "Viability", label: aspect.label || "" })} aria-label={`Edit aspect ${aspect.name}`} className="btn-icon"><Edit2 className="h-4 w-4" /></button>
                         <button type="button" onClick={() => handleDeleteAspect(aspect)} aria-label={`Delete aspect ${aspect.name}`} className="btn-icon-danger"><Trash2 className="h-4 w-4" /></button>
                       </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1411,7 +1441,7 @@ export default function AdminDashboardPage() {
                   <h2 id="projects-heading" className="section-title">All Workshop Projects</h2>
                   <p className="section-sub">Switch between workshops or create new project workspaces.</p>
                 </div>
-                <button type="button" onClick={openCreateProject} className="btn-primary"><Plus className="h-4 w-4" /> Create Project</button>
+                {isAdmin && (<button type="button" onClick={openCreateProject} className="btn-primary"><Plus className="h-4 w-4" /> Create Project</button>)}
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {projects.map((p) => (
@@ -1432,8 +1462,10 @@ export default function AdminDashboardPage() {
                         <a href={`/${p.slug}`} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm text-slate-600 hover:text-slate-800">
                           <span>Viewer</span><ExternalLink className="h-3 w-3" />
                         </a>
+                        {isAdmin && (<>
                         <button type="button" onClick={() => openEditProject(p)} aria-label={`Edit project ${p.name}`} className="btn-icon !p-1"><Edit2 className="h-4 w-4" /></button>
                         <button type="button" onClick={() => handleDeleteProject(p)} aria-label={`Delete project ${p.name}`} className="btn-icon-danger !p-1"><Trash2 className="h-4 w-4" /></button>
+                        </>)}
                       </span>
                     </div>
                   </div>
@@ -1443,7 +1475,7 @@ export default function AdminDashboardPage() {
           )}
 
           {/* TAB: USERS (ADMIN ONLY) */}
-          {activeTab === "users" && currentUser?.role === "ADMIN" && (
+          {activeTab === "users" && isAdmin && (
             <section aria-labelledby="users-heading" className="max-w-3xl space-y-6">
               <div className="card space-y-6 p-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
