@@ -19,13 +19,19 @@ export function Modal({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = labelledBy || `modal-title-${title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+  // Callers pass inline `onClose` arrows, so its identity changes on
+  // every render. Keep the latest one in a ref and run the open-once
+  // effect a single time — otherwise every keystroke in any field
+  // re-ran the effect and yanked focus back to the first field.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     document.addEventListener("keydown", onKey);
-    // Focus the first focusable field inside the dialog.
+    // Focus the first focusable field once, when the dialog opens.
     const el = panelRef.current?.querySelector<HTMLElement>(
       "input, select, textarea, button:not([data-close])"
     );
@@ -36,7 +42,8 @@ export function Modal({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
     };
-  }, [onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div

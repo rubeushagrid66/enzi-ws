@@ -46,7 +46,7 @@ body {
     @apply rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500;
   }
   .input {
-    @apply rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500;
+    @apply rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500;
   }
   .field-label {
     @apply mb-1 block text-xs font-bold text-slate-600;
@@ -60,6 +60,22 @@ body {
   .section-sub {
     @apply text-sm text-slate-600;
   }
+}
+
+/* iOS Safari auto-zooms when a focused text field is smaller than 16px,
+   which makes typing on mobile jumpy and annoying. Keep every text-like
+   field at 16px or larger, no matter what utility class it also has.
+   (Deliberately unlayered so it wins over Tailwind's text-xs/text-sm.) */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+textarea,
+select {
+  font-size: 16px;
 }
 
 /* Post-it Note Animation & Styling */
