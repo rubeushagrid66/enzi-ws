@@ -613,17 +613,19 @@ export default function WorkshopSession({
                         Step 2 — Record votes (Viability)
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">
-                        Go participant by participant and record each person&apos;s own
-                        answer per aspect. Votes on Viability-linked aspects feed the
-                        Viability score (the share of validated votes); votes on
+                        Score each aspect 1–3 as yourself and write your Alasan
+                        (reason) per aspect. Scores on Viability-linked aspects feed
+                        the Viability score (the share of scored aspects); scores on
                         Desirability- or Feasibility-linked aspects feed those scores
-                        instead — see the group headings on the matrix.
+                        instead — see the group headings on the matrix. If your role
+                        is Business &amp; Ops, Product or Tech you only see your own
+                        label&apos;s aspects.
                       </p>
                     </div>
                     <ViabilityVoteMatrix
                       project={project}
                       finding={selectedFinding}
-                      isAdmin={true}
+                      currentUser={currentUser}
                       onVotesChanged={(updated) => {
                         applyUpdatedFinding(updated);
                         loadProject(true);

@@ -654,6 +654,7 @@ export default function ProjectResultViewer({
           allFindings={findings}
           project={project}
           isAdmin={isAdmin}
+          currentUser={currentUser}
           onClose={() => setSelectedFinding(null)}
           onFindingUpdated={(updated) => {
             applyUpdatedFinding(updated);
