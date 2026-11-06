@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { LogIn, LogOut, Shield, LayoutGrid, LayoutDashboard, ExternalLink } from "lucide-react";
+import { LogIn, LogOut, Shield, LayoutGrid, LayoutDashboard } from "lucide-react";
 
 interface User {
   id: string;
@@ -19,16 +19,14 @@ export default function Navbar({
   projectName?: string;
 }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/auth/me")
       .then((res) => res.json())
       .then((data) => {
         if (data?.user) setUser(data.user);
-        setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {});
   }, []);
 
   const handleLogout = async () => {

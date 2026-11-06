@@ -24,7 +24,7 @@ import {
 import { slugify } from "@/lib/slugify";
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: { slug: string } }
 ) {
   try {

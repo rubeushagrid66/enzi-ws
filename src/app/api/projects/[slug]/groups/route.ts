@@ -8,11 +8,13 @@ export async function GET(
   { params }: { params: { slug: string } }
 ) {
   try {
-    const project = await dbService.getProjectBySlug(params.slug);
-    if (!project) {
+    // Slim lookup (groups + participants only) — the full project
+    // fetch is far too heavy just to list groups for a dropdown.
+    const groups = await dbService.getGroupsBySlug(params.slug);
+    if (!groups) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
-    return NextResponse.json({ groups: project.groups });
+    return NextResponse.json({ groups });
   } catch (error) {
     console.error("Error fetching groups:", error);
     return NextResponse.json({ error: "Failed to fetch groups" }, { status: 500 });

@@ -5,10 +5,6 @@ import AutoRefreshOnFocus from "@/components/AutoRefreshOnFocus";
 import {
   Sparkles,
   ArrowRight,
-  Layers,
-  Compass,
-  Target,
-  Users2,
   CheckCircle2,
   ExternalLink,
 } from "lucide-react";
