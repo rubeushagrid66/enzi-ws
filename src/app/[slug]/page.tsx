@@ -37,11 +37,14 @@ export default function ProjectResultViewer({
   const [selectedFinding, setSelectedFinding] = useState<any | null>(null);
   const [viewMode, setViewMode] = useState<"directory" | "canvas">("directory");
 
-  // Fetch project data
-  const loadProjectData = async () => {
+  // Fetch project data. `silent` refreshes in the background without
+  // flashing the full-page loading screen or unmounting the matrix —
+  // a full reload after a drag-drop save used to snap the card back
+  // to its old position.
+  const loadProjectData = async (silent = false) => {
     try {
-      setLoading(true);
-      const res = await fetch(`/api/projects/${slug}`);
+      if (!silent) setLoading(true);
+      const res = await fetch(`/api/projects/${slug}`, { cache: "no-store" });
       if (!res.ok) {
         throw new Error("Project not found");
       }
@@ -55,14 +58,49 @@ export default function ProjectResultViewer({
         setCurrentUser(userData.user);
       }
     } catch (err: any) {
-      setError(err.message || "Failed to load project");
+      if (!silent) setError(err.message || "Failed to load project");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
+  };
+
+  // Apply a saved finding (e.g. a dragged position) to local state
+  // immediately, so the card stays where it was dropped. The backend
+  // already saved it; this just keeps the UI in sync with the truth.
+  const applyUpdatedFinding = (updated: any) => {
+    if (!updated?.id) return;
+    setProject((prev: any) =>
+      prev
+        ? {
+            ...prev,
+            findings: (prev.findings || []).map((f: any) =>
+              f.id === updated.id ? { ...f, ...updated } : f
+            ),
+          }
+        : prev
+    );
+    setSelectedFinding((prev: any) =>
+      prev && prev.id === updated.id ? { ...prev, ...updated } : prev
+    );
   };
 
   useEffect(() => {
     loadProjectData();
+  }, [slug]);
+
+  // Auto-refresh when the tab comes back into view, so changes made in
+  // the admin dashboard (possibly in another tab) show up without a
+  // manual reload.
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") loadProjectData(true);
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
   }, [slug]);
 
   if (loading) {
@@ -489,7 +527,10 @@ export default function ProjectResultViewer({
                     projectSlug={project.slug}
                     isAdmin={isAdmin}
                     onPositionSaved={(updated) => {
-                      loadProjectData();
+                      applyUpdatedFinding(updated);
+                      // Silent background refresh for recalculated scores
+                      // (quadrant / composite change with the position).
+                      loadProjectData(true);
                     }}
                   />
 
@@ -538,8 +579,8 @@ export default function ProjectResultViewer({
           isAdmin={isAdmin}
           onClose={() => setSelectedFinding(null)}
           onFindingUpdated={(updated) => {
-            setSelectedFinding(updated);
-            loadProjectData();
+            applyUpdatedFinding(updated);
+            loadProjectData(true);
           }}
         />
       )}

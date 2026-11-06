@@ -35,11 +35,23 @@ export default function FeasibilityMatrix({
   const [isDragging, setIsDragging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Latest dragged coordinates. React state updates are async, so reading
+  // posX/posY in the pointer-up handler can save the previous position.
+  // The ref always holds the newest values from the last pointer move.
+  const latestPosRef = useRef({ x: finding.feasibilityX ?? 50, y: finding.feasibilityY ?? 50 });
+  const isDraggingRef = useRef(false);
 
   useEffect(() => {
-    setPosX(finding.feasibilityX ?? 50);
-    setPosY(finding.feasibilityY ?? 50);
+    // Never snap the card back while a drag is in progress, and never
+    // overwrite the just-dropped position with the pre-save prop value.
+    if (isDraggingRef.current) return;
+    const x = finding.feasibilityX ?? 50;
+    const y = finding.feasibilityY ?? 50;
+    latestPosRef.current = { x, y };
+    setPosX(x);
+    setPosY(y);
   }, [finding.id, finding.feasibilityX, finding.feasibilityY]);
 
   // Compute quadrant from continuous coordinates
@@ -95,10 +107,14 @@ export default function FeasibilityMatrix({
 
   const currentInfo = computeQuadrant(posX, posY);
 
-  // Save coordinates to backend
+  // Save coordinates to backend. On success the parent updates its own
+  // state from the returned finding, so the card stays where it was
+  // dropped. On failure the card stays at the dropped position too and
+  // an error is shown — it must not silently snap back to the old spot.
   const saveCoordinates = async (finalX: number, finalY: number) => {
     setIsSaving(true);
     setSaveSuccess(false);
+    setSaveError(null);
     try {
       const res = await fetch(
         `/api/projects/${projectSlug}/findings/${finding.id}/feasibility`,
@@ -108,16 +124,19 @@ export default function FeasibilityMatrix({
           body: JSON.stringify({ x: finalX, y: finalY }),
         }
       );
-      if (res.ok) {
-        const data = await res.json();
-        setSaveSuccess(true);
-        if (onPositionSaved && data.finding) {
-          onPositionSaved(data.finding);
-        }
-        setTimeout(() => setSaveSuccess(false), 2000);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Save failed (${res.status})`);
       }
-    } catch (err) {
+      const data = await res.json();
+      setSaveSuccess(true);
+      if (onPositionSaved && data.finding) {
+        onPositionSaved(data.finding);
+      }
+      setTimeout(() => setSaveSuccess(false), 2000);
+    } catch (err: any) {
       console.error("Failed to save feasibility coordinates:", err);
+      setSaveError(err?.message || "Failed to save position. Try dragging again.");
     } finally {
       setIsSaving(false);
     }
@@ -126,6 +145,8 @@ export default function FeasibilityMatrix({
   // Pointer / Mouse drag handlers for smooth responsive interaction
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!isAdmin) return;
+    setSaveError(null);
+    isDraggingRef.current = true;
     setIsDragging(true);
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -143,19 +164,24 @@ export default function FeasibilityMatrix({
     newX = Math.max(3, Math.min(97, newX));
     newY = Math.max(3, Math.min(97, newY));
 
-    setPosX(Number(newX.toFixed(1)));
-    setPosY(Number(newY.toFixed(1)));
+    const rounded = { x: Number(newX.toFixed(1)), y: Number(newY.toFixed(1)) };
+    latestPosRef.current = rounded;
+    setPosX(rounded.x);
+    setPosY(rounded.y);
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
     if (!isDragging) return;
+    isDraggingRef.current = false;
     setIsDragging(false);
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {
       // Ignore capture release errors
     }
-    saveCoordinates(posX, posY);
+    // Save the latest dragged coordinates from the ref, not from state,
+    // which may still hold the previous pointer-move value.
+    saveCoordinates(latestPosRef.current.x, latestPosRef.current.y);
   };
 
   return (
@@ -185,6 +211,11 @@ export default function FeasibilityMatrix({
               {saveSuccess && (
                 <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
                   <Check className="h-3.5 w-3.5" /> Saved
+                </span>
+              )}
+              {saveError && (
+                <span role="alert" className="inline-flex items-center gap-1 text-rose-600 font-medium">
+                  <AlertCircle className="h-3.5 w-3.5" /> {saveError}
                 </span>
               )}
               <span className="text-slate-400 font-mono">
