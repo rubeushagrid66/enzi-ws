@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { dbService } from "@/lib/db-service";
+import { dbService, ASPECT_LABELS } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
 import { FRAMEWORKS } from "@/lib/scoring";
@@ -30,7 +30,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { name, description, framework } = await request.json();
+    const { name, description, framework, label } = await request.json();
     if (!name) {
       return NextResponse.json({ error: "Aspect name is required" }, { status: 400 });
     }
@@ -40,13 +40,19 @@ export async function POST(
         { status: 400 }
       );
     }
+    if (label !== undefined && label !== null && label !== "" && !(ASPECT_LABELS as readonly string[]).includes(label)) {
+      return NextResponse.json(
+        { error: "label must be Business & Ops, Product or Tech" },
+        { status: 400 }
+      );
+    }
 
     const projectId = await dbService.getProjectIdBySlug(params.slug);
     if (!projectId) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    const aspect = await dbService.createAspect(projectId, name, description, framework ?? "Viability");
+    const aspect = await dbService.createAspect(projectId, name, description, framework ?? "Viability", label ?? null);
     revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, aspect });
   } catch (error) {

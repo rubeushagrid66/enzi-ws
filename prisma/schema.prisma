@@ -104,6 +104,7 @@ model ViabilityAspect {
   projectId      String
   name           String          // e.g. "Market Demand", "Operational Capacity", "Tech Readiness"
   framework      String          @default("Viability") // Desirability | Viability | Feasibility — the framework dimension this aspect's votes feed
+  label          String?         // Business & Ops | Product | Tech — grouping used by the viability scoring formula (stored/display only for now)
   description    String?
   isActive       Boolean         @default(true)
   createdAt      DateTime        @default(now())

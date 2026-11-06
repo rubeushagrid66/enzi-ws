@@ -33,6 +33,19 @@ function toNotFoundError(error: any, message: string): Error {
 export const GLOBAL_SQL_HINT =
   "Global setup is not enabled yet — run docs/global-setup-sql.md in the Supabase SQL editor.";
 
+/** The only allowed aspect labels. A label groups an aspect for the
+ *  viability scoring formula (stored and displayed only for now). */
+export const ASPECT_LABELS = ["Business & Ops", "Product", "Tech"] as const;
+export type AspectLabel = (typeof ASPECT_LABELS)[number];
+
+/** Normalise a label input: a valid label passes through, anything
+ *  else (null, empty string, unknown value) becomes null (no label). */
+export function normalizeAspectLabel(label: unknown): AspectLabel | null {
+  return typeof label === "string" && (ASPECT_LABELS as readonly string[]).includes(label)
+    ? (label as AspectLabel)
+    : null;
+}
+
 /** Parse a global_settings value (jsonb object from Supabase, or a JSON
  *  string from Prisma) into a weights array, or null when unusable. */
 function parseGlobalWeights(value: any): Array<{ name: string; weight: number }> | null {
@@ -163,8 +176,10 @@ export const dbService = {
           name: a.name,
           // The framework column only exists after the SQL in
           // docs/aspect-framework-sql.md is run; until then every aspect
-          // reads as Viability, exactly as before.
+          // reads as Viability, exactly as before. Same for the label
+          // column (docs/global-setup-sql.md, Step 1): missing means null.
           framework: a.framework ?? "Viability",
+          label: a.label ?? null,
           description: a.description,
           isActive: a.is_active,
         })),
@@ -963,29 +978,31 @@ export const dbService = {
 
   // ── Viability Aspect CRUD ────────────────────────────────────────────────────
 
-  async createAspect(projectId: string, name: string, description?: string, framework?: string) {
+  async createAspect(projectId: string, name: string, description?: string, framework?: string, label?: string | null) {
     const fw = framework === "Desirability" || framework === "Feasibility" ? framework : "Viability";
+    const lab = normalizeAspectLabel(label);
     if (isSupabaseConfigured && supabase) {
       // The framework column may not exist yet in Supabase (it is added
-      // by docs/aspect-framework-sql.md). If the insert fails on that
+      // by docs/aspect-framework-sql.md), and likewise the label column
+      // (docs/global-setup-sql.md, Step 1). If the insert fails on either
       // column, retry without it so aspect creation never breaks.
-      let res = await supabase
-        .from("viability_aspects")
-        .insert({ project_id: projectId, name, description: description || "", is_active: true, framework: fw })
-        .select()
-        .single();
+      const payload: any = { project_id: projectId, name, description: description || "", is_active: true, framework: fw };
+      if (lab !== null) payload.label = lab;
+      let res = await supabase.from("viability_aspects").insert(payload).select().single();
       if (res.error && /framework/i.test(res.error.message || "")) {
         console.warn("viability_aspects.framework column missing — saving aspect without framework; run docs/aspect-framework-sql.md to enable linkage.");
-        res = await supabase
-          .from("viability_aspects")
-          .insert({ project_id: projectId, name, description: description || "", is_active: true })
-          .select()
-          .single();
+        delete payload.framework;
+        res = await supabase.from("viability_aspects").insert(payload).select().single();
+      }
+      if (res.error && /label/i.test(res.error.message || "")) {
+        console.warn("viability_aspects.label column missing — saving aspect without label; run docs/global-setup-sql.md to enable labels.");
+        delete payload.label;
+        res = await supabase.from("viability_aspects").insert(payload).select().single();
       }
       if (res.error) throw res.error;
-      return { ...res.data, framework: res.data.framework ?? fw };
+      return { ...res.data, framework: res.data.framework ?? fw, label: res.data.label ?? lab };
     }
-    return prisma.viabilityAspect.create({ data: { projectId, name, description: description || "", framework: fw } });
+    return prisma.viabilityAspect.create({ data: { projectId, name, description: description || "", framework: fw, label: lab } });
   },
 
   async deleteAspect(id: string) {
@@ -1076,23 +1093,32 @@ export const dbService = {
     return prisma.participant.update({ where: { id }, data });
   },
 
-  async updateAspect(id: string, data: { name?: string; description?: string; framework?: string }) {
+  async updateAspect(id: string, data: { name?: string; description?: string; framework?: string; label?: string | null }) {
     const fw = data.framework === "Desirability" || data.framework === "Feasibility" ? data.framework : data.framework === "Viability" ? "Viability" : undefined;
+    // label: undefined = leave untouched; null / "" = clear; a valid
+    // label = set it. Anything else normalises to null (clear).
+    const lab = data.label === undefined ? undefined : normalizeAspectLabel(data.label);
     if (isSupabaseConfigured && supabase) {
-      const withFramework = {
+      const withExtras: any = {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.description !== undefined && { description: data.description }),
         ...(fw !== undefined && { framework: fw }),
+        ...(lab !== undefined && { label: lab }),
         updated_at: new Date().toISOString(),
       };
-      let res = await supabase.from("viability_aspects").update(withFramework).eq("id", id).select().single();
+      let res = await supabase.from("viability_aspects").update(withExtras).eq("id", id).select().single();
       if (res.error && fw !== undefined && /framework/i.test(res.error.message || "")) {
         console.warn("viability_aspects.framework column missing — saving aspect without framework; run docs/aspect-framework-sql.md to enable linkage.");
-        const { framework: _omit, ...withoutFramework } = withFramework as any;
-        res = await supabase.from("viability_aspects").update(withoutFramework).eq("id", id).select().single();
+        delete withExtras.framework;
+        res = await supabase.from("viability_aspects").update(withExtras).eq("id", id).select().single();
+      }
+      if (res.error && lab !== undefined && /label/i.test(res.error.message || "")) {
+        console.warn("viability_aspects.label column missing — saving aspect without label; run docs/global-setup-sql.md to enable labels.");
+        delete withExtras.label;
+        res = await supabase.from("viability_aspects").update(withExtras).eq("id", id).select().single();
       }
       if (res.error) throw res.error;
-      return { ...res.data, framework: res.data.framework ?? fw ?? "Viability" };
+      return { ...res.data, framework: res.data.framework ?? fw ?? "Viability", label: res.data.label ?? lab ?? null };
     }
     return prisma.viabilityAspect.update({
       where: { id },
@@ -1100,6 +1126,7 @@ export const dbService = {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.description !== undefined && { description: data.description }),
         ...(fw !== undefined && { framework: fw }),
+        ...(lab !== undefined && { label: lab }),
       },
     });
   },

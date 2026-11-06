@@ -12,7 +12,12 @@ first — run everything below once in the Supabase dashboard
 
 ```sql
 alter table viability_aspects add column if not exists framework text not null default 'Viability';
+alter table viability_aspects add column if not exists label text;
 ```
+
+The `label` column holds each aspect's label (Business & Ops, Product,
+or Tech). It is needed before labels will stick: until it exists, the
+code saves aspects without a label and reads them as unlabeled.
 
 ## Step 2 — Allow pool findings and a global parameter tree
 

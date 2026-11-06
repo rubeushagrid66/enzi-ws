@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { dbService } from "@/lib/db-service";
+import { dbService, ASPECT_LABELS } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
 import { FRAMEWORKS } from "@/lib/scoring";
@@ -11,7 +11,7 @@ export async function PUT(
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const { name, description, framework } = await request.json();
+    const { name, description, framework, label } = await request.json();
     if (!name) return NextResponse.json({ error: "Aspect name is required" }, { status: 400 });
     if (framework !== undefined && !FRAMEWORKS.includes(framework)) {
       return NextResponse.json(
@@ -19,7 +19,13 @@ export async function PUT(
         { status: 400 }
       );
     }
-    const aspect = await dbService.updateAspect(params.id, { name, description, framework });
+    if (label !== undefined && label !== null && label !== "" && !(ASPECT_LABELS as readonly string[]).includes(label)) {
+      return NextResponse.json(
+        { error: "label must be Business & Ops, Product or Tech" },
+        { status: 400 }
+      );
+    }
+    const aspect = await dbService.updateAspect(params.id, { name, description, framework, label });
     revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, aspect });
   } catch (error) {
