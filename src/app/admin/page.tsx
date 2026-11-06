@@ -1610,6 +1610,9 @@ export default function AdminDashboardPage() {
               <select id="user-role" value={userForm.role} onChange={(e) => setUserForm((f) => ({ ...f, role: e.target.value }))} className="input w-full">
                 <option value="FACILITATOR">Facilitator</option>
                 <option value="ADMIN">Admin</option>
+                <option value="Business & Ops">Business &amp; Ops (scores Business &amp; Ops aspects only)</option>
+                <option value="Product">Product (scores Product aspects only)</option>
+                <option value="Tech">Tech (scores Tech aspects only)</option>
               </select>
             </div>
             <div className="flex items-center justify-end gap-2 pt-2">
