@@ -60,6 +60,17 @@ export async function POST(request: Request) {
 
     const passwordHash = await hashPassword(password);
     const user = await dbService.createUser({ name, email, passwordHash, role, groupId: cleanGroupId, projectId: effectiveProjectId });
+    // Best-effort: a user created with a group immediately gets their
+    // participant row in that group (inheriting project, role, group),
+    // so they show up in the group and the scoring table before their
+    // first login. Never fails the user save.
+    if (user.groupId) {
+      try {
+        await dbService.ensureUserParticipantInGroup(user.id, user.name, user.role, user.groupId);
+      } catch {
+        // The /me flow creates the participant on first use instead.
+      }
+    }
     return NextResponse.json({ success: true, user });
   } catch (error: any) {
     console.error("Error creating user:", error);

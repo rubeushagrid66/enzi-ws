@@ -1339,13 +1339,16 @@ export const dbService = {
     return prisma.participant.update({ where: { id }, data });
   },
 
-  /** Best-effort: move the user's participant row in the given group's
-   *  project into that group (used when an admin changes a user's
-   *  assigned group). Finds the row by login id, else by name. Returns
-   *  the moved participant, or null when there is no row there yet
-   *  (the /me flow will create it in the assigned group on next use)
-   *  or when anything fails — it must never fail a user save. */
-  async moveUserParticipantToGroup(userId: string, userName: string, groupId: string) {
+  /** Best-effort: make the user's assignment real as a participant row,
+   *  so the user inherits their assigned project, role and group at
+   *  assignment time — not only when they first log in and open the
+   *  project. Used when an admin creates a user with a group or changes
+   *  a user's assigned group. Finds the row by login id, else by name,
+   *  in the group's project; moves it into the assigned group and links
+   *  it (login id + role) when found; creates it there when missing.
+   *  Returns the participant, or null when there is no such group or
+   *  anything fails — it must never fail a user save. */
+  async ensureUserParticipantInGroup(userId: string, userName: string, roleTitle: string, groupId: string) {
     try {
       const group = await dbService.getGroupById(groupId);
       if (!group) return null;
@@ -1353,7 +1356,7 @@ export const dbService = {
       if (isSupabaseConfigured && supabase) {
         const { data, error } = await supabase
           .from("groups")
-          .select("id, participants(id, name, user_id)")
+          .select("id, participants(id, name, user_id, role_title)")
           .eq("project_id", group.projectId);
         if (error) return null;
         participants = (data || []).flatMap((g: any) =>
@@ -1371,11 +1374,23 @@ export const dbService = {
       const row =
         participants.find((p: any) => p.user_id === userId || p.userId === userId) ||
         participants.find((p: any) => p.name.trim().toLowerCase() === userName.trim().toLowerCase());
-      if (!row) return null;
-      if (row.groupId === groupId) return row;
-      return await dbService.updateParticipant(row.id, { groupId });
+      if (!row) {
+        return await dbService.createParticipant(groupId, userName, roleTitle, userId);
+      }
+      // Claim / move the row into the assigned group, inheriting the
+      // user's role. (A row claimed by name gets linked to the login.)
+      if (!row.user_id && !row.userId) {
+        await dbService.linkParticipantToUser(row.id, userId);
+      }
+      const patch: any = {};
+      if (row.groupId !== groupId) patch.groupId = groupId;
+      if ((row.role_title ?? row.roleTitle ?? "") !== roleTitle) patch.roleTitle = roleTitle;
+      if (Object.keys(patch).length > 0) {
+        return await dbService.updateParticipant(row.id, patch);
+      }
+      return row;
     } catch (err) {
-      console.warn("Could not move participant to assigned group:", (err as any)?.message || err);
+      console.warn("Could not ensure participant in assigned group:", (err as any)?.message || err);
       return null;
     }
   },

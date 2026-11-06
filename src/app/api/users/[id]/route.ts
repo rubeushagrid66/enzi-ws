@@ -76,12 +76,14 @@ export async function PUT(
     }
     const passwordHash = password ? await hashPassword(password) : undefined;
     const user = await dbService.updateUser(params.id, { name, role, passwordHash, groupId: effectiveGroupId, projectId: effectiveProjectId });
-    // Best-effort: when the assigned group changed, move the user's
-    // participant in that group's project into the new group so the
-    // "Me" chip follows immediately. Never fails the user save.
-    if (effectiveGroupId && effectiveGroupId !== current.groupId) {
+    // Best-effort: whenever a group is assigned, make sure the user's
+    // participant row exists in that group (inheriting project, role,
+    // group) — creating it when missing, moving it when it sits in
+    // another group — so the "Me" chip and the group lists follow
+    // immediately. Never fails the user save.
+    if (effectiveGroupId) {
       try {
-        await dbService.moveUserParticipantToGroup(params.id, user.name, effectiveGroupId);
+        await dbService.ensureUserParticipantInGroup(params.id, user.name, user.role, effectiveGroupId);
       } catch {
         // The /me flow moves/creates the participant on next use.
       }
