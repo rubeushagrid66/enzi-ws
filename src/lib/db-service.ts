@@ -1166,6 +1166,19 @@ export const dbService = {
     if (user?.projectId && user.projectId !== project.id && isLabelRole(session.role)) {
       return null;
     }
+    // A group assignment implies a project (a group's project): a
+    // label-role user whose assigned group belongs to ANOTHER project
+    // cannot score here either — otherwise merely opening the wrong
+    // project silently creates them a participant in that project's
+    // first group (seen live with Biz CMS 2: assigned to CMS Grup 2,
+    // opened DVC, got a "Me" in DVC Grup 1). Same exemptions as the
+    // project gate. A dangling groupId (group deleted) does not block.
+    if (user?.groupId && isLabelRole(session.role)) {
+      const assigned = await dbService.getGroupById(user.groupId).catch(() => null);
+      if (assigned && assigned.projectId !== project.id) {
+        return null;
+      }
+    }
     const assignedGroup = user?.groupId
       ? (project.groups || []).find((g: any) => g.id === user.groupId) || null
       : null;
