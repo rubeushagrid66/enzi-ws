@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
-import FindingDetailModal from "@/components/FindingDetailModal";
 import FeasibilityMatrix from "@/components/FeasibilityMatrix";
 import {
   Sparkles,
@@ -135,6 +135,7 @@ export default function ProjectResultViewer({
   params: { slug: string };
 }) {
   const { slug } = params;
+  const router = useRouter();
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -531,7 +532,7 @@ export default function ProjectResultViewer({
                     </p>
                     <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                       {scoredFindings.map((finding, i) => (
-                        <FindingCard key={finding.id} finding={finding} rank={i + 1} onSelect={setSelectedFinding} />
+                        <FindingCard key={finding.id} finding={finding} rank={i + 1} onSelect={(f) => router.push(`/${slug}/findings/${f.id}`)} />
                       ))}
                     </div>
                   </section>
@@ -546,7 +547,7 @@ export default function ProjectResultViewer({
                     </p>
                     <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                       {awaitingFindings.map((finding) => (
-                        <FindingCard key={finding.id} finding={finding} onSelect={setSelectedFinding} />
+                        <FindingCard key={finding.id} finding={finding} onSelect={(f) => router.push(`/${slug}/findings/${f.id}`)} />
                       ))}
                     </div>
                   </section>
@@ -646,22 +647,6 @@ export default function ProjectResultViewer({
           </div>
         )}
       </main>
-
-      {/* 3-Tab Detail View Modal */}
-      {selectedFinding && (
-        <FindingDetailModal
-          finding={selectedFinding}
-          allFindings={findings}
-          project={project}
-          isAdmin={isAdmin}
-          currentUser={currentUser}
-          onClose={() => setSelectedFinding(null)}
-          onFindingUpdated={(updated) => {
-            applyUpdatedFinding(updated);
-            loadProjectData(true);
-          }}
-        />
-      )}
     </div>
   );
 }
