@@ -133,3 +133,22 @@ group id; groups are per-project, so a user assigned to a group in one
 project keeps that assignment when another project is selected — the
 participant is only moved when the assigned group belongs to the
 project being scored.
+
+## Step 7 — User project assignment (run once)
+
+Each login user can be assigned to a project from the dashboard Users
+tab ("Project" field). Label-role users (Tech / Product / Business &
+Ops) assigned to a project can only score in that project — the /me
+endpoint answers 403 elsewhere and no participant row is created
+there; ADMIN and FACILITATOR work across projects. Until this column
+exists, the field does not stick and users keep the previous
+behaviour (no project restriction).
+
+```sql
+alter table users add column if not exists project_id text;
+```
+
+Notes: `project_id` is null when no project is assigned. When both a
+project and a group are set, the group must belong to that project
+(the API rejects a mismatch and clears a kept group when the project
+changes). A group on its own implies its project.

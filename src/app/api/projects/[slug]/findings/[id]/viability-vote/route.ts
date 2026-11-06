@@ -51,6 +51,16 @@ export async function POST(
 
     // Resolve who is voting. Label-role users always vote as themselves.
     const me = await dbService.resolveMeParticipant(params.slug, session);
+    if (!me) {
+      // Label-role user assigned to another project: no participant row
+      // exists for them here, so they cannot vote in this project.
+      const user = await dbService.getUserById(session.id).catch(() => null);
+      const assigned = user?.projectId ? await dbService.getProjectById(user.projectId).catch(() => null) : null;
+      return NextResponse.json(
+        { error: `This user is assigned to ${assigned?.name ?? "another project"} and cannot score in this project` },
+        { status: 403 }
+      );
+    }
     let voterId = participantId || me.id;
     if (isLabelRole(session.role)) {
       if (voterId !== me.id) {

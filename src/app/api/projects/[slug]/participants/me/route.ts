@@ -18,6 +18,16 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const participant = await dbService.resolveMeParticipant(params.slug, session);
+    if (!participant) {
+      // Label-role user assigned to another project: they can look but
+      // cannot score here (no participant row was created or linked).
+      const user = await dbService.getUserById(session.id).catch(() => null);
+      const assigned = user?.projectId ? await dbService.getProjectById(user.projectId).catch(() => null) : null;
+      return NextResponse.json(
+        { error: `This user is assigned to ${assigned?.name ?? "another project"} and cannot score in this project` },
+        { status: 403 }
+      );
+    }
     return NextResponse.json({ success: true, participant });
   } catch (error: any) {
     console.error("Error resolving voter participant:", error);
