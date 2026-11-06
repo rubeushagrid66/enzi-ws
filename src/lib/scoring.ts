@@ -24,9 +24,50 @@ export interface DesirabilityResult {
   score: number; // 0-100
   l1Breakdowns: L1Breakdown[];
   formulaExplanation: string;
+  /** The inputs that were blended into this score (see blend rule). */
+  inputs: BlendInput[];
 }
 
 export type ScoringDimension = "Desirability" | "Viability" | "Feasibility";
+
+/** The three frameworks an aspect can be linked to. */
+export const FRAMEWORKS: ScoringDimension[] = [
+  "Desirability",
+  "Viability",
+  "Feasibility",
+];
+
+/**
+ * Normalizes a stored/raw framework value. Anything unknown or missing
+ * is "Viability" — every aspect created before the linkage existed
+ * behaves exactly as it did before.
+ */
+export function normalizeFramework(value: any): ScoringDimension {
+  if (value === "Desirability" || value === "Feasibility") return value;
+  return "Viability";
+}
+
+/**
+ * Blend rule (Option B — aspect linkage feeds scoring): within one
+ * dimension, the score is the average of the inputs that are available
+ * for that dimension. If only one input exists, that input alone is the
+ * score. If none exists, the dimension is unscored (null), never 0.
+ */
+export interface BlendInput {
+  label: string;
+  score: number; // 0-100
+}
+
+export function blendDimensionInputs(
+  inputs: Array<BlendInput | null | undefined>
+): { score: number | null; inputs: BlendInput[] } {
+  const available = (inputs.filter(
+    (i): i is BlendInput => i != null && Number.isFinite(i.score)
+  ) ?? []) as BlendInput[];
+  if (available.length === 0) return { score: null, inputs: [] };
+  const avg = available.reduce((sum, i) => sum + i.score, 0) / available.length;
+  return { score: Number(avg.toFixed(1)), inputs: available };
+}
 
 export interface FindingScoringStatus {
   desirabilityScored: boolean;
@@ -41,20 +82,43 @@ export interface FindingScoringStatus {
 /**
  * Derives a finding's scoring status from existing data only — no status
  * column exists. A dimension counts as scored only when the workshop
- * produced data for it: an explicit L3 mapping (Desirability), at least
- * one viability vote (Viability), or a placed matrix position
- * (Feasibility). A finding with no workshop data is Unscored.
+ * produced data for it: an explicit L3 mapping or a vote on a
+ * Desirability-linked aspect (Desirability), a vote on a
+ * Viability-linked aspect (Viability), or a placed matrix position or a
+ * vote on a Feasibility-linked aspect (Feasibility). A finding with no
+ * workshop data is Unscored.
  */
-export function getFindingScoringStatus(finding: {
-  parameterValues?: Array<any> | null;
-  viabilityVotes?: Array<any> | null;
-  feasibilityX?: number | null;
-  feasibilityY?: number | null;
-}): FindingScoringStatus {
-  const desirabilityScored = (finding.parameterValues?.length ?? 0) > 0;
-  const viabilityScored = (finding.viabilityVotes?.length ?? 0) > 0;
-  const feasibilityScored =
+export function getFindingScoringStatus(
+  finding: {
+    parameterValues?: Array<any> | null;
+    viabilityVotes?: Array<any> | null;
+    feasibilityX?: number | null;
+    feasibilityY?: number | null;
+  },
+  aspects?: Array<{ id: string; framework?: any }> | null
+): FindingScoringStatus {
+  const votes = finding.viabilityVotes ?? [];
+  let desirabilityScored = (finding.parameterValues?.length ?? 0) > 0;
+  let viabilityScored = votes.length > 0;
+  let feasibilityScored =
     finding.feasibilityX != null && finding.feasibilityY != null;
+  if (aspects && aspects.length > 0) {
+    // Aspect linkage: a vote only scores the dimension its aspect is
+    // linked to. Without aspects, fall back to the old rule (any vote
+    // scores Viability).
+    const idsFor = (dim: ScoringDimension) =>
+      new Set(
+        aspects
+          .filter((a) => normalizeFramework(a.framework) === dim)
+          .map((a) => a.id)
+      );
+    const dIds = idsFor("Desirability");
+    const vIds = idsFor("Viability");
+    const fIds = idsFor("Feasibility");
+    if (votes.some((v: any) => dIds.has(v.aspectId))) desirabilityScored = true;
+    viabilityScored = votes.some((v: any) => vIds.has(v.aspectId));
+    if (votes.some((v: any) => fIds.has(v.aspectId))) feasibilityScored = true;
+  }
   const pending: ScoringDimension[] = [];
   if (!desirabilityScored) pending.push("Desirability");
   if (!viabilityScored) pending.push("Viability");
@@ -76,6 +140,12 @@ export function getFindingScoringStatus(finding: {
  * Sumber/Platform attributes are display tags, not score inputs — a
  * finding must be mapped to L3 segments by the workshop group before it
  * can have a Desirability score.
+ *
+ * Blend rule (aspect linkage): when Desirability-linked aspects have
+ * votes, their validation % is blended with the L3-mapping score as an
+ * equal input (average of the available inputs). Pass
+ * aspectValidationScore as null when there are no D-linked aspects or
+ * no votes on them — the mapping score alone is then the result.
  */
 export function calculateDesirabilityScore(
   l1Parameters: Array<{
@@ -84,13 +154,23 @@ export function calculateDesirabilityScore(
     scoringRules: ScoringRule[];
     subCategories: Array<{ id: string; name: string }>;
   }>,
-  findingValues: Array<{ l3Id: string; l3?: { l2Id: string } }>
+  findingValues: Array<{ l3Id: string; l3?: { l2Id: string } }>,
+  aspectValidationScore?: number | null
 ): DesirabilityResult {
   if (!l1Parameters || l1Parameters.length === 0) {
+    const blended = blendDimensionInputs([
+      aspectValidationScore != null
+        ? { label: "Desirability aspects validated", score: aspectValidationScore }
+        : null,
+    ]);
     return {
-      score: 0,
+      score: blended.score ?? 0,
       l1Breakdowns: [],
-      formulaExplanation: "No Level 1 parameters configured.",
+      formulaExplanation:
+        blended.inputs.length > 0
+          ? `No Level 1 parameters configured — Desirability from aspects only: ${blended.inputs.map((i) => `${i.label} ${i.score}`).join(" · ")} = ${blended.score}`
+          : "No Level 1 parameters configured.",
+      inputs: blended.inputs,
     };
   }
 
@@ -143,7 +223,7 @@ export function calculateDesirabilityScore(
     });
   }
 
-  const finalScore = Number(
+  const mappingScore = Number(
     (totalNormalizedScore / l1Parameters.length).toFixed(1)
   );
 
@@ -154,10 +234,31 @@ export function calculateDesirabilityScore(
     )
     .join(" + ");
 
+  // Blend the L3-mapping score with D-linked aspect validation, when
+  // the workshop recorded votes on Desirability-linked aspects. No
+  // mappings means no mapping input at all — an empty mapping must not
+  // contribute a phantom score to the blend.
+  const blended = blendDimensionInputs([
+    findingValues.length > 0
+      ? { label: "L3 mapping", score: mappingScore }
+      : null,
+    aspectValidationScore != null
+      ? { label: "Desirability aspects validated", score: aspectValidationScore }
+      : null,
+  ]);
+  const inputsText = blended.inputs
+    .map((i) => `${i.label} ${i.score}`)
+    .join(" · ");
+  const blendNote =
+    blended.inputs.length > 1
+      ? ` Blend (average of ${blended.inputs.length} inputs): ${inputsText} = ${blended.score}`
+      : "";
+
   return {
-    score: finalScore,
+    score: blended.score ?? mappingScore,
     l1Breakdowns: breakdowns,
-    formulaExplanation: `Average of categories: (${explanation}) / ${breakdowns.length} = ${finalScore}`,
+    formulaExplanation: `Average of categories: (${explanation}) / ${breakdowns.length} = ${mappingScore}.${blendNote}`,
+    inputs: blended.inputs,
   };
 }
 
@@ -180,10 +281,82 @@ export interface ViabilityResult {
     possibleVotes: number;
     percentage: number;
   }>;
+  /** How many aspects were counted (e.g. only the Viability-linked ones). */
+  aspectsCounted?: number;
+}
+
+export interface AspectValidation {
+  /** Validation % across the given aspects (participants x aspects). */
+  score: number;
+  totalPossibleVotes: number;
+  totalValidatedVotes: number;
+  groupBreakdown: ViabilityResult["groupBreakdown"];
+  /** True once any vote row exists for these aspects (validated or not). */
+  hasVotes: boolean;
 }
 
 /**
- * Computes Viability Score from participant validation matrix
+ * Validation % for one set of linked aspects (e.g. all Desirability-
+ * linked aspects). Returns null when there are no aspects in the set or
+ * no votes recorded on them yet — an unvoted aspect input is unavailable,
+ * not 0, so it never drags a blended score down.
+ */
+export function calculateAspectValidation(
+  aspectIds: string[],
+  groups: Array<{
+    id: string;
+    name: string;
+    participants: Array<{ id: string; name: string }>;
+  }>,
+  votes: Array<{ participantId: string; aspectId: string; isValidated: boolean }>
+): AspectValidation | null {
+  if (!aspectIds || aspectIds.length === 0) return null;
+  const ids = new Set(aspectIds);
+  const relevant = (votes || []).filter((v) => ids.has(v.aspectId));
+  if (relevant.length === 0) return null;
+
+  const activeVotes = relevant.filter((v) => v.isValidated);
+  let grandTotalPossible = 0;
+  let grandTotalValidated = 0;
+
+  const groupBreakdown = groups.map((g) => {
+    const participantsCount = g.participants.length;
+    const possible = participantsCount * aspectIds.length;
+    let validated = 0;
+    for (const p of g.participants) {
+      for (const v of activeVotes) {
+        if (v.participantId === p.id) validated++;
+      }
+    }
+    grandTotalPossible += possible;
+    grandTotalValidated += validated;
+    return {
+      groupId: g.id,
+      groupName: g.name,
+      validatedVotes: validated,
+      possibleVotes: possible,
+      percentage:
+        possible > 0 ? Number(((validated / possible) * 100).toFixed(1)) : 0,
+    };
+  });
+
+  return {
+    score:
+      grandTotalPossible > 0
+        ? Number(((grandTotalValidated / grandTotalPossible) * 100).toFixed(1))
+        : 0,
+    totalPossibleVotes: grandTotalPossible,
+    totalValidatedVotes: grandTotalValidated,
+    groupBreakdown,
+    hasVotes: true,
+  };
+}
+
+/**
+ * Computes Viability Score from participant validation matrix.
+ * Pass `aspectIds` to count only those aspects (e.g. only the
+ * Viability-linked ones) — votes on other frameworks' aspects are
+ * ignored. Without it, all given votes count (legacy behaviour).
  */
 export function calculateViabilityScore(
   totalAspectsCount: number,
@@ -192,9 +365,14 @@ export function calculateViabilityScore(
     name: string;
     participants: Array<{ id: string; name: string }>;
   }>,
-  votes: Array<{ participantId: string; aspectId: string; isValidated: boolean }>
+  votes: Array<{ participantId: string; aspectId: string; isValidated: boolean }>,
+  aspectIds?: string[]
 ): ViabilityResult {
-  const activeVotes = votes.filter((v) => v.isValidated);
+  const scopedVotes =
+    aspectIds && aspectIds.length > 0
+      ? (votes || []).filter((v) => aspectIds.includes(v.aspectId))
+      : votes;
+  const activeVotes = scopedVotes.filter((v) => v.isValidated);
   const validatedVoteSet = new Set(
     activeVotes.map((v) => `${v.participantId}:${v.aspectId}`)
   );
@@ -240,6 +418,7 @@ export function calculateViabilityScore(
     totalPossibleVotes: grandTotalPossible,
     totalValidatedVotes: grandTotalValidated,
     groupBreakdown,
+    aspectsCounted: aspectIds?.length ?? totalAspectsCount,
   };
 }
 
@@ -256,6 +435,8 @@ export interface FeasibilityInfo {
   impactLabel: "HIGH" | "LOW";
   effortLabel: "HIGH" | "LOW";
   score: number; // 0-100 score representation
+  /** The inputs blended into this score (quadrant + F-aspect validation). */
+  inputs?: BlendInput[];
 }
 
 /**
@@ -265,7 +446,20 @@ export interface FeasibilityInfo {
  * Bottom-Left: Avoid (Low Impact, High Effort => Y < 50, X < 50)
  * Bottom-Right: Fill-ins (Low Impact, Low Effort => Y < 50, X >= 50)
  */
-export function getFeasibilityFromCoordinates(x: number, y: number): FeasibilityInfo {
+/**
+ * Maps continuous X, Y coordinates to a 2x2 Feasibility Quadrant.
+ *
+ * Blend rule (aspect linkage): when Feasibility-linked aspects have
+ * votes, their validation % is blended with the quadrant score as an
+ * equal input. Pass aspectValidationScore as null when there are no
+ * F-linked aspects or no votes on them — the quadrant score alone is
+ * then the result.
+ */
+export function getFeasibilityFromCoordinates(
+  x: number,
+  y: number,
+  aspectValidationScore?: number | null
+): FeasibilityInfo {
   const clampedX = Math.max(0, Math.min(100, x));
   const clampedY = Math.max(0, Math.min(100, y));
 
@@ -273,21 +467,28 @@ export function getFeasibilityFromCoordinates(x: number, y: number): Feasibility
   const isLowEffort = clampedX >= 50; // Higher X = lower effort / easier to do
 
   let quadrant: FeasibilityQuadrant;
-  let score = 50;
+  let quadrantScore = 50;
 
   if (isHighImpact && !isLowEffort) {
     quadrant = "BIG_BETS";
-    score = 75;
+    quadrantScore = 75;
   } else if (isHighImpact && isLowEffort) {
     quadrant = "QUICK_WINS";
-    score = 100;
+    quadrantScore = 100;
   } else if (!isHighImpact && !isLowEffort) {
     quadrant = "AVOID";
-    score = 25;
+    quadrantScore = 25;
   } else {
     quadrant = "FILL_INS";
-    score = 50;
+    quadrantScore = 50;
   }
+
+  const blended = blendDimensionInputs([
+    { label: "Matrix quadrant", score: quadrantScore },
+    aspectValidationScore != null
+      ? { label: "Feasibility aspects validated", score: aspectValidationScore }
+      : null,
+  ]);
 
   return {
     x: clampedX,
@@ -295,7 +496,8 @@ export function getFeasibilityFromCoordinates(x: number, y: number): Feasibility
     quadrant,
     impactLabel: isHighImpact ? "HIGH" : "LOW",
     effortLabel: isLowEffort ? "LOW" : "HIGH",
-    score,
+    score: blended.score ?? quadrantScore,
+    inputs: blended.inputs,
   };
 }
 
