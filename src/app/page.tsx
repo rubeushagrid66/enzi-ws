@@ -68,10 +68,10 @@ export default async function HomePage() {
               </p>
             </div>
             <Link
-              href="/admin"
+              href="/dashboard"
               className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
             >
-              <span>Manage in Admin</span>
+              <span>Manage in Dashboard</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -152,10 +152,10 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <p>Enzi Workshop Platform • Desirability, Viability & Feasibility (DVF) Engine</p>
           <div className="flex items-center gap-4">
-            <Link href="/admin/login" className="hover:text-slate-800 transition">
+            <Link href="/dashboard/login" className="hover:text-slate-800 transition">
               Admin Login
             </Link>
-            <Link href="/admin/login" className="hover:text-slate-800 transition">
+            <Link href="/dashboard/login" className="hover:text-slate-800 transition">
               User login
             </Link>
           </div>

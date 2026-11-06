@@ -15,7 +15,7 @@ export default async function WorkshopPage({
   params: { slug: string };
 }) {
   const session = await getSession();
-  if (!session) redirect("/admin/login");
+  if (!session) redirect("/dashboard/login");
 
   return <WorkshopSession slug={params.slug} currentUser={session} />;
 }

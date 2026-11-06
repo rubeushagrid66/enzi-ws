@@ -8,5 +8,5 @@ import { revalidatePath } from "next/cache";
 export function revalidateProjectPages(slug?: string) {
   revalidatePath("/", "page");
   if (slug) revalidatePath(`/${slug}`, "page");
-  revalidatePath("/admin", "page");
+  revalidatePath("/dashboard", "page");
 }

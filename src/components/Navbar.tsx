@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { LogIn, LogOut, Shield, LayoutGrid, ExternalLink } from "lucide-react";
+import { LogIn, LogOut, Shield, LayoutGrid, LayoutDashboard, ExternalLink } from "lucide-react";
 
 interface User {
   id: string;
@@ -87,13 +87,23 @@ export default function Navbar({
             </Link>
           )}
 
-          <Link
-            href="/admin/login"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-          >
-            <Shield className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-            <span className="hidden sm:inline">Admin Login</span>
-          </Link>
+          {user ? (
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            >
+              <LayoutDashboard className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </Link>
+          ) : (
+            <Link
+              href="/dashboard/login"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            >
+              <Shield className="h-4 w-4 text-emerald-600" aria-hidden="true" />
+              <span className="hidden sm:inline">Admin Login</span>
+            </Link>
+          )}
 
           {user ? (
             <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
@@ -115,7 +125,7 @@ export default function Navbar({
             </div>
           ) : (
             <Link
-              href="/admin/login"
+              href="/dashboard/login"
               className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-sm font-semibold text-white shadow-xs hover:bg-emerald-700 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
             >
               <LogIn className="h-4 w-4" aria-hidden="true" />
