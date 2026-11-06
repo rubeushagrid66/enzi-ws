@@ -244,14 +244,16 @@ export default function FeasibilityMatrix({
 
       {/* 2x2 Matrix Canvas */}
       <div className="relative">
-        {/* Y-Axis Label (Impact) */}
-        <div className="absolute -left-6 top-1/2 -translate-y-1/2 -rotate-90 text-xs font-bold uppercase tracking-widest text-slate-500 select-none">
+        {/* Y-Axis Label (Impact) — hidden on phones, where it crowds
+            the board's left edge. */}
+        <div className="absolute -left-6 top-1/2 -translate-y-1/2 -rotate-90 text-xs font-bold uppercase tracking-widest text-slate-500 select-none hidden sm:block">
           Impact (Low → High)
         </div>
 
-        {/* X-Axis Label (Effort) */}
+        {/* X-Axis Label (Effort) — short form on phones. */}
         <div className="text-center text-xs font-bold uppercase tracking-widest text-slate-500 select-none pb-1">
-          ← High Effort (Harder) —————— Low Effort (Easier) →
+          <span className="sm:hidden">← Harder ———— Easier →</span>
+          <span className="hidden sm:inline">← High Effort (Harder) —————— Low Effort (Easier) →</span>
         </div>
 
         <div
@@ -268,7 +270,7 @@ export default function FeasibilityMatrix({
               <span className="text-xs font-bold uppercase tracking-wider text-amber-800/80">
                 Big Bets
               </span>
-              <span className="text-xs font-medium text-amber-600 bg-amber-100/60 px-2 py-0.5 rounded-full">
+              <span className="hidden sm:inline text-xs font-medium text-amber-600 bg-amber-100/60 px-2 py-0.5 rounded-full">
                 High Impact • High Effort
               </span>
             </div>
@@ -280,7 +282,7 @@ export default function FeasibilityMatrix({
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-800/80">
                 Quick Wins
               </span>
-              <span className="text-[10px] font-medium text-emerald-600 bg-emerald-100/60 px-2 py-0.5 rounded-full">
+              <span className="hidden sm:inline text-[10px] font-medium text-emerald-600 bg-emerald-100/60 px-2 py-0.5 rounded-full">
                 High Impact • Low Effort
               </span>
             </div>
@@ -292,7 +294,7 @@ export default function FeasibilityMatrix({
               <span className="text-xs font-bold uppercase tracking-wider text-rose-800/80">
                 Avoid
               </span>
-              <span className="text-[10px] font-medium text-rose-600 bg-rose-100/60 px-2 py-0.5 rounded-full">
+              <span className="hidden sm:inline text-[10px] font-medium text-rose-600 bg-rose-100/60 px-2 py-0.5 rounded-full">
                 Low Impact • High Effort
               </span>
             </div>
@@ -304,7 +306,7 @@ export default function FeasibilityMatrix({
               <span className="text-xs font-bold uppercase tracking-wider text-blue-800/80">
                 Fill-ins
               </span>
-              <span className="text-[10px] font-medium text-blue-600 bg-blue-100/60 px-2 py-0.5 rounded-full">
+              <span className="hidden sm:inline text-[10px] font-medium text-blue-600 bg-blue-100/60 px-2 py-0.5 rounded-full">
                 Low Impact • Low Effort
               </span>
             </div>
@@ -346,7 +348,7 @@ export default function FeasibilityMatrix({
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
-            className={`postit-note absolute z-30 w-52 sm:w-60 rounded-xl p-3.5 shadow-lg border transition-shadow cursor-default ${
+            className={`postit-note absolute z-30 w-40 sm:w-60 rounded-xl p-3.5 shadow-lg border transition-shadow cursor-default ${
               isAdmin ? "cursor-grab active:cursor-grabbing hover:shadow-xl" : ""
             } ${
               currentInfo.quadrant === "QUICK_WINS"

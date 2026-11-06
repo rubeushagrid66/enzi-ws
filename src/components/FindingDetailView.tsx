@@ -5,13 +5,7 @@ import {
   Target,
   Users2,
   Compass,
-  CheckCircle2,
-  Percent,
-  Layers,
-  Sparkles,
   HelpCircle,
-  BarChart3,
-  Check,
 } from "lucide-react";
 import FeasibilityMatrix from "./FeasibilityMatrix";
 import ViabilityVoteMatrix from "./ViabilityVoteMatrix";
@@ -102,17 +96,17 @@ export default function FindingDetailView({
           )}
 
           {/* Tab Navigation */}
-          <div className="mt-6 flex border-b border-slate-200">
+          <div className="mt-6 flex border-b border-slate-200 overflow-x-auto">
             <button
               onClick={() => setActiveTab("desirability")}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition -mb-px ${
+              className={`flex shrink-0 items-center gap-2 px-3 sm:px-5 py-3 text-xs sm:text-sm font-semibold border-b-2 transition -mb-px ${
                 activeTab === "desirability"
                   ? "border-emerald-600 text-emerald-700 bg-emerald-50/50"
                   : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
               }`}
             >
-              <Target className="h-4 w-4" />
-              <span>Tab 1: Desirability</span>
+              <Target className="hidden sm:block h-4 w-4" />
+              <span><span className="hidden sm:inline">Tab 1: </span>Desirability</span>
               <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800">
                 {showNum(scores.desirability)}
               </span>
@@ -120,14 +114,14 @@ export default function FindingDetailView({
 
             <button
               onClick={() => setActiveTab("viability")}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition -mb-px ${
+              className={`flex shrink-0 items-center gap-2 px-3 sm:px-5 py-3 text-xs sm:text-sm font-semibold border-b-2 transition -mb-px ${
                 activeTab === "viability"
                   ? "border-blue-600 text-blue-700 bg-blue-50/50"
                   : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
               }`}
             >
-              <Users2 className="h-4 w-4" />
-              <span>Tab 2: Viability</span>
+              <Users2 className="hidden sm:block h-4 w-4" />
+              <span><span className="hidden sm:inline">Tab 2: </span>Viability</span>
               <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-800">
                 {scores.viability != null ? `${scores.viability}%` : "—"}
               </span>
@@ -135,14 +129,14 @@ export default function FindingDetailView({
 
             <button
               onClick={() => setActiveTab("feasibility")}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition -mb-px ${
+              className={`flex shrink-0 items-center gap-2 px-3 sm:px-5 py-3 text-xs sm:text-sm font-semibold border-b-2 transition -mb-px ${
                 activeTab === "feasibility"
                   ? "border-amber-600 text-amber-700 bg-amber-50/50"
                   : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
               }`}
             >
-              <Compass className="h-4 w-4" />
-              <span>Tab 3: Feasibility (2x2 Matrix)</span>
+              <Compass className="hidden sm:block h-4 w-4" />
+              <span><span className="hidden sm:inline">Tab 3: </span>Feasibility<span className="hidden sm:inline"> (2x2 Matrix)</span></span>
               <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800">
                 {feasibility.quadrant?.replace("_", " ") ?? "Not placed"}
               </span>

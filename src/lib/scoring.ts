@@ -373,9 +373,6 @@ export function calculateViabilityScore(
       ? (votes || []).filter((v) => aspectIds.includes(v.aspectId))
       : votes;
   const activeVotes = scopedVotes.filter((v) => v.isValidated);
-  const validatedVoteSet = new Set(
-    activeVotes.map((v) => `${v.participantId}:${v.aspectId}`)
-  );
 
   let grandTotalPossible = 0;
   let grandTotalValidated = 0;

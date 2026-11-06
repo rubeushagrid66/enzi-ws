@@ -5,18 +5,10 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import FeasibilityMatrix from "@/components/FeasibilityMatrix";
 import {
-  Sparkles,
   Search,
-  Filter,
-  Layers,
   Target,
-  Users2,
-  Compass,
   ArrowRight,
-  TrendingUp,
-  LayoutGrid,
   CheckCircle2,
-  Calendar,
 } from "lucide-react";
 
 function FindingCard({
@@ -155,7 +147,12 @@ export default function ProjectResultViewer({
   const loadProjectData = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const res = await fetch(`/api/projects/${slug}`, { cache: "no-store" });
+      // The project and the session are independent — fetch them
+      // together instead of one after the other.
+      const [res, userRes] = await Promise.all([
+        fetch(`/api/projects/${slug}`, { cache: "no-store" }),
+        fetch("/api/auth/me"),
+      ]);
       if (!res.ok) {
         throw new Error("Project not found");
       }
@@ -163,7 +160,6 @@ export default function ProjectResultViewer({
       setProject(data.project);
 
       // Check current session
-      const userRes = await fetch("/api/auth/me");
       if (userRes.ok) {
         const userData = await userRes.json();
         setCurrentUser(userData.user);
