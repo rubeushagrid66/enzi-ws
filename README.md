@@ -20,7 +20,7 @@ The platform features two streamlined primary interfaces:
 
 2. **Admin Dashboard (`/admin`):**
    - **Project Management:** Create projects with auto-generated URL slugs, active/inactive toggles.
-   - **Framework & Weighting Engine:** Real-time **Auto-Calibration Logic** that proportionally normalizes weights when inputs exceed or differ from 100%.
+   - **Framework & Weighting Engine:** Desirability, Viability, and Feasibility weights are saved exactly as entered — any number, no automatic recalibration or normalization to 100%.
    - **Findings & Dynamic Tagging:** Create findings with customizable tags (*Sumber*, *Platform*, *Feature*).
    - **Hierarchical Parameters (L1 → L2 → L3):** Level 1 Categories with custom logic-based scoring rules (e.g. >66% = 3, >33% = 2, <=33% = 1), Level 2 Sub-categories, and Level 3 Segments.
    - **Group & Participant Manager:** Manage groups and participants for validation matrices.
