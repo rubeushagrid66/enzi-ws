@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from "./supabase";
 import { prisma } from "./prisma";
+import { slugify } from "./slugify";
 
 /**
  * Unified Database Service supporting both:
@@ -121,8 +122,11 @@ export const dbService = {
           title: f.title,
           description: f.description,
           tags: typeof f.tags === "string" ? f.tags : JSON.stringify(f.tags || []),
-          feasibilityX: f.feasibility_x != null ? Number(f.feasibility_x) : 50,
-          feasibilityY: f.feasibility_y != null ? Number(f.feasibility_y) : 50,
+          // Null stays null: an unplaced finding has no feasibility
+          // position. The UI may display it at 50/50 as a neutral
+          // default, but null is what marks it "not yet scored".
+          feasibilityX: f.feasibility_x != null ? Number(f.feasibility_x) : null,
+          feasibilityY: f.feasibility_y != null ? Number(f.feasibility_y) : null,
           feasibilityQuadrant: f.feasibility_quadrant,
           feasibilityImpact: f.feasibility_impact,
           feasibilityEffort: f.feasibility_effort,
@@ -330,17 +334,27 @@ export const dbService = {
 
   // ── Project CRUD ────────────────────────────────────────────────────────────
 
+  /** Lightweight slug lookup (id only) for uniqueness checks. */
+  async findProjectBySlug(slug: string): Promise<{ id: string; slug: string } | null> {
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase
+        .from("projects")
+        .select("id, slug")
+        .eq("slug", slug)
+        .maybeSingle();
+      return data ? { id: data.id, slug: data.slug } : null;
+    }
+    const p = await prisma.project.findUnique({ where: { slug }, select: { id: true, slug: true } });
+    return p ? { id: p.id, slug: p.slug } : null;
+  },
+
   async createProject(data: {
     name: string;
     slug: string;
     description?: string;
     isActive?: boolean;
   }) {
-    const slug = data.slug
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9-]/g, "-")
-      .replace(/-+/g, "-");
+    const slug = slugify(data.slug);
 
     if (isSupabaseConfigured && supabase) {
       // Check slug uniqueness
@@ -402,7 +416,10 @@ export const dbService = {
     });
   },
 
-  async updateProject(slug: string, data: { name?: string; description?: string; isActive?: boolean }) {
+  async updateProject(
+    slug: string,
+    data: { name?: string; description?: string; isActive?: boolean; slug?: string }
+  ) {
     if (isSupabaseConfigured && supabase) {
       const { data: project, error } = await supabase
         .from("projects")
@@ -410,6 +427,8 @@ export const dbService = {
           ...(data.name !== undefined && { name: data.name }),
           ...(data.description !== undefined && { description: data.description }),
           ...(data.isActive !== undefined && { is_active: data.isActive }),
+          // Renaming a project moves its URL: the slug follows the name.
+          ...(data.slug !== undefined && { slug: data.slug }),
           updated_at: new Date().toISOString(),
         })
         .eq("slug", slug)
@@ -424,6 +443,7 @@ export const dbService = {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.description !== undefined && { description: data.description }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
+        ...(data.slug !== undefined && { slug: data.slug }),
       },
     });
   },
@@ -453,6 +473,8 @@ export const dbService = {
       platform: data.platform || [],
     });
 
+    // A new finding starts Unscored: no feasibility position until the
+    // workshop places it on the matrix (null, not a 50/50 default).
     if (isSupabaseConfigured && supabase) {
       const { data: finding, error } = await supabase
         .from("findings")
@@ -461,11 +483,11 @@ export const dbService = {
           title: data.title,
           description: data.description || "",
           tags: tagsJson,
-          feasibility_x: 50,
-          feasibility_y: 50,
-          feasibility_quadrant: "QUICK_WINS",
-          feasibility_impact: "HIGH",
-          feasibility_effort: "LOW",
+          feasibility_x: null,
+          feasibility_y: null,
+          feasibility_quadrant: null,
+          feasibility_impact: null,
+          feasibility_effort: null,
         })
         .select()
         .single();
@@ -479,13 +501,66 @@ export const dbService = {
         title: data.title,
         description: data.description || "",
         tags: tagsJson,
-        feasibilityX: 50,
-        feasibilityY: 50,
-        feasibilityQuadrant: "QUICK_WINS",
-        feasibilityImpact: "HIGH",
-        feasibilityEffort: "LOW",
+        feasibilityX: null,
+        feasibilityY: null,
+        feasibilityQuadrant: null,
+        feasibilityImpact: null,
+        feasibilityEffort: null,
       },
     });
+  },
+
+  // ── Finding Parameter Values (workshop Desirability mapping) ───────────────
+
+  /** Replace all L3 mappings of a finding with the given list. */
+  async setFindingParameterValues(
+    findingId: string,
+    values: Array<{ l3Id: string; value: string }>
+  ) {
+    const clean = values
+      .filter((v) => v.l3Id && v.value && v.value.trim())
+      .map((v) => ({ l3Id: v.l3Id, value: v.value.trim() }));
+    if (isSupabaseConfigured && supabase) {
+      const { error: delError } = await supabase
+        .from("finding_parameter_values")
+        .delete()
+        .eq("finding_id", findingId);
+      if (delError) throw delError;
+      if (clean.length > 0) {
+        const { data, error } = await supabase
+          .from("finding_parameter_values")
+          .insert(
+            clean.map((v) => ({
+              finding_id: findingId,
+              l3_id: v.l3Id,
+              value: v.value,
+            }))
+          )
+          .select();
+        if (error) throw error;
+        return data;
+      }
+      return [];
+    }
+    await prisma.findingParameterValue.deleteMany({ where: { findingId } });
+    if (clean.length === 0) return [];
+    await prisma.findingParameterValue.createMany({ data: clean.map((v) => ({ ...v, findingId })) });
+    return prisma.findingParameterValue.findMany({ where: { findingId } });
+  },
+
+  /** Remove all mappings of one L3 segment from a finding. */
+  async deleteFindingParameterValue(findingId: string, l3Id: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase
+        .from("finding_parameter_values")
+        .delete()
+        .eq("finding_id", findingId)
+        .eq("l3_id", l3Id);
+      if (error) throw error;
+      return { success: true };
+    }
+    await prisma.findingParameterValue.deleteMany({ where: { findingId, l3Id } });
+    return { success: true };
   },
 
   async updateFinding(id: string, data: {

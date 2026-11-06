@@ -1,0 +1,611 @@
+"use client";
+
+import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import Navbar from "@/components/Navbar";
+import FeasibilityMatrix from "./FeasibilityMatrix";
+import ViabilityVoteMatrix from "./ViabilityVoteMatrix";
+import {
+  Target,
+  Users2,
+  Compass,
+  CheckCircle2,
+  ArrowLeft,
+  ArrowRight,
+  Clock,
+} from "lucide-react";
+
+type Step = "desirability" | "viability" | "feasibility";
+
+const STEPS: Array<{ id: Step; label: string; hint: string }> = [
+  { id: "desirability", label: "1 · Map parameters", hint: "Desirability" },
+  { id: "viability", label: "2 · Record votes", hint: "Viability" },
+  { id: "feasibility", label: "3 · Consensus placement", hint: "Feasibility" },
+];
+
+function StatusChip({ scored, label }: { scored: boolean; label: string }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold ${
+        scored
+          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+          : "border-amber-200 bg-amber-50 text-amber-800"
+      }`}
+    >
+      {scored && <CheckCircle2 className="h-3 w-3" />}
+      {label}: {scored ? "Scored" : "Pending"}
+    </span>
+  );
+}
+
+export default function WorkshopSession({
+  slug,
+  currentUser,
+}: {
+  slug: string;
+  currentUser: { name: string; role: string };
+}) {
+  const [project, setProject] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedFindingId, setSelectedFindingId] = useState<string | null>(null);
+  const [step, setStep] = useState<Step>("desirability");
+  const [status, setStatus] = useState<string | null>(null);
+
+  // Step 1 (Desirability) local mapping: l3Id -> free-text value.
+  const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [savingMapping, setSavingMapping] = useState(false);
+  // Step 3 (Feasibility) consensus: last position saved by a drag.
+  const [lastPos, setLastPos] = useState<{ x: number; y: number } | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+
+  const loadProject = useCallback(
+    async (silent = false) => {
+      try {
+        if (!silent) setLoading(true);
+        const res = await fetch(`/api/projects/${slug}`, { cache: "no-store" });
+        if (!res.ok) throw new Error("Project not found");
+        const data = await res.json();
+        setProject(data.project);
+      } catch (err: any) {
+        if (!silent) setError(err.message || "Failed to load project");
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [slug]
+  );
+
+  useEffect(() => {
+    loadProject();
+  }, [loadProject]);
+
+  const findings: any[] = project?.findings || [];
+  const selectedFinding =
+    findings.find((f) => f.id === selectedFindingId) || findings[0] || null;
+
+  // Rebuild the mapping editor whenever a different finding is selected.
+  useEffect(() => {
+    if (!selectedFinding) {
+      setMapping({});
+      return;
+    }
+    const m: Record<string, string> = {};
+    for (const pv of selectedFinding.parameterValues || []) {
+      m[pv.l3Id] = pv.value;
+    }
+    setMapping(m);
+    setConfirmed(false);
+    setLastPos(
+      selectedFinding.feasibilityX != null && selectedFinding.feasibilityY != null
+        ? { x: selectedFinding.feasibilityX, y: selectedFinding.feasibilityY }
+        : null
+    );
+    setStatus(null);
+  }, [selectedFinding?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Merge a freshly saved finding into local state (no full reload, so a
+  // dragged card stays where it was dropped).
+  const applyUpdatedFinding = (updated: any) => {
+    if (!updated?.id) return;
+    setProject((prev: any) =>
+      prev
+        ? {
+            ...prev,
+            findings: (prev.findings || []).map((f: any) =>
+              f.id === updated.id ? { ...f, ...updated } : f
+            ),
+          }
+        : prev
+    );
+  };
+
+  const scoredCount = findings.filter((f) => f.scoringStatus?.scored).length;
+  const nextUnscored = findings.find((f) => !f.scoringStatus?.scored);
+
+  // --- Step 1: save L3 mapping ---
+  const handleSaveMapping = async () => {
+    if (!selectedFinding) return;
+    setSavingMapping(true);
+    setStatus(null);
+    try {
+      const values = Object.entries(mapping).map(([l3Id, value]) => ({
+        l3Id,
+        value,
+      }));
+      const res = await fetch(
+        `/api/projects/${slug}/findings/${selectedFinding.id}/parameters`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ values }),
+        }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Save failed (${res.status})`);
+      }
+      await loadProject(true);
+      setStatus("Mapping saved — Desirability score updated.");
+    } catch (e: any) {
+      setStatus(e.message || "Failed to save mapping.");
+    } finally {
+      setSavingMapping(false);
+    }
+  };
+
+  // --- Step 3: confirm the consensus position ---
+  const handleConfirmPosition = async () => {
+    if (!selectedFinding || !lastPos) return;
+    setConfirming(true);
+    setStatus(null);
+    try {
+      const res = await fetch(
+        `/api/projects/${slug}/findings/${selectedFinding.id}/feasibility`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ x: lastPos.x, y: lastPos.y }),
+        }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Save failed (${res.status})`);
+      }
+      const data = await res.json();
+      if (data.finding) applyUpdatedFinding(data.finding);
+      setConfirmed(true);
+      await loadProject(true);
+      setStatus("Consensus position confirmed and saved.");
+    } catch (e: any) {
+      setStatus(e.message || "Failed to confirm position.");
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+            <p className="text-sm font-semibold text-slate-600">Loading workshop…</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !project) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="max-w-md w-full p-8 bg-white rounded-2xl border border-slate-200 text-center shadow-sm">
+            <h2 className="text-xl font-bold text-slate-900">Project Not Found</h2>
+            <p className="mt-2 text-sm text-slate-600">{error || "This project does not exist."}</p>
+            <Link href="/" className="mt-6 inline-flex px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white">
+              Back to Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const st = selectedFinding?.scoringStatus || {};
+  const stepDone: Record<Step, boolean> = {
+    desirability: !!st.desirabilityScored,
+    viability: !!st.viabilityScored,
+    feasibility: !!st.feasibilityScored,
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Navbar projectSlug={project.slug} projectName={project.name} />
+
+      <main id="main-content" className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 flex-1">
+        {/* Header */}
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+              Workshop Scoring Session
+            </span>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              {project.name}
+            </h1>
+            <p className="mt-1 text-sm text-slate-600 max-w-2xl">
+              Score each finding together with the participants, in three steps.
+              Findings stay unscored until the group produces the data — nothing
+              is scored at creation.
+            </p>
+            <p className="mt-2 text-xs font-semibold text-slate-700">
+              {scoredCount} of {findings.length} findings fully scored
+            </p>
+          </div>
+          <Link
+            href={`/${project.slug}`}
+            className="btn-secondary"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to Result Viewer
+          </Link>
+        </div>
+
+        <div role="note" className="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+          <span className="font-bold text-slate-800">One driver at a time.</span>{" "}
+          Several facilitators can be logged in at once ({currentUser.name} is driving
+          as {currentUser.role}), but agree who drives this shared screen — two people
+          dragging the same card or saving at the same moment will overwrite each
+          other (last save wins). Votes are safe: each participant&apos;s vote is
+          stored separately.
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          {/* Finding list */}
+          <section aria-labelledby="workshop-findings-heading" className="card p-4 lg:sticky lg:top-4">
+            <h2 id="workshop-findings-heading" className="text-sm font-bold text-slate-900">
+              Findings to score
+            </h2>
+            <ul className="mt-3 space-y-2">
+              {findings.map((f) => {
+                const active = selectedFinding?.id === f.id;
+                const fs = f.scoringStatus || {};
+                return (
+                  <li key={f.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedFindingId(f.id);
+                        setStep("desirability");
+                      }}
+                      aria-current={active ? "true" : undefined}
+                      className={`w-full rounded-xl border p-3 text-left transition ${
+                        active
+                          ? "border-emerald-500 bg-emerald-50/60"
+                          : "border-slate-200 bg-white hover:bg-slate-50"
+                      }`}
+                    >
+                      <span className="block text-sm font-bold text-slate-900 leading-snug">
+                        {f.title}
+                      </span>
+                      <span className="mt-2 flex flex-wrap gap-1">
+                        <StatusChip scored={!!fs.desirabilityScored} label="D" />
+                        <StatusChip scored={!!fs.viabilityScored} label="V" />
+                        <StatusChip scored={!!fs.feasibilityScored} label="F" />
+                      </span>
+                      {fs.scored && f.scores?.composite != null && (
+                        <span className="mt-1 block text-xs font-bold text-emerald-700">
+                          DVF {f.scores.composite}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+              {findings.length === 0 && (
+                <li className="text-sm text-slate-500 italic">
+                  No findings yet — add them in the Admin Dashboard first.
+                </li>
+              )}
+            </ul>
+          </section>
+
+          {/* Scoring walkthrough */}
+          <section aria-labelledby="workshop-scoring-heading" className="lg:col-span-2 space-y-6">
+            {!selectedFinding ? (
+              <div className="card p-8 text-center text-sm text-slate-500">
+                Select a finding on the left to start scoring it with the group.
+              </div>
+            ) : (
+              <>
+                <div className="card p-6">
+                  <h2 id="workshop-scoring-heading" className="text-lg font-bold text-slate-900">
+                    {selectedFinding.title}
+                  </h2>
+                  {selectedFinding.description && (
+                    <p className="mt-1 text-sm text-slate-600">{selectedFinding.description}</p>
+                  )}
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    <StatusChip scored={!!st.desirabilityScored} label="Desirability" />
+                    <StatusChip scored={!!st.viabilityScored} label="Viability" />
+                    <StatusChip scored={!!st.feasibilityScored} label="Feasibility" />
+                    {st.scored && selectedFinding.scores?.composite != null && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-600 px-2 py-0.5 text-[11px] font-bold text-white">
+                        Fully scored — DVF {selectedFinding.scores.composite}
+                      </span>
+                    )}
+                  </div>
+                  {status && (
+                    <p role="status" className="mt-3 text-sm font-semibold text-emerald-700">
+                      {status}
+                    </p>
+                  )}
+                </div>
+
+                {/* Stepper */}
+                <div className="flex flex-wrap gap-2" role="tablist" aria-label="Scoring steps">
+                  {STEPS.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={step === s.id}
+                      onClick={() => setStep(s.id)}
+                      className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold border transition ${
+                        step === s.id
+                          ? "bg-emerald-600 text-white border-emerald-600"
+                          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      {stepDone[s.id] && <CheckCircle2 className="h-3.5 w-3.5" />}
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* STEP 1 — Desirability mapping */}
+                {step === "desirability" && (
+                  <div className="card p-6 space-y-4">
+                    <div>
+                      <h3 className="flex items-center gap-2 text-base font-bold text-slate-900">
+                        <Target className="h-4 w-4 text-emerald-600" />
+                        Step 1 — Map parameters (Desirability)
+                      </h3>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Discuss with the group which L1–L3 segments this finding belongs
+                        to, tick them, and add the specific note for each (e.g. the
+                        feature it refers to). The Desirability score is computed from
+                        this mapping only.
+                      </p>
+                    </div>
+
+                    {(project.parametersL1 || []).length === 0 && (
+                      <p className="text-sm text-slate-500 italic">
+                        No L1 parameters configured for this project yet — add them in
+                        Admin → L1-L3 Parameters &amp; Rules first.
+                      </p>
+                    )}
+                    {(project.parametersL1 || []).map((l1: any) => (
+                      <fieldset key={l1.id} className="rounded-xl border border-slate-200 p-4">
+                        <legend className="px-1 text-sm font-bold text-slate-800">{l1.name}</legend>
+                        {(l1.subCategories || []).map((l2: any) => (
+                          <div key={l2.id} className="mt-3">
+                            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                              {l2.name}
+                            </div>
+                            <div className="mt-2 space-y-3">
+                              {(l2.segments || []).map((l3: any) => {
+                                const checked = mapping[l3.id] !== undefined;
+                                return (
+                                  <div key={l3.id} className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
+                                    <label className="flex min-w-0 cursor-pointer items-center gap-2 text-sm font-medium text-slate-800">
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={(e) => {
+                                          setMapping((prev) => {
+                                            const next = { ...prev };
+                                            if (e.target.checked) next[l3.id] = l3.name;
+                                            else delete next[l3.id];
+                                            return next;
+                                          });
+                                        }}
+                                        className="h-4 w-4 shrink-0 rounded accent-emerald-600"
+                                      />
+                                      <span className="truncate">{l3.name}</span>
+                                    </label>
+                                    {checked && (
+                                      <label className="sm:ml-auto sm:w-64">
+                                        <span className="sr-only">Note for {l3.name}</span>
+                                        <input
+                                          type="text"
+                                          value={mapping[l3.id]}
+                                          onChange={(e) =>
+                                            setMapping((prev) => ({ ...prev, [l3.id]: e.target.value }))
+                                          }
+                                          placeholder="Specific note, e.g. Bulk Payment"
+                                          className="input w-full"
+                                        />
+                                      </label>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </fieldset>
+                    ))}
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                      <p className="text-sm text-slate-600">
+                        {st.desirabilityScored ? (
+                          <>Current Desirability score: <span className="font-extrabold text-emerald-700">{selectedFinding.scores?.desirability} / 100</span></>
+                        ) : (
+                          "Not scored yet — save a mapping to score Desirability."
+                        )}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleSaveMapping}
+                        disabled={savingMapping}
+                        className="btn-primary"
+                      >
+                        {savingMapping ? "Saving…" : "Save mapping"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* STEP 2 — Viability votes */}
+                {step === "viability" && (
+                  <div className="card p-6 space-y-4">
+                    <div>
+                      <h3 className="flex items-center gap-2 text-base font-bold text-slate-900">
+                        <Users2 className="h-4 w-4 text-blue-600" />
+                        Step 2 — Record votes (Viability)
+                      </h3>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Go participant by participant and record each person&apos;s own
+                        answer per aspect. The Viability score is the share of
+                        validated votes.
+                      </p>
+                    </div>
+                    <ViabilityVoteMatrix
+                      project={project}
+                      finding={selectedFinding}
+                      isAdmin={true}
+                      onVotesChanged={(updated) => {
+                        applyUpdatedFinding(updated);
+                        loadProject(true);
+                      }}
+                    />
+                    <p className="text-sm text-slate-600">
+                      {st.viabilityScored ? (
+                        <>Current Viability score: <span className="font-extrabold text-blue-700">{selectedFinding.scores?.viability}%</span> ({selectedFinding.scores?.viabilityDetails?.totalValidatedVotes ?? 0} of {selectedFinding.scores?.viabilityDetails?.totalPossibleVotes ?? 0} votes)</>
+                      ) : (
+                        "Not scored yet — record at least one vote to score Viability."
+                      )}
+                    </p>
+                  </div>
+                )}
+
+                {/* STEP 3 — Feasibility consensus */}
+                {step === "feasibility" && (
+                  <div className="card p-6 space-y-4">
+                    <div>
+                      <h3 className="flex items-center gap-2 text-base font-bold text-slate-900">
+                        <Compass className="h-4 w-4 text-amber-600" />
+                        Step 3 — Consensus placement (Feasibility)
+                      </h3>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Discuss impact vs. effort as a group, drag the card to the
+                        position everyone agrees on, then confirm it. The Feasibility
+                        score comes from the quadrant the card lands in.
+                      </p>
+                    </div>
+                    <FeasibilityMatrix
+                      finding={selectedFinding}
+                      allFindings={findings}
+                      projectSlug={project.slug}
+                      isAdmin={true}
+                      onPositionSaved={(updated) => {
+                        applyUpdatedFinding(updated);
+                        if (updated.feasibilityX != null && updated.feasibilityY != null) {
+                          setLastPos({
+                            x: updated.feasibilityX,
+                            y: updated.feasibilityY,
+                          });
+                        }
+                        setConfirmed(false);
+                        loadProject(true);
+                      }}
+                    />
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-sm text-slate-600">
+                        {st.feasibilityScored ? (
+                          <>Placed: <span className="font-bold text-slate-900">{selectedFinding.feasibilityQuadrant?.replace("_", " ")}</span> — Feasibility score {selectedFinding.scores?.feasibility} / 100</>
+                        ) : (
+                          "Not placed yet — drag the card to a position first."
+                        )}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleConfirmPosition}
+                        disabled={!lastPos || confirming}
+                        className="btn-primary"
+                      >
+                        {confirming
+                          ? "Confirming…"
+                          : confirmed
+                            ? "✓ Consensus position confirmed"
+                            : "Confirm consensus position"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step navigation */}
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setStep(step === "feasibility" ? "viability" : "desirability")}
+                    disabled={step === "desirability"}
+                    className="btn-secondary disabled:opacity-50"
+                  >
+                    <ArrowLeft className="h-4 w-4" /> Back
+                  </button>
+                  {step !== "feasibility" ? (
+                    <button
+                      type="button"
+                      onClick={() => setStep(step === "desirability" ? "viability" : "feasibility")}
+                      className="btn-primary"
+                    >
+                      Next step <ArrowRight className="h-4 w-4" />
+                    </button>
+                  ) : nextUnscored && nextUnscored.id !== selectedFinding.id ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedFindingId(nextUnscored.id);
+                        setStep("desirability");
+                      }}
+                      className="btn-primary"
+                    >
+                      Next unscored finding <ArrowRight className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <Link href={`/${project.slug}`} className="btn-primary">
+                      {st.scored ? "Done — view ranked results" : "Back to viewer"} <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  )}
+                </div>
+
+                {st.scored && (
+                  <div role="status" className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>
+                      <span className="font-bold">Fully scored.</span> This finding now
+                      appears in the ranked list with DVF {selectedFinding.scores?.composite}.
+                      Scores can still be changed by a facilitator — there is no lock
+                      yet; locking is part of the planned Phase 2 session design.
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+        </div>
+
+        <p className="mt-6 flex items-center gap-1.5 text-xs text-slate-500">
+          <Clock className="h-3.5 w-3.5" />
+          Scores save as you go — you can leave and come back; anything already
+          scored stays scored.
+        </p>
+      </main>
+    </div>
+  );
+}

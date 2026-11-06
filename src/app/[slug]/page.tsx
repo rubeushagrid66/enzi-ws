@@ -19,6 +19,116 @@ import {
   Calendar,
 } from "lucide-react";
 
+function FindingCard({
+  finding,
+  rank,
+  onSelect,
+}: {
+  finding: any;
+  rank?: number;
+  onSelect: (f: any) => void;
+}) {
+  const s = finding.scores || {};
+  const quad = finding.feasibilityQuadrant || "QUICK_WINS";
+  const scored = finding.scoringStatus?.scored;
+  return (
+    <div
+      onClick={() => onSelect(finding)}
+      className="group cursor-pointer rounded-2xl border border-slate-200 bg-white p-5 shadow-xs hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between"
+    >
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          {scored ? (
+            <span
+              className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                quad === "QUICK_WINS"
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                  : quad === "BIG_BETS"
+                  ? "bg-amber-50 border-amber-200 text-amber-800"
+                  : quad === "AVOID"
+                  ? "bg-rose-50 border-rose-200 text-rose-800"
+                  : "bg-blue-50 border-blue-200 text-blue-800"
+              }`}
+            >
+              {quad.replace("_", " ")}
+            </span>
+          ) : (
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800">
+              Awaiting scoring
+            </span>
+          )}
+
+          <div className="flex items-center gap-1 text-xs font-extrabold text-slate-900 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
+            {rank != null && (
+              <span className="text-xs font-extrabold text-emerald-700">#{rank}</span>
+            )}
+            <span className="text-xs text-slate-500 font-normal">DVF:</span>
+            <span>{s.composite != null ? s.composite : "—"}</span>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="font-bold text-slate-900 group-hover:text-emerald-700 transition leading-snug line-clamp-2 text-sm sm:text-base">
+            {finding.title}
+          </h3>
+          {finding.description && (
+            <p className="mt-1.5 text-xs text-slate-500 line-clamp-2">
+              {finding.description}
+            </p>
+          )}
+        </div>
+
+        {finding.tagsList && finding.tagsList.length > 0 && (
+          <div className="flex flex-wrap gap-1 pt-1">
+            {finding.tagsList.map((tag: any, i: number) => (
+              <span
+                key={i}
+                className="text-xs font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200"
+              >
+                {tag.category}: {tag.value}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {!scored && finding.scoringStatus?.pending?.length > 0 && (
+          <p className="text-xs text-amber-700">
+            Needs scoring: {finding.scoringStatus.pending.join(", ")}
+          </p>
+        )}
+      </div>
+
+      <div className="mt-5 pt-4 border-t border-slate-100 space-y-2">
+        <div className="grid grid-cols-3 gap-2 text-center text-xs">
+          <div className="rounded bg-emerald-50/80 p-1.5 border border-emerald-100">
+            <div className="text-emerald-700 font-semibold">Desir.</div>
+            <div className="font-extrabold text-emerald-900 mt-0.5">
+              {s.desirability != null ? s.desirability : "—"}
+            </div>
+          </div>
+          <div className="rounded bg-blue-50/80 p-1.5 border border-blue-100">
+            <div className="text-blue-700 font-semibold">Viab.</div>
+            <div className="font-extrabold text-blue-900 mt-0.5">
+              {s.viability != null ? `${s.viability}%` : "—"}
+            </div>
+          </div>
+          <div className="rounded bg-amber-50/80 p-1.5 border border-amber-100">
+            <div className="text-amber-700 font-semibold">Feas.</div>
+            <div className="font-extrabold text-amber-900 mt-0.5">
+              {s.feasibility != null ? s.feasibility : "—"}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-emerald-600 font-semibold pt-1">
+          <span>View 3-Tab breakdown</span>
+          <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProjectResultViewer({
   params,
 }: {
@@ -181,14 +291,24 @@ export default function ProjectResultViewer({
     return true;
   });
 
-  // Calculate average composite DVF
+  // Ranked list = fully scored findings, best composite first.
+  // Unscored findings are never ranked — they wait in "Awaiting scoring".
+  const scoredFindings = filteredFindings
+    .filter((f) => f.scoringStatus?.scored)
+    .sort((a, b) => (b.scores?.composite ?? 0) - (a.scores?.composite ?? 0));
+  const awaitingFindings = filteredFindings.filter(
+    (f) => !f.scoringStatus?.scored
+  );
+
+  // Average composite DVF over scored findings only (unscored ones have
+  // no composite and must not drag the average down with 0s).
   const avgDvfScore =
-    findings.length > 0
+    scoredFindings.length > 0
       ? (
-          findings.reduce((acc, curr) => acc + (curr.scores?.composite || 0), 0) /
-          findings.length
+          scoredFindings.reduce((acc, curr) => acc + (curr.scores?.composite || 0), 0) /
+          scoredFindings.length
         ).toFixed(1)
-      : "0";
+      : "—";
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -287,10 +407,26 @@ export default function ProjectResultViewer({
               <div>
                 <span className="text-slate-400">Avg DVF Score:</span>{" "}
                 <span className="font-extrabold text-emerald-700">
-                  {avgDvfScore} / 100
+                  {avgDvfScore === "—" ? "— (no findings scored yet)" : `${avgDvfScore} / 100`}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400">Scored:</span>{" "}
+                <span className="font-bold text-slate-900">
+                  {findings.filter((f) => f.scoringStatus?.scored).length} of {findings.length} findings
                 </span>
               </div>
             </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {isAdmin && (
+                <a
+                  href={`/${project.slug}/workshop`}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold shadow-xs hover:bg-emerald-700 transition"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Open Workshop Scoring
+                </a>
+              )}
 
             {/* View Switcher */}
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
@@ -316,6 +452,7 @@ export default function ProjectResultViewer({
               >
                 2x2 Feasibility Board
               </button>
+            </div>
             </div>
           </div>
         </div>
@@ -379,102 +516,41 @@ export default function ProjectResultViewer({
               </div>
             </div>
 
-            {/* Findings List */}
+
+
+            {/* Findings List — ranked (scored) first, awaiting scoring below */}
             {filteredFindings.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {filteredFindings.map((finding) => {
-                  const s = finding.scores || {};
-                  const quad = finding.feasibilityQuadrant || "QUICK_WINS";
-
-                  return (
-                    <div
-                      key={finding.id}
-                      onClick={() => setSelectedFinding(finding)}
-                      className="group cursor-pointer rounded-2xl border border-slate-200 bg-white p-5 shadow-xs hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between"
-                    >
-                      <div className="space-y-3">
-                        {/* Top Badges */}
-                        <div className="flex items-center justify-between gap-2">
-                          <span
-                            className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
-                              quad === "QUICK_WINS"
-                                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                                : quad === "BIG_BETS"
-                                ? "bg-amber-50 border-amber-200 text-amber-800"
-                                : quad === "AVOID"
-                                ? "bg-rose-50 border-rose-200 text-rose-800"
-                                : "bg-blue-50 border-blue-200 text-blue-800"
-                            }`}
-                          >
-                            {quad.replace("_", " ")}
-                          </span>
-
-                          <div className="flex items-center gap-1 text-xs font-extrabold text-slate-900 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
-                            <span className="text-xs text-slate-500 font-normal">
-                              DVF:
-                            </span>
-                            <span>{s.composite ?? 0}</span>
-                          </div>
-                        </div>
-
-                        {/* Title & Description */}
-                        <div>
-                          <h3 className="font-bold text-slate-900 group-hover:text-emerald-700 transition leading-snug line-clamp-2 text-sm sm:text-base">
-                            {finding.title}
-                          </h3>
-                          {finding.description && (
-                            <p className="mt-1.5 text-xs text-slate-500 line-clamp-2">
-                              {finding.description}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Tags */}
-                        {finding.tagsList && finding.tagsList.length > 0 && (
-                          <div className="flex flex-wrap gap-1 pt-1">
-                            {finding.tagsList.map((tag: any, i: number) => (
-                              <span
-                                key={i}
-                                className="text-xs font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200"
-                              >
-                                {tag.category}: {tag.value}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* DVF Metric Breakdown Bars */}
-                      <div className="mt-5 pt-4 border-t border-slate-100 space-y-2">
-                        <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                          <div className="rounded bg-emerald-50/80 p-1.5 border border-emerald-100">
-                            <div className="text-emerald-700 font-semibold">Desir.</div>
-                            <div className="font-extrabold text-emerald-900 mt-0.5">
-                              {s.desirability ?? 0}
-                            </div>
-                          </div>
-                          <div className="rounded bg-blue-50/80 p-1.5 border border-blue-100">
-                            <div className="text-blue-700 font-semibold">Viab.</div>
-                            <div className="font-extrabold text-blue-900 mt-0.5">
-                              {s.viability ?? 0}%
-                            </div>
-                          </div>
-                          <div className="rounded bg-amber-50/80 p-1.5 border border-amber-100">
-                            <div className="text-amber-700 font-semibold">Feas.</div>
-                            <div className="font-extrabold text-amber-900 mt-0.5">
-                              {s.feasibility ?? 50}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between text-xs text-emerald-600 font-semibold pt-1">
-                          <span>View 3-Tab breakdown</span>
-                          <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                      </div>
+              <div className="space-y-8">
+                {scoredFindings.length > 0 && (
+                  <section aria-labelledby="ranked-heading">
+                    <h2 id="ranked-heading" className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                      Ranked by DVF Score ({scoredFindings.length})
+                    </h2>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Only findings fully scored in the workshop are ranked.
+                    </p>
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                      {scoredFindings.map((finding, i) => (
+                        <FindingCard key={finding.id} finding={finding} rank={i + 1} onSelect={setSelectedFinding} />
+                      ))}
                     </div>
-                  );
-                })}
+                  </section>
+                )}
+                {awaitingFindings.length > 0 && (
+                  <section aria-labelledby="awaiting-heading">
+                    <h2 id="awaiting-heading" className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                      Awaiting Scoring ({awaitingFindings.length})
+                    </h2>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Listed only — no scores yet. Score these together with participants in the workshop.
+                    </p>
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                      {awaitingFindings.map((finding) => (
+                        <FindingCard key={finding.id} finding={finding} onSelect={setSelectedFinding} />
+                      ))}
+                    </div>
+                  </section>
+                )}
               </div>
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -499,6 +575,7 @@ export default function ProjectResultViewer({
             )}
           </div>
         )}
+
 
         {/* VIEW MODE 2: 2X2 FEASIBILITY CANVAS (WHOLE PROJECT) */}
         {viewMode === "canvas" && (
