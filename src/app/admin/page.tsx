@@ -42,6 +42,11 @@ const FRAMEWORK_BADGE_CLASS: Record<string, string> = {
   Feasibility: "bg-amber-100 text-amber-800 border-amber-200",
 };
 
+// Aspect label: a second grouping on each aspect (Business & Ops /
+// Product / Tech), used by the viability scoring formula later. Stored
+// and displayed only for now — no scoring math reads it yet.
+const ASPECT_LABEL_OPTIONS = ["Business & Ops", "Product", "Tech"] as const;
+
 /**
  * Pool rows carry tags as a JSON string ({sumber, fitur, platform}),
  * while project-detail rows already carry the parsed fields. Normalise
@@ -99,6 +104,24 @@ function AspectFrameworkBadge({ framework }: { framework?: string }) {
       className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-bold ${FRAMEWORK_BADGE_CLASS[fw]}`}
     >
       {fw === "Desirability" ? "D" : fw === "Feasibility" ? "F" : "V"} · {fw}
+    </span>
+  );
+}
+
+function AspectLabelBadge({ label }: { label?: string | null }) {
+  if (!label) {
+    return (
+      <span title="No label yet — edit the aspect to set one" className="inline-flex shrink-0 items-center rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-xs font-bold text-slate-400">
+        No label
+      </span>
+    );
+  }
+  return (
+    <span
+      title={`Label: ${label} — used by the viability scoring formula`}
+      className="inline-flex shrink-0 items-center rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700"
+    >
+      {label}
     </span>
   );
 }
@@ -163,7 +186,8 @@ export default function AdminDashboardPage() {
   const [newAspectName, setNewAspectName] = useState("");
   const [newAspectDesc, setNewAspectDesc] = useState("");
   const [newAspectFramework, setNewAspectFramework] = useState<string>("Viability");
-  const [editingAspect, setEditingAspect] = useState<{ id: string; name: string; description: string; framework: string } | null>(null);
+  const [newAspectLabel, setNewAspectLabel] = useState<string>("");
+  const [editingAspect, setEditingAspect] = useState<{ id: string; name: string; description: string; framework: string; label: string } | null>(null);
 
   // Parameters L1/L2/L3
   const [newL1Name, setNewL1Name] = useState("");
@@ -680,11 +704,12 @@ export default function AdminDashboardPage() {
       await apiCall(`/api/projects/${selectedProjectSlug}/aspects`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newAspectName, description: newAspectDesc, framework: newAspectFramework }),
+        body: JSON.stringify({ name: newAspectName, description: newAspectDesc, framework: newAspectFramework, label: newAspectLabel || null }),
       });
       setNewAspectName("");
       setNewAspectDesc("");
       setNewAspectFramework("Viability");
+      setNewAspectLabel("");
       await loadProjectDetails(selectedProjectSlug);
     } catch (err: any) {
       setError(err.message || "Failed to create aspect");
@@ -699,7 +724,7 @@ export default function AdminDashboardPage() {
       await apiCall(`/api/projects/${selectedProjectSlug}/aspects/${editingAspect.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editingAspect.name.trim(), description: editingAspect.description, framework: editingAspect.framework }),
+        body: JSON.stringify({ name: editingAspect.name.trim(), description: editingAspect.description, framework: editingAspect.framework, label: editingAspect.label || null }),
       });
       setEditingAspect(null);
       await loadProjectDetails(selectedProjectSlug);
@@ -1344,6 +1369,15 @@ export default function AdminDashboardPage() {
                       ))}
                     </select>
                   </div>
+                  <div>
+                    <label htmlFor="new-aspect-label" className="field-label">Label — which group does this aspect belong to?</label>
+                    <select id="new-aspect-label" value={newAspectLabel} onChange={(e) => setNewAspectLabel(e.target.value)} className="input w-full">
+                      <option value="">— No label —</option>
+                      {ASPECT_LABEL_OPTIONS.map((lb) => (
+                        <option key={lb} value={lb}>{lb}</option>
+                      ))}
+                    </select>
+                  </div>
                   <button type="submit" className="btn-primary">Add Aspect</button>
                 </form>
                 <div className="space-y-2 border-t border-slate-100 pt-4">
@@ -1354,11 +1388,12 @@ export default function AdminDashboardPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm font-semibold text-slate-800">{aspect.name}</span>
                           <AspectFrameworkBadge framework={aspect.framework} />
+                          <AspectLabelBadge label={aspect.label} />
                         </div>
                         {aspect.description && <div className="mt-0.5 text-xs text-slate-600">{aspect.description}</div>}
                       </div>
                       <span className="flex shrink-0 items-center gap-1">
-                        <button type="button" onClick={() => setEditingAspect({ id: aspect.id, name: aspect.name, description: aspect.description || "", framework: aspect.framework || "Viability" })} aria-label={`Edit aspect ${aspect.name}`} className="btn-icon"><Edit2 className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => setEditingAspect({ id: aspect.id, name: aspect.name, description: aspect.description || "", framework: aspect.framework || "Viability", label: aspect.label || "" })} aria-label={`Edit aspect ${aspect.name}`} className="btn-icon"><Edit2 className="h-4 w-4" /></button>
                         <button type="button" onClick={() => handleDeleteAspect(aspect)} aria-label={`Delete aspect ${aspect.name}`} className="btn-icon-danger"><Trash2 className="h-4 w-4" /></button>
                       </span>
                     </div>
@@ -1644,6 +1679,15 @@ export default function AdminDashboardPage() {
               <select id="edit-aspect-framework" value={editingAspect.framework} onChange={(e) => setEditingAspect({ ...editingAspect, framework: e.target.value })} className="input w-full">
                 {FRAMEWORK_OPTIONS.map((fw) => (
                   <option key={fw} value={fw}>{fw}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="edit-aspect-label" className="field-label">Label — which group does this aspect belong to?</label>
+              <select id="edit-aspect-label" value={editingAspect.label} onChange={(e) => setEditingAspect({ ...editingAspect, label: e.target.value })} className="input w-full">
+                <option value="">— No label —</option>
+                {ASPECT_LABEL_OPTIONS.map((lb) => (
+                  <option key={lb} value={lb}>{lb}</option>
                 ))}
               </select>
             </div>
