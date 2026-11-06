@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
-import { getSession } from "@/lib/auth";
+import { getSession, requireAdmin } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
 
 /** Rename / delete a global parameter (L1/L2/L3). Same db-service
@@ -11,9 +11,8 @@ export async function PUT(
 ) {
   try {
     const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const forbidden = requireAdmin(session);
+    if (forbidden) return forbidden;
     const body = await request.json();
     const { level, name } = body;
     if (!name || !["L1", "L2", "L3"].includes(level)) {
@@ -39,9 +38,8 @@ export async function DELETE(
 ) {
   try {
     const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const forbidden = requireAdmin(session);
+    if (forbidden) return forbidden;
     const level = new URL(request.url).searchParams.get("level");
     if (level === "L1") await dbService.deleteParameterL1(params.id);
     else if (level === "L2") await dbService.deleteParameterL2(params.id);

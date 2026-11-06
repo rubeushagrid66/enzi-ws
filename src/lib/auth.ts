@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 
 const JWT_SECRET =
   process.env.JWT_SECRET ||
@@ -16,6 +17,25 @@ export const LABEL_ROLES = ["Business & Ops", "Product", "Tech"] as const;
 
 export function isLabelRole(role: string | null | undefined): role is (typeof LABEL_ROLES)[number] {
   return role === "Business & Ops" || role === "Product" || role === "Tech";
+}
+
+/**
+ * Admin gate for config mutation routes: returns a 401 response when
+ * logged out, a 403 when the session role is not ADMIN, and null when
+ * the caller is an admin. Usage at the top of a mutation handler:
+ *   const forbidden = requireAdmin(session);
+ *   if (forbidden) return forbidden;
+ * Findings edits stay open to any logged-in user, so findings routes,
+ * the workshop scoring routes, and participants/me must NOT use this.
+ */
+export function requireAdmin(session: SessionUser | null): NextResponse | null {
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (session.role !== "ADMIN") {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  }
+  return null;
 }
 
 export interface SessionUser {

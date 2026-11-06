@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
-import { getSession } from "@/lib/auth";
+import { getSession, requireAdmin } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
 
 export async function PUT(
@@ -9,7 +9,8 @@ export async function PUT(
 ) {
   try {
     const session = await getSession();
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const forbidden = requireAdmin(session);
+    if (forbidden) return forbidden;
     const { level, name } = await request.json();
     if (!name || !["L1", "L2", "L3"].includes(level)) {
       return NextResponse.json({ error: "Name and a valid level (L1, L2 or L3) are required" }, { status: 400 });
@@ -32,7 +33,8 @@ export async function DELETE(
 ) {
   try {
     const session = await getSession();
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const forbidden = requireAdmin(session);
+    if (forbidden) return forbidden;
     const level = new URL(request.url).searchParams.get("level");
     if (!["L1", "L2", "L3"].includes(level || "")) {
       return NextResponse.json({ error: "A valid level query param (L1, L2 or L3) is required" }, { status: 400 });

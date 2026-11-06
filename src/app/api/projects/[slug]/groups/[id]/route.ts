@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
-import { getSession } from "@/lib/auth";
+import { getSession, requireAdmin } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
 
 export async function PUT(
@@ -9,7 +9,8 @@ export async function PUT(
 ) {
   try {
     const session = await getSession();
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const forbidden = requireAdmin(session);
+    if (forbidden) return forbidden;
     const { name } = await request.json();
     if (!name) return NextResponse.json({ error: "Group name is required" }, { status: 400 });
     const group = await dbService.updateGroup(params.id, name);
@@ -27,7 +28,8 @@ export async function DELETE(
 ) {
   try {
     const session = await getSession();
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const forbidden = requireAdmin(session);
+    if (forbidden) return forbidden;
     await dbService.deleteGroup(params.id);
     revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, message: "Group deleted" });

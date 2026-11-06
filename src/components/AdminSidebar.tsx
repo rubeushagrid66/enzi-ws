@@ -94,9 +94,11 @@ export default function AdminSidebar({
           </p>
         )}
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" onClick={onNewProject} className="btn-primary btn-sm flex-1">
-            <Plus className="h-4 w-4" /> New Project
-          </button>
+          {isAdmin && (
+            <button type="button" onClick={onNewProject} className="btn-primary btn-sm flex-1">
+              <Plus className="h-4 w-4" /> New Project
+            </button>
+          )}
           {selectedProjectSlug && (
             <a
               href={`/${selectedProjectSlug}`}

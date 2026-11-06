@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
-import { getSession } from "@/lib/auth";
+import { getSession, requireAdmin } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
 import { WeightInput } from "@/lib/scoring";
 
@@ -45,9 +45,8 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const forbidden = requireAdmin(session);
+    if (forbidden) return forbidden;
 
     const body = await request.json();
     const rawWeights: WeightInput[] = body.weights;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { dbService, NotFoundError } from "@/lib/db-service";
-import { getSession } from "@/lib/auth";
+import { getSession, requireAdmin } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
 
 /** A missing project is a 404 with a clear message (e.g. the admin tab
@@ -239,9 +239,8 @@ export async function PUT(
 ) {
   try {
     const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const forbidden = requireAdmin(session);
+    if (forbidden) return forbidden;
 
     const { slug } = params;
     const body = await request.json();
@@ -292,9 +291,8 @@ export async function DELETE(
 ) {
   try {
     const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const forbidden = requireAdmin(session);
+    if (forbidden) return forbidden;
     await dbService.deleteProject(params.slug);
     revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, message: "Project deleted" });
