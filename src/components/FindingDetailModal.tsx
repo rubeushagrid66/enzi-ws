@@ -236,7 +236,7 @@ export default function FindingDetailModal({
                     {project.weightsMap?.desirability ?? 33.3}%
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
-                    Auto-calibrated framework allocation
+                    Framework allocation
                   </p>
                 </div>
 
@@ -336,7 +336,7 @@ export default function FindingDetailModal({
                     {project.weightsMap?.viability ?? 33.3}%
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
-                    Auto-calibrated framework allocation
+                    Framework allocation
                   </p>
                 </div>
 
@@ -476,7 +476,7 @@ export default function FindingDetailModal({
                     {project.weightsMap?.feasibility ?? 33.3}%
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
-                    Auto-calibrated framework allocation
+                    Framework allocation
                   </p>
                 </div>
 

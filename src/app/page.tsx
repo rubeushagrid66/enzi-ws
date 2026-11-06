@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { dbService } from "@/lib/db-service";
 import Navbar from "@/components/Navbar";
+import AutoRefreshOnFocus from "@/components/AutoRefreshOnFocus";
 import {
   Sparkles,
   ArrowRight,
@@ -14,12 +15,14 @@ import {
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function HomePage() {
   const projects = await dbService.getProjects();
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
+      <AutoRefreshOnFocus />
       <Navbar />
 
       {/* Hero Section */}
@@ -36,7 +39,7 @@ export default async function HomePage() {
           </h1>
 
           <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-            Capture user pain points, build multi-level parameter hierarchies, aggregate participant votes, and map 2x2 Feasibility matrices with live auto-calibrated scoring.
+            Capture user pain points, build multi-level parameter hierarchies, aggregate participant votes, and map 2x2 Feasibility matrices with live DVF scoring.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">

@@ -21,7 +21,7 @@ export interface AdminNavItem {
 
 export const ADMIN_NAV: AdminNavItem[] = [
   { id: "findings", label: "Findings & Tags", icon: Tag },
-  { id: "weights", label: "Framework & Weighting", badge: "Auto-Calibrate", icon: Sliders },
+  { id: "weights", label: "Framework & Weighting", icon: Sliders },
   { id: "groups", label: "Groups & Participants", icon: Users2 },
   { id: "parameters", label: "L1-L3 Parameters & Rules", icon: Layers },
   { id: "aspects", label: "Viability Aspects", icon: ListChecks },

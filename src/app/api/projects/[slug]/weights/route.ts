@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
-import { normalizeWeights, WeightInput } from "@/lib/scoring";
+import { revalidateProjectPages } from "@/lib/revalidate";
+import { WeightInput } from "@/lib/scoring";
 
 export async function POST(
   request: Request,
@@ -24,6 +25,22 @@ export async function POST(
       );
     }
 
+    // Weights are saved exactly as entered — no auto-calibration,
+    // no normalization to 100. Any non-negative number is allowed.
+    const invalid = rawWeights.some(
+      (w) =>
+        typeof w?.name !== "string" ||
+        typeof w?.weight !== "number" ||
+        !Number.isFinite(w.weight) ||
+        w.weight < 0
+    );
+    if (invalid) {
+      return NextResponse.json(
+        { error: "Each weight must be a non-negative number" },
+        { status: 400 }
+      );
+    }
+
     const project = await dbService.getProjectBySlug(slug);
 
     if (!project) {
@@ -33,16 +50,13 @@ export async function POST(
       );
     }
 
-    // Auto-calibrate weights to equal 100%
-    const normalized = normalizeWeights(rawWeights);
+    const updatedWeights = await dbService.updateWeights(project.id, rawWeights);
 
-    const updatedWeights = await dbService.updateWeights(project.id, normalized);
-
+    revalidateProjectPages(slug);
     return NextResponse.json({
       success: true,
       weights: updatedWeights,
-      normalized,
-      message: "Weights auto-calibrated and saved successfully",
+      message: "Weights saved successfully",
     });
   } catch (error) {
     console.error("Failed to update weights:", error);

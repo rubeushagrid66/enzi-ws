@@ -3,53 +3,6 @@ export interface WeightInput {
   weight: number;
 }
 
-export interface NormalizedWeight {
-  name: string;
-  weight: number;
-  originalWeight: number;
-  percentage: number;
-}
-
-/**
- * Auto-Calibration Logic for Framework Weights
- * Normalizes input weights proportionally so their sum equals exactly 100%.
- */
-export function normalizeWeights(weights: WeightInput[]): NormalizedWeight[] {
-  const sum = weights.reduce((acc, curr) => acc + Math.max(0, curr.weight), 0);
-
-  if (sum === 0) {
-    const equalShare = weights.length > 0 ? Number((100 / weights.length).toFixed(2)) : 0;
-    return weights.map((w) => ({
-      name: w.name,
-      weight: equalShare,
-      originalWeight: w.weight,
-      percentage: equalShare,
-    }));
-  }
-
-  let allocated = 0;
-  return weights.map((w, index) => {
-    if (index === weights.length - 1) {
-      // Avoid rounding error on the last item
-      const lastWeight = Number((100 - allocated).toFixed(2));
-      return {
-        name: w.name,
-        weight: lastWeight,
-        originalWeight: w.weight,
-        percentage: lastWeight,
-      };
-    }
-    const normalized = Number(((Math.max(0, w.weight) / sum) * 100).toFixed(2));
-    allocated += normalized;
-    return {
-      name: w.name,
-      weight: normalized,
-      originalWeight: w.weight,
-      percentage: normalized,
-    };
-  });
-}
-
 export interface ScoringRule {
   minPercent: number; // e.g., 66, 33, 0
   score: number;      // e.g., 3, 2, 1
@@ -329,7 +282,10 @@ export function getFeasibilityFromCoordinates(x: number, y: number): Feasibility
 }
 
 /**
- * Computes composite DVF Score from framework weights and individual scores
+ * Computes composite DVF Score from framework weights and individual scores.
+ * Weights are used exactly as entered — they are NOT normalized to 100.
+ * If the weights total 100, the composite is out of 100; otherwise it
+ * scales with the total (e.g. weights totalling 120 can give up to 120).
  */
 export function calculateCompositeDVF(
   weights: { desirability: number; viability: number; feasibility: number },
