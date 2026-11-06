@@ -5,7 +5,6 @@ import AutoRefreshOnFocus from "@/components/AutoRefreshOnFocus";
 import {
   Sparkles,
   ArrowRight,
-  Shield,
   Layers,
   Compass,
   Target,
@@ -30,7 +29,7 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">
             <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-            <span>Workshop Facilitation & Prioritization Platform</span>
+            <span>Smart & Digital</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight max-w-4xl mx-auto">
@@ -45,32 +44,24 @@ export default async function HomePage() {
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             {projects.length > 0 && (
               <Link
-                href={`/${projects[0].slug}`}
+                href="#platform"
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 transition shadow-md hover:shadow-lg"
               >
-                <span>Explore Live Workshop ({projects[0].name})</span>
+                <span>Explore Platform</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
             )}
-
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white border border-slate-200 text-slate-800 font-semibold text-sm hover:bg-slate-50 transition shadow-xs"
-            >
-              <Shield className="h-4 w-4 text-emerald-600" />
-              <span>Admin Dashboard</span>
-            </Link>
           </div>
         </div>
       </section>
 
       {/* Workshop Projects Grid */}
       <main id="main-content" className="py-12 sm:py-16">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div id="platform" className="mx-auto max-w-7xl px-4 sm:px-6 scroll-mt-20">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-                Active Workshop Projects
+                Platform
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-1">
                 Select a project below to open its dedicated Result Viewer UI.
