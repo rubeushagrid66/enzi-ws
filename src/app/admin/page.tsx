@@ -247,9 +247,9 @@ export default function AdminDashboardPage() {
       setWeightSaveStatus("Saving weights...");
       await apiCall(`/api/projects/${selectedProjectSlug}/weights`, {
         method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ weights: weightInputs }),
-        });
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weights: weightInputs }),
+      });
       setWeightSaveStatus("Weights saved!");
       await loadProjectDetails(selectedProjectSlug);
       setTimeout(() => setWeightSaveStatus(null), 3000);
