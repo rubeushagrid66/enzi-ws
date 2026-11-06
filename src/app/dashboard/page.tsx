@@ -268,23 +268,28 @@ export default function AdminDashboardPage() {
   const initData = async () => {
     try {
       setLoading(true);
-      const userRes = await fetch("/api/auth/me");
-      const userData = await userRes.json();
+      // The session check and the project list are independent — fetch
+      // them together instead of one after the other.
+      const [userData, projData] = await Promise.all([
+        fetch("/api/auth/me").then((r) => r.json()),
+        apiCall("/api/projects"),
+      ]);
       if (!userData?.user) {
         router.push("/dashboard/login");
         return;
       }
       setCurrentUser(userData.user);
-      const projData = await apiCall("/api/projects");
       const loadedProjects = projData.projects || [];
       setProjects(loadedProjects);
-      if (loadedProjects.length > 0) {
-        const firstSlug = loadedProjects[0].slug;
-        setSelectedProjectSlug(firstSlug);
-        await loadProjectDetails(firstSlug);
-      }
-      await loadGlobalData();
-      if (userData.user.role === "ADMIN") await reloadUsers();
+      // Once the first project is known, its details, the global setup
+      // and the users list are independent — fetch them together.
+      const firstSlug = loadedProjects.length > 0 ? loadedProjects[0].slug : null;
+      if (firstSlug) setSelectedProjectSlug(firstSlug);
+      await Promise.all([
+        firstSlug ? loadProjectDetails(firstSlug) : Promise.resolve(),
+        loadGlobalData(),
+        userData.user.role === "ADMIN" ? reloadUsers() : Promise.resolve(),
+      ]);
     } catch (e: any) {
       setError(e.message || "Failed to load admin data");
     } finally {
@@ -857,8 +862,10 @@ export default function AdminDashboardPage() {
     const proj = projects.find((p: any) => p.id === pid);
     if (!proj) return;
     let cancelled = false;
-    apiCall(`/api/projects/${proj.slug}`)
-      .then((d: any) => { if (!cancelled) setUserFormGroups((m) => ({ ...m, [pid]: d.project?.groups || [] })); })
+    // Slim groups endpoint (groups + participants only) — the full
+    // project fetch took seconds just to fill this dropdown.
+    apiCall(`/api/projects/${proj.slug}/groups`)
+      .then((d: any) => { if (!cancelled) setUserFormGroups((m) => ({ ...m, [pid]: d.groups || [] })); })
       .catch(() => { if (!cancelled) setUserFormGroups((m) => ({ ...m, [pid]: [] })); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
