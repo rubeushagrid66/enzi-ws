@@ -130,19 +130,19 @@ export default function AdminSidebar({
                   aria-current={active ? "page" : undefined}
                   className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
                     active
-                      ? "bg-emerald-600 font-semibold text-white shadow-sm"
+                      ? "bg-emerald-50 font-semibold text-emerald-800"
                       : "text-slate-700 hover:bg-slate-100"
                   }`}
                 >
-                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-white" : "text-slate-400"}`} />
+                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-emerald-700" : "text-slate-400"}`} />
                   <span className="min-w-0 flex-1 truncate">{item.label}</span>
                   {item.badge && (
-                    <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${active ? "bg-white/20 text-white" : "bg-emerald-50 text-emerald-700"}`}>
+                    <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${active ? "bg-emerald-100 text-emerald-800" : "bg-emerald-50 text-emerald-700"}`}>
                       {item.badge}
                     </span>
                   )}
                   {count !== undefined && (
-                    <span className={`text-xs font-mono font-medium ${active ? "text-white/70" : "text-slate-400"}`}>
+                    <span className={`text-xs font-mono font-medium ${active ? "text-emerald-700" : "text-slate-400"}`}>
                       {count}
                     </span>
                   )}
