@@ -84,7 +84,7 @@ export default function AdminSidebar({
         >
           {projects.map((p: any) => (
             <option key={p.id} value={p.slug}>
-              {p.name} (/{p.slug})
+              {p.name}
             </option>
           ))}
         </select>
@@ -93,9 +93,9 @@ export default function AdminSidebar({
             {activeProject.description || "No description"}
           </p>
         )}
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-col gap-2">
           {isAdmin && (
-            <button type="button" onClick={onNewProject} className="btn-primary btn-sm flex-1">
+            <button type="button" onClick={onNewProject} className="btn-primary btn-sm w-full">
               <Plus className="h-4 w-4" /> New Project
             </button>
           )}
@@ -104,7 +104,7 @@ export default function AdminSidebar({
               href={`/${selectedProjectSlug}`}
               target="_blank"
               rel="noreferrer"
-              className="btn-secondary btn-sm flex-1 justify-center"
+              className="btn-secondary btn-sm w-full justify-center"
             >
               <ExternalLink className="h-4 w-4" /> Open Landing Page
             </a>
@@ -163,7 +163,7 @@ export default function AdminSidebar({
   return (
     <>
       {/* Desktop: fixed sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-[304px] shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
         {content}
       </aside>
 
@@ -175,7 +175,7 @@ export default function AdminSidebar({
             onClick={onClose}
             aria-hidden="true"
           />
-          <aside className="absolute inset-y-0 left-0 w-[300px] max-w-[85vw] bg-white shadow-xl">
+          <aside className="absolute inset-y-0 left-0 w-[320px] max-w-[85vw] bg-white shadow-xl">
             {content}
           </aside>
         </div>

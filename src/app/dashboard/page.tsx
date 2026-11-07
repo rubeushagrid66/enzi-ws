@@ -998,7 +998,7 @@ export default function AdminDashboardPage() {
 
         {/* Admin header */}
         <header className="border-b border-slate-200 bg-white">
-          <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-4 sm:px-6">
+          <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-4 sm:px-6">
             <button
               ref={menuButtonRef}
               type="button"
@@ -1031,7 +1031,7 @@ export default function AdminDashboardPage() {
           </div>
         </header>
 
-        <main id="main-content" className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6">
+        <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
           {error && (
             <div role="alert" className="mb-6 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -1060,8 +1060,14 @@ export default function AdminDashboardPage() {
 
               <div className="card overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+                  <table className="w-full min-w-[760px] border-collapse text-left text-sm">
                     <caption className="sr-only">All findings: the shared pool and every project's findings</caption>
+                    <colgroup>
+                      <col className="w-[38%]" />
+                      <col className="w-[34%]" />
+                      <col className="w-[16%]" />
+                      <col className="w-[12%]" />
+                    </colgroup>
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
                         <th scope="col" className="px-4 py-3 font-bold text-slate-700">Finding Title</th>
@@ -1090,14 +1096,14 @@ export default function AdminDashboardPage() {
                                   ))}
                                 </div>
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="whitespace-nowrap px-4 py-3">
                                 {isPool ? (
-                                  <span className="rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800">Pool</span>
+                                  <span className="whitespace-nowrap rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800">Pool</span>
                                 ) : (
-                                  <span className="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700">{f.projectName || f.projectSlug || "Project"}</span>
+                                  <span className="whitespace-nowrap rounded border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700">{f.projectName || f.projectSlug || "Project"}</span>
                                 )}
                               </td>
-                              <td className="px-4 py-3 text-right">
+                              <td className="whitespace-nowrap px-4 py-3 text-right">
                                 <div className="flex items-center justify-end gap-1">
                                   {isPool ? (
                                     <button
