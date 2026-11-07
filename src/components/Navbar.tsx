@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { LogIn, LogOut, Shield, LayoutGrid, LayoutDashboard } from "lucide-react";
+import { LogIn, LogOut, Shield, LayoutDashboard } from "lucide-react";
 
 interface User {
   id: string;
@@ -97,35 +97,6 @@ export default function Navbar({
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          {projectSlug && (
-            <Link
-              href={`/${projectSlug}`}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                dark
-                  ? "text-white/70 hover:bg-white/10 hover:text-white"
-                  : "text-slate-700 hover:bg-slate-100"
-              }`}
-            >
-              <LayoutGrid
-                className={`h-4 w-4 ${dark ? "text-white/50" : "text-slate-500"}`}
-                aria-hidden="true"
-              />
-              <span className="hidden sm:inline">Result Viewer</span>
-            </Link>
-          )}
-          {projectSlug && user && (
-            <Link
-              href={`/${projectSlug}/workshop`}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold shadow-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                dark
-                  ? "bg-white text-black hover:bg-neutral-200"
-                  : "bg-emerald-600 text-white hover:bg-emerald-700"
-              }`}
-            >
-              <span className="hidden sm:inline">Workshop</span>
-            </Link>
-          )}
-
           {user ? (
             <Link
               href="/dashboard"
