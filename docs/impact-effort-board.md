@@ -1,10 +1,11 @@
 # Impact vs Effort board — BUILT 2026-11-07 (position computed from D/V/F scores)
 
-Status: **built and shipped 2026-11-07.** The formula the user defined
-that day (22:59 WIB) is implemented; the only open piece is D's own
-formula, which the user will define later — until then D is the current
-L3-mapping score (0–100). No 0–100 composite anywhere (removed
-2026-11-07, per the user's "jangan pake composite 0-100").
+Status: **built and shipped 2026-11-07; D formula replaced 2026-11-08.**
+The board formula the user defined (22:59 WIB 2026-11-07) is implemented.
+D's own formula is now defined too (user, 2026-11-08): D is 1–3 from
+research mentions (Wawancara + Survey), not the L3-mapping score — L3
+mapping was deleted. No 0–100 composite anywhere (removed 2026-11-07,
+per the user's "jangan pake composite 0-100").
 
 ## What the user asked (2026-11-06 14:29 WIB)
 
@@ -14,10 +15,11 @@ impact vs effort board — and the board must stay draggable.
 ## The formula as defined (user, 2026-11-07 22:59 WIB)
 
 - **Impact (Y) = rata-rata berbobot D dan V** (weighted average of D
-  and V). D is 0–100; V is 1–3, normalized to 0–100 as (V−1)/2×100.
-  Weights are equal (50/50) — the same equal split as the 33/33/33
-  framework weights. Assumption to confirm with the user: the 50/50
-  split was not specified; it is the natural equal default.
+  and V). D and V are both 1–3, each normalized to 0–100 as
+  (score−1)/2×100 (3 → 100, 2 → 50, 1 → 0). Weights are equal (50/50)
+  — the same equal split as the 33/33/33 framework weights. Assumption
+  to confirm with the user: the 50/50 split was not specified; it is
+  the natural equal default.
 - **Effort = taken from feasibility (F).** F is 1–3 (3 = easiest).
   X = (F−1)/2×100, so F 3 → X 100 (low effort, right) and F 1 → X 0
   (high effort, left). The user's earlier "rata-rata empat aspek
@@ -70,8 +72,8 @@ built):
 
 ## Position mapping (built, 2026-11-07)
 
-- **Impact (Y) = weighted average of D and V**, 50/50, with V
-  normalized (V−1)/2×100. Y = (D + V_norm) / 2.
+- **Impact (Y) = weighted average of D and V**, 50/50, with D and V
+  each normalized (score−1)/2×100. Y = (D_norm + V_norm) / 2.
 - **Effort (X) = F**, mapped X = (F−1)/2×100.
 - **Unscored findings have no computed position.** If any of D, V, F is
   unscored, the finding stays unplaced (50/50 neutral, no quadrant),
@@ -130,8 +132,25 @@ built):
 
 1. Impact weights: 50/50 was used as the equal default — confirm, or
    give a different D vs V split.
-2. D's own formula — the user will define it later; until then D is
-   the current L3-mapping score.
+2. D's own formula — DEFINED 2026-11-08 (research mentions, 1–3).
+   L3 mapping deleted. See the D rule in the summary below.
 3. When a pinned card's scores change, show a hint ("scores changed —
    position is manual") or stay silent?
 4. Should a board-wide "reset all to computed" exist, or per-card only?
+
+## D's formula (user, 2026-11-08) — research mentions, 1–3
+
+- A "mention" is a user mentioning the finding in that source.
+- Wawancara: N = interview users in the project (Cash 3, DVC 2).
+  ≥ 66% mention → 3, ≥ 33% → 2, below 33% → 1.
+- Survey: N = survey respondents in the project (Cash 121, DVC 123).
+  ≥ 30% mention → 3, ≥ 15% → 2, below 15% → 1.
+- Internal is NOT a research source and is never counted.
+- D = round-up average of the two source scores (2.5 → 3); a single
+  source stands alone; no source → D null (not yet scored).
+- Example: Pengingat otomatis — interview 2 of 3 (67%) = 3, survey
+  40 of 121 (33%) = 3, so D = 3.
+- Counts are entered per finding (detail page, Tab 1: Desirability);
+  the basis N per project is set in the dashboard (Framework &
+  Weighting → Research Basis, admin only). SQL: Step 9 in
+  docs/global-setup-sql.md.

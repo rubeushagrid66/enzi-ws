@@ -266,6 +266,10 @@ export const dbService = {
           // True only when the card was dragged to a manual pin (Step 8
           // SQL adds the column; missing means computed position).
           feasibilityManual: f.feasibility_manual === true,
+          // Research mentions (Step 9 SQL adds the columns; missing
+          // means not entered yet — D is unscored, never 0).
+          interviewMentions: f.interview_mentions != null ? Number(f.interview_mentions) : null,
+          surveyMentions: f.survey_mentions != null ? Number(f.survey_mentions) : null,
           parameterValues: (f.parameterValues || []).map((pv: any) => ({
             id: pv.id,
             l3Id: pv.l3_id,
@@ -448,6 +452,10 @@ export const dbService = {
           feasibilityX: f.feasibility_x != null ? Number(f.feasibility_x) : null,
           feasibilityY: f.feasibility_y != null ? Number(f.feasibility_y) : null,
           feasibilityQuadrant: f.feasibility_quadrant,
+          // Research mentions (Step 9 SQL adds the columns; missing
+          // means not entered yet).
+          interviewMentions: f.interview_mentions != null ? Number(f.interview_mentions) : null,
+          surveyMentions: f.survey_mentions != null ? Number(f.survey_mentions) : null,
           projectId: f.project_id ?? null,
           projectSlug: proj?.slug ?? null,
           projectName: proj?.name ?? null,
@@ -466,6 +474,8 @@ export const dbService = {
       feasibilityX: f.feasibilityX,
       feasibilityY: f.feasibilityY,
       feasibilityQuadrant: f.feasibilityQuadrant,
+      interviewMentions: f.interviewMentions ?? null,
+      surveyMentions: f.surveyMentions ?? null,
       projectId: f.projectId ?? null,
       projectSlug: f.project?.slug ?? null,
       projectName: f.project?.name ?? null,
@@ -485,8 +495,9 @@ export const dbService = {
   /**
    * Copy a finding into a project (or into the pool when targetProjectId
    * is null). Only the listing is copied — title, description, tags.
-   * Votes, L3 mappings and matrix position are NOT copied: the copy
-   * starts Unscored and is scored independently in its own workshop.
+   * Votes, L3 mappings, research mentions and matrix position are NOT
+   * copied: the copy starts Unscored and is scored independently in its
+   * own workshop.
    */
   async copyFinding(findingId: string, targetProjectId: string | null) {
     const source = await dbService.getFindingById(findingId);
@@ -640,6 +651,63 @@ export const dbService = {
     return prisma.finding.update({
       where: { id },
       data: { feasibilityManual: manual },
+    });
+  },
+
+  /**
+   * Save a finding's research mentions (how many users mentioned it in
+   * Wawancara and/or Survey). Null clears a count. D is computed from
+   * these counts against the project's basis N — the counts themselves
+   * are the only thing stored. The interview_mentions / survey_mentions
+   * columns are added by docs/global-setup-sql.md (Step 9); when they do
+   * not exist yet the save fails with a clear message naming that step
+   * (there is no partial save for research data).
+   */
+  async updateFindingResearch(
+    id: string,
+    data: { interviewMentions?: number | null; surveyMentions?: number | null }
+  ) {
+    const clean = (v: number | null | undefined): number | null | undefined => {
+      if (v === undefined) return undefined;
+      if (v === null) return null;
+      const n = Math.floor(Number(v));
+      return Number.isFinite(n) && n >= 0 ? n : null;
+    };
+    if (isSupabaseConfigured && supabase) {
+      const payload: Record<string, number | null | string> = {
+        updated_at: new Date().toISOString(),
+      };
+      const im = clean(data.interviewMentions);
+      const sm = clean(data.surveyMentions);
+      if (im !== undefined) payload.interview_mentions = im;
+      if (sm !== undefined) payload.survey_mentions = sm;
+      const { data: finding, error } = await supabase
+        .from("findings")
+        .update(payload)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) {
+        if (/interview_mentions|survey_mentions/i.test(error.message || "")) {
+          throw new Error(
+            "Research columns are not set up yet — run docs/global-setup-sql.md (Step 9) in the Supabase SQL editor, then save the counts again."
+          );
+        }
+        throw error;
+      }
+      return {
+        ...finding,
+        interviewMentions: finding.interview_mentions != null ? Number(finding.interview_mentions) : null,
+        surveyMentions: finding.survey_mentions != null ? Number(finding.survey_mentions) : null,
+      };
+    }
+
+    return prisma.finding.update({
+      where: { id },
+      data: {
+        ...(clean(data.interviewMentions) !== undefined && { interviewMentions: clean(data.interviewMentions) }),
+        ...(clean(data.surveyMentions) !== undefined && { surveyMentions: clean(data.surveyMentions) }),
+      },
     });
   },
 
@@ -925,22 +993,47 @@ export const dbService = {
 
   async updateProject(
     slug: string,
-    data: { name?: string; description?: string; isActive?: boolean; slug?: string }
+    data: { name?: string; description?: string; isActive?: boolean; slug?: string; interviewN?: number | null; surveyN?: number | null }
   ) {
     if (isSupabaseConfigured && supabase) {
-      const { data: project, error } = await supabase
+      const cleanN = (v: number | null | undefined): number | null | undefined => {
+        if (v === undefined) return undefined;
+        if (v === null) return null;
+        const n = Math.floor(Number(v));
+        return Number.isFinite(n) && n > 0 ? n : null;
+      };
+      const base = {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.isActive !== undefined && { is_active: data.isActive }),
+        // Renaming a project moves its URL: the slug follows the name.
+        ...(data.slug !== undefined && { slug: data.slug }),
+        updated_at: new Date().toISOString(),
+      };
+      // Research basis N (Step 9 SQL adds the columns). When they do
+      // not exist yet, retry without them so a rename/description edit
+      // still saves — the N values simply cannot be stored yet.
+      const withN = {
+        ...base,
+        ...(cleanN(data.interviewN) !== undefined && { interview_n: cleanN(data.interviewN) }),
+        ...(cleanN(data.surveyN) !== undefined && { survey_n: cleanN(data.surveyN) }),
+      };
+      let res = await supabase
         .from("projects")
-        .update({
-          ...(data.name !== undefined && { name: data.name }),
-          ...(data.description !== undefined && { description: data.description }),
-          ...(data.isActive !== undefined && { is_active: data.isActive }),
-          // Renaming a project moves its URL: the slug follows the name.
-          ...(data.slug !== undefined && { slug: data.slug }),
-          updated_at: new Date().toISOString(),
-        })
+        .update(withN)
         .eq("slug", slug)
         .select()
         .single();
+      if (res.error && /interview_n|survey_n/i.test(res.error.message || "")) {
+        console.warn("projects.interview_n/survey_n columns missing — saving the project without the research basis; run docs/global-setup-sql.md (Step 9).");
+        res = await supabase
+          .from("projects")
+          .update(base)
+          .eq("slug", slug)
+          .select()
+          .single();
+      }
+      const { data: project, error } = res;
       // .single() on zero rows (stale slug — e.g. renamed in another
       // tab) errors PGRST116: surface it as not-found, not a 500.
       if (error) throw toNotFoundError(error, `Project not found (slug "${slug}" may have been renamed — refresh the project list)`);
@@ -954,6 +1047,8 @@ export const dbService = {
           ...(data.description !== undefined && { description: data.description }),
           ...(data.isActive !== undefined && { isActive: data.isActive }),
           ...(data.slug !== undefined && { slug: data.slug }),
+          ...(data.interviewN !== undefined && { interviewN: data.interviewN }),
+          ...(data.surveyN !== undefined && { surveyN: data.surveyN }),
         },
       });
     } catch (error: any) {
@@ -1041,59 +1136,6 @@ export const dbService = {
         feasibilityEffort: null,
       },
     });
-  },
-
-  // ── Finding Parameter Values (workshop Desirability mapping) ───────────────
-
-  /** Replace all L3 mappings of a finding with the given list. */
-  async setFindingParameterValues(
-    findingId: string,
-    values: Array<{ l3Id: string; value: string }>
-  ) {
-    const clean = values
-      .filter((v) => v.l3Id && v.value && v.value.trim())
-      .map((v) => ({ l3Id: v.l3Id, value: v.value.trim() }));
-    if (isSupabaseConfigured && supabase) {
-      const { error: delError } = await supabase
-        .from("finding_parameter_values")
-        .delete()
-        .eq("finding_id", findingId);
-      if (delError) throw delError;
-      if (clean.length > 0) {
-        const { data, error } = await supabase
-          .from("finding_parameter_values")
-          .insert(
-            clean.map((v) => ({
-              finding_id: findingId,
-              l3_id: v.l3Id,
-              value: v.value,
-            }))
-          )
-          .select();
-        if (error) throw error;
-        return data;
-      }
-      return [];
-    }
-    await prisma.findingParameterValue.deleteMany({ where: { findingId } });
-    if (clean.length === 0) return [];
-    await prisma.findingParameterValue.createMany({ data: clean.map((v) => ({ ...v, findingId })) });
-    return prisma.findingParameterValue.findMany({ where: { findingId } });
-  },
-
-  /** Remove all mappings of one L3 segment from a finding. */
-  async deleteFindingParameterValue(findingId: string, l3Id: string) {
-    if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase
-        .from("finding_parameter_values")
-        .delete()
-        .eq("finding_id", findingId)
-        .eq("l3_id", l3Id);
-      if (error) throw error;
-      return { success: true };
-    }
-    await prisma.findingParameterValue.deleteMany({ where: { findingId, l3Id } });
-    return { success: true };
   },
 
   async updateFinding(id: string, data: {

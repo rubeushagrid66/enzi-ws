@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { Modal } from "@/components/Modal";
-import FeasibilityMatrix from "@/components/FeasibilityMatrix";
 import {
   Search,
   Target,
@@ -102,7 +101,7 @@ function FindingCard({
           <div className="rounded bg-emerald-50/80 p-1.5 border border-emerald-100">
             <div className="text-emerald-700 font-semibold">Desir.</div>
             <div className="font-extrabold text-emerald-900 mt-0.5">
-              {s.desirability != null ? s.desirability : "—"}
+              {s.desirability != null ? `${s.desirability} / 3` : "—"}
             </div>
           </div>
           <div className="rounded bg-blue-50/80 p-1.5 border border-blue-100">
@@ -149,8 +148,6 @@ export default function ProjectResultViewer({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedQuadrant, setSelectedQuadrant] = useState<string>("ALL");
   const [selectedTag, setSelectedTag] = useState<string>("ALL");
-  const [selectedFinding, setSelectedFinding] = useState<any | null>(null);
-  const [viewMode, setViewMode] = useState<"directory" | "canvas">("directory");
 
   // Add Finding — same fields as the dashboard's finding modal. Creates the
   // finding in THIS project; open to any logged-in user, like editing
@@ -220,26 +217,6 @@ export default function ProjectResultViewer({
     } finally {
       if (!silent) setLoading(false);
     }
-  };
-
-  // Apply a saved finding (e.g. a dragged position) to local state
-  // immediately, so the card stays where it was dropped. The backend
-  // already saved it; this just keeps the UI in sync with the truth.
-  const applyUpdatedFinding = (updated: any) => {
-    if (!updated?.id) return;
-    setProject((prev: any) =>
-      prev
-        ? {
-            ...prev,
-            findings: (prev.findings || []).map((f: any) =>
-              f.id === updated.id ? { ...f, ...updated } : f
-            ),
-          }
-        : prev
-    );
-    setSelectedFinding((prev: any) =>
-      prev && prev.id === updated.id ? { ...prev, ...updated } : prev
-    );
   };
 
   useEffect(() => {
@@ -317,7 +294,7 @@ export default function ProjectResultViewer({
   const findings: any[] = project.findings || [];
   const myScores = (f: any) =>
     scoresForParticipant(f.scores?.participantScores, meId);
-  // Scored FOR ME: Desirability mapped + I scored a Viability aspect +
+  // Scored FOR ME: Desirability scored from research + I scored a Viability aspect +
   // I scored a Feasibility aspect. Logged-out viewers have no V/F, so
   // every finding waits in "Awaiting scoring" for them.
   const myScored = (f: any) => {
@@ -436,32 +413,6 @@ export default function ProjectResultViewer({
                   <Plus className="h-3.5 w-3.5" /> Add Finding
                 </button>
               )}
-
-            {/* View Switcher */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-              <button
-                aria-pressed={viewMode === "directory"}
-                onClick={() => setViewMode("directory")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                  viewMode === "directory"
-                    ? "bg-white text-slate-900 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Findings Directory
-              </button>
-              <button
-                aria-pressed={viewMode === "canvas"}
-                onClick={() => setViewMode("canvas")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                  viewMode === "canvas"
-                    ? "bg-white text-slate-900 shadow-xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                2x2 Feasibility Board
-              </button>
-            </div>
             </div>
           </div>
         </div>
@@ -469,8 +420,7 @@ export default function ProjectResultViewer({
 
       {/* Main Content Area */}
       <main id="main-content" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-10 flex-1 w-full">
-        {/* VIEW MODE 1: FINDINGS DIRECTORY */}
-        {viewMode === "directory" && (
+        {/* FINDINGS DIRECTORY */}
           <div className="space-y-6">
             {/* Filter and Search Bar */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
@@ -536,7 +486,7 @@ export default function ProjectResultViewer({
                       Scored by you ({scoredFindings.length})
                     </h2>
                     <p className="mt-0.5 text-xs text-slate-500">
-                      Findings you fully scored in the workshop — Desirability mapped, plus your own Viability and Feasibility scores.
+                      Findings you fully scored in the workshop — Desirability scored from research, plus your own Viability and Feasibility scores.
                     </p>
                     <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                       {scoredFindings.map((finding) => (
@@ -583,80 +533,13 @@ export default function ProjectResultViewer({
               </div>
             )}
           </div>
-        )}
-
-
-        {/* VIEW MODE 2: 2X2 FEASIBILITY CANVAS (WHOLE PROJECT) */}
-        {viewMode === "canvas" && (
-          <div className="space-y-4">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
-                <div>
-                  <h2 className="text-xl font-semibold text-slate-900">
-                    Project Feasibility 2x2 Matrix
-                  </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Click any finding to inspect its 3-Tab details or drag to reposition if you are logged in as Admin.
-                  </p>
-                </div>
-                <div className="text-xs text-slate-400 font-mono">
-                  {findings.length} findings mapped
-                </div>
-              </div>
-
-              {/* Show matrix for the first finding or let user click to select */}
-              {findings.length > 0 ? (
-                <div className="mt-6">
-                  <FeasibilityMatrix
-                    finding={selectedFinding || findings[0]}
-                    allFindings={findings}
-                    projectSlug={project.slug}
-                    isAdmin={isAdmin}
-                    meId={meId}
-                    onPositionSaved={(updated) => {
-                      applyUpdatedFinding(updated);
-                      // Silent background refresh so the board shows the
-                      // saved position (the position no longer changes
-                      // any score — F comes only from aspect votes).
-                      loadProjectData(true);
-                    }}
-                  />
-
-                  {/* Findings quick picker */}
-                  <div className="mt-6 pt-4 border-t border-slate-100">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Select Finding to Active Focus:
-                    </span>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {findings.map((f) => {
-                        const isFocused =
-                          (selectedFinding?.id || findings[0].id) === f.id;
-                        return (
-                          <button
-                            key={f.id}
-                            onClick={() => setSelectedFinding(f)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition ${
-                              isFocused
-                                ? "bg-emerald-600 text-white border-emerald-600 shadow-xs font-semibold"
-                                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                            }`}
-                          >
-                            {f.title}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-slate-400 py-8 text-center italic">
-                  No findings to display on matrix.
-                </p>
-              )}
-            </div>
-          </div>
-        )}
       </main>
+
+      {/* Credit footer — same text as the homepage, styled for the white page */}
+      <footer className="mx-auto flex w-full max-w-7xl items-center justify-between border-t border-slate-100 px-4 py-6 text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400 sm:px-6 lg:px-10">
+        <span>Bank BSI &times; Aleph</span>
+        <span>&copy; Enzi 2026</span>
+      </footer>
 
       {/* Add Finding — same fields as the dashboard's finding form */}
       {addFindingOpen && (

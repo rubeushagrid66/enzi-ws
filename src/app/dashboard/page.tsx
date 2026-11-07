@@ -170,6 +170,18 @@ export default function AdminDashboardPage() {
   const [weightSaveStatus, setWeightSaveStatus] = useState<string | null>(null);
   const [weightsSource, setWeightsSource] = useState<string | null>(null);
 
+  // Research basis N for Desirability (per selected project): total
+  // users per source. Synced from the active project when it changes.
+  const [interviewNInput, setInterviewNInput] = useState<string>("");
+  const [surveyNInput, setSurveyNInput] = useState<string>("");
+  const [researchNSaveStatus, setResearchNSaveStatus] = useState<string | null>(null);
+  useEffect(() => {
+    setInterviewNInput(activeProject?.interviewN != null ? String(activeProject.interviewN) : "");
+    setSurveyNInput(activeProject?.surveyN != null ? String(activeProject.surveyN) : "");
+    setResearchNSaveStatus(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProject?.slug]);
+
   // Global findings pool + global L1–L3 tree (shared by all projects).
   const [poolFindings, setPoolFindings] = useState<any[]>([]);
   const [globalParams, setGlobalParams] = useState<any[]>([]);
@@ -416,6 +428,34 @@ export default function AdminDashboardPage() {
     } catch (e: any) {
       setWeightSaveStatus("Failed to save weights");
       setError(e.message || "Failed to save weights");
+    }
+  };
+
+  // Research basis N for Desirability (per selected project, admin-only).
+  // A blank basis means that source cannot score D.
+  const handleSaveResearchBasis = async () => {
+    if (!selectedProjectSlug) return;
+    try {
+      setError(null);
+      setResearchNSaveStatus("Saving research basis...");
+      const toN = (raw: string) =>
+        raw.trim() === "" ? null : Math.floor(Number(raw));
+      await apiCall(`/api/projects/${selectedProjectSlug}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          interviewN: toN(interviewNInput),
+          surveyN: toN(surveyNInput),
+        }),
+      });
+      setResearchNSaveStatus(
+        `Research basis saved for ${activeProject?.name ?? selectedProjectSlug}.`
+      );
+      await loadProjectDetails(selectedProjectSlug);
+      setTimeout(() => setResearchNSaveStatus(null), 3000);
+    } catch (e: any) {
+      setResearchNSaveStatus("Failed to save research basis");
+      setError(e.message || "Failed to save research basis");
     }
   };
 
@@ -1229,6 +1269,61 @@ export default function AdminDashboardPage() {
                     {weightSaveStatus && <span className="text-sm font-medium text-emerald-600">{weightSaveStatus}</span>}
                   </div>
                   {isAdmin && (<button type="button" onClick={handleSaveWeights} className="btn-primary">Save Weights</button>)}
+                </div>
+              </div>
+
+              <div className="card space-y-6 p-6">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    <Sparkles className="h-4 w-4" /> Research Basis
+                  </div>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-900">Desirability Research Basis</h2>
+                  <p className="mt-1 text-sm font-medium text-slate-500">Per project — {activeProject?.name ?? "no project selected"}.</p>
+                  <p className="mt-1 text-sm text-slate-600">Total users per research source. D is computed from each finding&apos;s mention counts against these totals (Wawancara: &ge;66% &rarr; 3, &ge;33% &rarr; 2; Survey: &ge;30% &rarr; 3, &ge;15% &rarr; 2). Leave a basis blank and that source cannot score D.</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="research-interview-n" className="field-label">Wawancara — total interview users</label>
+                    {isAdmin ? (
+                      <input
+                        id="research-interview-n"
+                        type="number"
+                        min={1}
+                        inputMode="numeric"
+                        value={interviewNInput}
+                        onChange={(e) => setInterviewNInput(e.target.value)}
+                        placeholder="e.g. 3"
+                        className="input w-full"
+                      />
+                    ) : (
+                      <span className="block py-2 text-sm font-semibold text-slate-900">{interviewNInput || "—"}</span>
+                    )}
+                  </div>
+                  <div>
+                    <label htmlFor="research-survey-n" className="field-label">Survey — total respondents</label>
+                    {isAdmin ? (
+                      <input
+                        id="research-survey-n"
+                        type="number"
+                        min={1}
+                        inputMode="numeric"
+                        value={surveyNInput}
+                        onChange={(e) => setSurveyNInput(e.target.value)}
+                        placeholder="e.g. 121"
+                        className="input w-full"
+                      />
+                    ) : (
+                      <span className="block py-2 text-sm font-semibold text-slate-900">{surveyNInput || "—"}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                  <div>
+                    {researchNSaveStatus && <span className="text-sm font-medium text-emerald-600">{researchNSaveStatus}</span>}
+                  </div>
+                  {isAdmin && (<button type="button" onClick={handleSaveResearchBasis} className="btn-primary">Save Research Basis</button>)}
                 </div>
               </div>
             </section>

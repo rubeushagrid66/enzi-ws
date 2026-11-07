@@ -33,14 +33,15 @@ import { normalizeFramework } from "@/lib/scoring";
  * composite score and no averaging across participants — each
  * participant's V and F are shown in the strip below the group chips.
  */
-const FRAMEWORK_ORDER = ["Desirability", "Viability", "Feasibility"] as const;
+// Only Viability and Feasibility aspects are scored here — Desirability
+// comes from research mentions (Wawancara + Survey), so Desirability-
+// linked aspects are not shown in this matrix and do not feed any score.
+const FRAMEWORK_ORDER = ["Viability", "Feasibility"] as const;
 const FRAMEWORK_HEADER_CLASS: Record<string, string> = {
-  Desirability: "bg-emerald-100 text-emerald-800",
   Viability: "bg-blue-100 text-blue-800",
   Feasibility: "bg-amber-100 text-amber-800",
 };
 const FRAMEWORK_BADGE_CLASS: Record<string, string> = {
-  Desirability: "bg-emerald-100 text-emerald-800 border-emerald-200",
   Viability: "bg-blue-100 text-blue-800 border-blue-200",
   Feasibility: "bg-amber-100 text-amber-800 border-amber-200",
 };
@@ -418,7 +419,7 @@ export default function ViabilityVoteMatrix({
                             <div className="font-bold text-slate-900 text-[13px]">{aspect.name}</div>
                             <div className="mt-1 flex flex-wrap gap-1">
                               <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold ${FRAMEWORK_BADGE_CLASS[fw]}`}>
-                                {fw === "Desirability" ? "D" : fw === "Feasibility" ? "F" : "V"} · {fw}
+                                {fw === "Feasibility" ? "F" : "V"} · {fw}
                               </span>
                               {aspect.label ? (
                                 <span className="inline-flex rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">

@@ -26,6 +26,12 @@ model Project {
   slug             String            @unique
   description      String?
   isActive         Boolean           @default(true)
+  // Research basis for Desirability (docs/global-setup-sql.md, Step 9):
+  // total users per research source in this project. Cash: interview 3,
+  // survey 121. DVC: interview 2, survey 123. Null means "not set" — D
+  // cannot be computed for a source whose N is missing.
+  interviewN       Int?
+  surveyN          Int?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   findings         Finding[]
@@ -66,6 +72,12 @@ model Finding {
   // pin). False/null means the position is computed from the viewer's
   // D/V/F scores. Added by docs/global-setup-sql.md (Step 8).
   feasibilityManual   Boolean?                @default(false)
+  // Research mentions (docs/global-setup-sql.md, Step 9): how many
+  // users mentioned this finding in each research source. D is computed
+  // from these counts against the project's interviewN/surveyN — never
+  // from L3 mappings (removed) or the Sumber/Platform tags.
+  interviewMentions   Int?
+  surveyMentions      Int?
   createdAt           DateTime                @default(now())
   updatedAt           DateTime                @updatedAt
   project             Project?                @relation(fields: [projectId], references: [id], onDelete: Cascade)

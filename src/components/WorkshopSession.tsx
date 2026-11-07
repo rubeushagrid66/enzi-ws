@@ -22,7 +22,7 @@ import {
 type Step = "desirability" | "viability" | "feasibility";
 
 const STEPS: Array<{ id: Step; label: string; hint: string }> = [
-  { id: "desirability", label: "1 · Map parameters", hint: "Desirability" },
+  { id: "desirability", label: "1 · Desirability score", hint: "Desirability" },
   { id: "viability", label: "2 · Record votes", hint: "Viability" },
   { id: "feasibility", label: "3 · Consensus placement", hint: "Feasibility" },
 ];
@@ -58,9 +58,6 @@ export default function WorkshopSession({
   // "Me": the score lines below show this participant's own V/F (1–3).
   const meId = useMeParticipantId(slug, currentUser as any);
 
-  // Step 1 (Desirability) local mapping: l3Id -> free-text value.
-  const [mapping, setMapping] = useState<Record<string, string>>({});
-  const [savingMapping, setSavingMapping] = useState(false);
   // Step 3 (Feasibility) consensus: last position saved by a drag.
   const [lastPos, setLastPos] = useState<{ x: number; y: number } | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -170,17 +167,9 @@ export default function WorkshopSession({
   const selectedFinding =
     findings.find((f) => f.id === selectedFindingId) || findings[0] || null;
 
-  // Rebuild the mapping editor whenever a different finding is selected.
+  // Reset the consensus state whenever a different finding is selected.
   useEffect(() => {
-    if (!selectedFinding) {
-      setMapping({});
-      return;
-    }
-    const m: Record<string, string> = {};
-    for (const pv of selectedFinding.parameterValues || []) {
-      m[pv.l3Id] = pv.value;
-    }
-    setMapping(m);
+    if (!selectedFinding) return;
     setConfirmed(false);
     setLastPos(
       selectedFinding.feasibilityX != null && selectedFinding.feasibilityY != null
@@ -208,37 +197,6 @@ export default function WorkshopSession({
 
   const scoredCount = findings.filter((f) => f.scoringStatus?.scored).length;
   const nextUnscored = findings.find((f) => !f.scoringStatus?.scored);
-
-  // --- Step 1: save L3 mapping ---
-  const handleSaveMapping = async () => {
-    if (!selectedFinding) return;
-    setSavingMapping(true);
-    setStatus(null);
-    try {
-      const values = Object.entries(mapping).map(([l3Id, value]) => ({
-        l3Id,
-        value,
-      }));
-      const res = await fetch(
-        `/api/projects/${slug}/findings/${selectedFinding.id}/parameters`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ values }),
-        }
-      );
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Save failed (${res.status})`);
-      }
-      await loadProject(true);
-      setStatus("Mapping saved — Desirability score updated.");
-    } catch (e: any) {
-      setStatus(e.message || "Failed to save mapping.");
-    } finally {
-      setSavingMapping(false);
-    }
-  };
 
   // --- Step 3: confirm the consensus position ---
   const handleConfirmPosition = async () => {
@@ -507,102 +465,62 @@ export default function WorkshopSession({
                   ))}
                 </div>
 
-                {/* STEP 1 — Desirability mapping */}
+                {/* STEP 1 — Desirability (research score, read-only) */}
                 {step === "desirability" && (
                   <div className="card p-6 space-y-4">
                     <div>
                       <h3 className="flex items-center gap-2 text-base font-bold text-slate-900">
                         <Target className="h-4 w-4 text-emerald-600" />
-                        Step 1 — Map parameters (Desirability)
+                        Step 1 — Desirability score (from research)
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">
-                        Discuss with the group which L1–L3 segments this finding belongs
-                        to, tick them, and add the specific note for each (e.g. the
-                        feature it refers to). The Desirability score is the average of
-                        this mapping and the validation of Desirability-linked aspects
-                        (voted on in Step 2) — whichever inputs exist.
+                        Desirability comes from research numbers, not from the
+                        workshop: how many users mentioned this finding in
+                        Wawancara and in Survey. Show the group the evidence
+                        first, then score Viability and Feasibility in the
+                        next steps. Counts are entered on the finding&apos;s
+                        detail page (Tab 1: Desirability).
                       </p>
                     </div>
 
-                    {(project.parametersL1 || []).length === 0 && (
-                      <p className="text-sm text-slate-500 italic">
-                        No L1 parameters configured for this project yet — add them in
-                        Admin → L1-L3 Parameters &amp; Rules first.
-                      </p>
-                    )}
-                    {(project.parametersL1 || []).map((l1: any) => (
-                      <fieldset key={l1.id} className="rounded-xl border border-slate-200 p-4">
-                        <legend className="px-1 text-sm font-bold text-slate-800">{l1.name}</legend>
-                        {(l1.subCategories || []).map((l2: any) => (
-                          <div key={l2.id} className="mt-3">
-                            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                              {l2.name}
+                    {(() => {
+                      const d = selectedFinding.scores?.desirabilityDetails || {};
+                      const row = (label: string, s: any, threshold: string) => (
+                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 px-4 py-3">
+                          <div>
+                            <div className="text-sm font-semibold text-slate-800">{label}</div>
+                            <div className="text-xs text-slate-500">{threshold}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-bold text-slate-900">
+                              {s?.mentions != null && s?.total != null
+                                ? `${s.mentions} of ${s.total} (${s.percent}%)`
+                                : "No count entered"}
                             </div>
-                            <div className="mt-2 space-y-3">
-                              {(l2.segments || []).map((l3: any) => {
-                                const checked = mapping[l3.id] !== undefined;
-                                return (
-                                  <div key={l3.id} className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
-                                    <label className="flex min-w-0 cursor-pointer items-center gap-2 text-sm font-medium text-slate-800">
-                                      <input
-                                        type="checkbox"
-                                        checked={checked}
-                                        onChange={(e) => {
-                                          setMapping((prev) => {
-                                            const next = { ...prev };
-                                            if (e.target.checked) next[l3.id] = l3.name;
-                                            else delete next[l3.id];
-                                            return next;
-                                          });
-                                        }}
-                                        className="h-4 w-4 shrink-0 rounded accent-emerald-600"
-                                      />
-                                      <span className="truncate">{l3.name}</span>
-                                    </label>
-                                    {checked && (
-                                      <label className="sm:ml-auto sm:w-64">
-                                        <span className="sr-only">Note for {l3.name}</span>
-                                        <input
-                                          type="text"
-                                          value={mapping[l3.id]}
-                                          onChange={(e) =>
-                                            setMapping((prev) => ({ ...prev, [l3.id]: e.target.value }))
-                                          }
-                                          placeholder="Specific note, e.g. Bulk Payment"
-                                          className="input w-full"
-                                        />
-                                      </label>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                            <div className="text-xs font-semibold text-emerald-700">
+                              {s?.score != null ? `Score ${s.score} / 3` : "\u2014"}
                             </div>
                           </div>
-                        ))}
-                      </fieldset>
-                    ))}
+                        </div>
+                      );
+                      return (
+                        <div className="space-y-3">
+                          {row("Wawancara", d.interview, "\u2265 66% \u2192 3 \u00b7 \u2265 33% \u2192 2 \u00b7 below 33% \u2192 1")}
+                          {row("Survey", d.survey, "\u2265 30% \u2192 3 \u00b7 \u2265 15% \u2192 2 \u00b7 below 15% \u2192 1")}
+                        </div>
+                      );
+                    })()}
 
-                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                      <p className="text-sm text-slate-600">
-                        {st.desirabilityScored ? (
-                          <>Current Desirability score: <span className="font-extrabold text-emerald-700">{selectedFinding.scores?.desirability} / 100</span>
-                            {selectedFinding.scores?.desirabilityDetails?.inputs?.length > 0 && (
-                              <> ({selectedFinding.scores.desirabilityDetails.inputs.map((i: any) => `${i.label} ${i.score}`).join(" · ")})</>
-                            )}
-                          </>
-                        ) : (
-                          "Not scored yet — save a mapping or record votes on Desirability-linked aspects to score Desirability."
-                        )}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleSaveMapping}
-                        disabled={savingMapping}
-                        className="btn-primary"
-                      >
-                        {savingMapping ? "Saving…" : "Save mapping"}
-                      </button>
-                    </div>
+                    <p className="text-sm text-slate-600">
+                      {st.desirabilityScored ? (
+                        <>Desirability score: <span className="font-extrabold text-emerald-700">{selectedFinding.scores?.desirability} / 3</span>
+                          {" — "}
+                          {selectedFinding.scores?.desirabilityDetails?.formulaExplanation}
+                        </>
+                      ) : (
+                        "Not scored yet — enter the research mentions on the finding's detail page (Tab 1: Desirability) and the score appears here."
+                      )}
+                    </p>
                   </div>
                 )}
 
@@ -619,11 +537,10 @@ export default function WorkshopSession({
                         (reason) per aspect. Your Viability score is the average of
                         your Viability aspect scores; your Feasibility score is
                         4 − the average of your Effort (Feasibility-linked) aspect
-                        scores. Scores on Desirability-linked aspects feed that score
-                        instead — see the group headings on the matrix. If your role
-                        is Business &amp; Ops, Product or Tech you can only score
-                        your own label&apos;s aspects in your own group (marked Me) —
-                        every other group and aspect is view-only.
+                        scores. If your role is Business &amp; Ops, Product or Tech
+                        you can only score your own label&apos;s aspects in your own
+                        group (marked Me) — every other group and aspect is
+                        view-only.
                       </p>
                     </div>
                     <ViabilityVoteMatrix

@@ -165,3 +165,39 @@ alter table findings add column if not exists feasibility_manual boolean default
 Notes: until this column exists, the code still works — a drag saves its
 coordinates but the pin does not persist, so the card returns to its
 computed position on the next load. After the SQL runs, pins persist.
+
+## Step 9 — Desirability from research mentions (run once)
+
+Desirability (D) is now computed from research numbers, not from L3
+mappings (deleted). Each finding stores how many users mentioned it in
+each source; each project stores the total users per source (the basis
+N). A finding with no count entered, or a project with no basis N for
+that source, has no D for that source — D is null (not yet scored),
+never 0 or 1.
+
+```sql
+alter table findings add column if not exists interview_mentions integer;
+alter table findings add column if not exists survey_mentions integer;
+alter table projects add column if not exists interview_n integer;
+alter table projects add column if not exists survey_n integer;
+
+-- Research basis per project (from the workshop's research):
+-- Cash Management System: 3 interview users, 121 survey respondents.
+-- Digital Value Chain: 2 interview users, 123 survey respondents.
+update projects set interview_n = 3, survey_n = 121 where slug = 'cash-management-system';
+update projects set interview_n = 2, survey_n = 123 where slug = 'digital-value-chain';
+
+-- Example from the D rule: "Pengingat otomatis" — interview 2 of 3
+-- (67%) = 3, survey 40 of 121 (33%) = 3, so D = 3.
+update findings set interview_mentions = 2, survey_mentions = 40
+where id = 'find_4';
+```
+
+Notes: until this SQL runs, the code still works — D shows as unscored
+("—") on every finding and the Desirability tab shows the research
+inputs with the basis N missing. After it runs, the Cash/DVC basis N
+values appear (editable in the dashboard: Framework & Weighting →
+Research Basis, admin only), and "Pengingat otomatis" shows D = 3.
+Other findings get a D once their mention counts are entered on their
+detail page (Tab 1: Desirability). Internal is not a research source
+and is never counted.

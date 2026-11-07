@@ -12,12 +12,10 @@ function notFoundResponse() {
   );
 }
 import {
-  calculateDesirabilityScore,
-  calculateAspectValidation,
+  calculateDesirabilityFromResearch,
   calculateAllParticipantScores,
   getFindingScoringStatus,
   normalizeFramework,
-  ScoringRule,
 } from "@/lib/scoring";
 import { slugify } from "@/lib/slugify";
 
@@ -50,24 +48,24 @@ export async function GET(
       if (lower.includes("feas")) weightsMap.feasibility = fw.weight;
     }
 
-    // Format L1 parameters for calculation
-    const parsedL1 = (project.parametersL1 || []).map((l1: any) => {
-      let rules: ScoringRule[] = [];
-      try {
-        rules = JSON.parse(l1.scoringRules);
-      } catch {
-        rules = [];
-      }
-      return {
-        id: l1.id,
-        name: l1.name,
-        scoringRules: rules,
-        subCategories: (l1.subCategories || []).map((sc: any) => ({
-          id: sc.id,
-          name: sc.name,
-        })),
-      };
-    });
+    // Research basis for Desirability (per project, per source):
+    // the project's interview/survey totals. The db row is snake_case
+    // in production (Supabase) and camelCase locally (Prisma) — read
+    // both. Null means "not set": D cannot be computed for that source.
+    const researchN = {
+      interviewN:
+        (project as any).interview_n != null
+          ? Number((project as any).interview_n)
+          : (project as any).interviewN != null
+            ? Number((project as any).interviewN)
+            : null,
+      surveyN:
+        (project as any).survey_n != null
+          ? Number((project as any).survey_n)
+          : (project as any).surveyN != null
+            ? Number((project as any).surveyN)
+            : null,
+    };
 
     // Helper to parse finding fields (Sumber, Fitur, Platform)
     const parseFindingMeta = (rawTags: any) => {
@@ -117,7 +115,6 @@ export async function GET(
       (project.viabilityAspects || [])
         .filter((a: any) => normalizeFramework(a.framework) === dim)
         .map((a: any) => a.id);
-    const dAspectIds = aspectIdsFor("Desirability");
     const vAspectIds = aspectIdsFor("Viability");
     const fAspectIds = aspectIdsFor("Feasibility");
 
@@ -130,37 +127,26 @@ export async function GET(
     // aspect scores; F = 4 − mean of the participant's Feasibility
     // ("Effort") aspect scores; unscored aspects are skipped, never 0.
     // The finding shows the logged-in participant's own values, selected
-    // client-side from participantScores. Desirability is unchanged
-    // (explicit L3 mappings, blended with D-linked aspect validation).
+    // client-side from participantScores. Desirability is 1–3 from
+    // research mentions (Wawancara + Survey), not L3 mappings.
     const findingsWithScores = (project.findings || []).map((f: any) => {
       const { sumber, fitur, platform, tagsList } = parseFindingMeta(f.tags);
       const scoringStatus = getFindingScoringStatus(
         f,
-        project.viabilityAspects
+        project.viabilityAspects,
+        researchN
       );
 
-      // 1. Desirability — explicit L3 mappings, blended with validation
-      // of Desirability-linked aspects when the workshop voted on them.
-      const findingValues = (f.parameterValues || []).map((pv: any) => ({
-        l3Id: pv.l3Id,
-        l3: pv.segment
-          ? {
-              l2Id: pv.segment.subCategory?.id,
-            }
-          : undefined,
-      }));
-      const dAspectValidation = calculateAspectValidation(
-        dAspectIds,
-        project.groups,
-        f.viabilityVotes
+      // 1. Desirability — research mentions against the project's basis
+      // N (Wawancara: ≥66% → 3, ≥33% → 2; Survey: ≥30% → 3, ≥15% → 2;
+      // D = round-up average of the two source scores, or the single
+      // source's score). Null when no source has data.
+      const desirabilityData = calculateDesirabilityFromResearch(
+        f.interviewMentions ?? null,
+        researchN.interviewN,
+        f.surveyMentions ?? null,
+        researchN.surveyN
       );
-      const desirabilityData = scoringStatus.desirabilityScored
-        ? calculateDesirabilityScore(
-            parsedL1,
-            findingValues,
-            dAspectValidation?.score ?? null
-          )
-        : null;
 
       // 2. Viability + Feasibility — per-participant 1–3 scores.
       const participantScores = calculateAllParticipantScores(
@@ -187,6 +173,10 @@ export async function GET(
     return NextResponse.json({
       project: {
         ...project,
+        // Camel-case research basis for the client (the raw row is
+        // snake_case in production, camelCase locally).
+        interviewN: researchN.interviewN,
+        surveyN: researchN.surveyN,
         findings: findingsWithScores,
         weightsMap,
       },
@@ -236,6 +226,11 @@ export async function PUT(
       name: body.name,
       description: body.description,
       isActive: body.isActive,
+      // Research basis N for Desirability (admin-only): total users per
+      // source in this project. Null clears a basis (D then cannot be
+      // computed for that source).
+      ...(body.interviewN !== undefined && { interviewN: body.interviewN }),
+      ...(body.surveyN !== undefined && { surveyN: body.surveyN }),
       ...(newSlug !== undefined && { slug: newSlug }),
     });
 

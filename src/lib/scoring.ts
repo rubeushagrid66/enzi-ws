@@ -9,22 +9,26 @@ export interface ScoringRule {
   label?: string;
 }
 
-export interface L1Breakdown {
-  l1Id: string;
-  l1Name: string;
-  totalSubcategories: number;
-  coveredSubcategories: number;
-  coveragePercent: number;
-  matchedRule: ScoringRule | null;
-  score: number; // Normalized 0-100
-  maxScore: number;
+/** One research source's contribution to Desirability (1–3). */
+export interface ResearchSourceScore {
+  source: "Wawancara" | "Survey";
+  /** Users who mentioned this finding (null = not entered yet). */
+  mentions: number | null;
+  /** Total users in this source for the project (null = basis not set). */
+  total: number | null;
+  /** Mentions as a % of the total, one decimal (null when no data). */
+  percent: number | null;
+  /** 1–3 from the source's thresholds (null when no data). */
+  score: number | null;
 }
 
 export interface DesirabilityResult {
-  score: number; // 0-100
-  l1Breakdowns: L1Breakdown[];
+  /** D on the 1–3 scale (null when no source has data — not yet scored). */
+  score: number | null;
+  interview: ResearchSourceScore;
+  survey: ResearchSourceScore;
   formulaExplanation: string;
-  /** The inputs that were blended into this score (see blend rule). */
+  /** The source scores that were averaged into D (1–3 each). */
   inputs: BlendInput[];
 }
 
@@ -82,24 +86,34 @@ export interface FindingScoringStatus {
 /**
  * Derives a finding's scoring status from existing data only — no status
  * column exists. A dimension counts as scored only when the workshop
- * produced data for it: an explicit L3 mapping or a vote on a
- * Desirability-linked aspect (Desirability), a vote on a
- * Viability-linked aspect (Viability), or a vote on a
- * Feasibility-linked aspect (Feasibility). A finding with no workshop
- * data is Unscored. Note: placing a card on the 2x2 board does NOT
- * score Feasibility — F comes only from Feasibility aspect votes.
+ * produced data for it: research mentions that yield a Desirability
+ * score (Desirability), a vote on a Viability-linked aspect (Viability),
+ * or a vote on a Feasibility-linked aspect (Feasibility). A finding
+ * with no workshop data is Unscored. Note: placing a card on the 2x2
+ * board does NOT score Feasibility — F comes only from Feasibility
+ * aspect votes. Internal is not a research source and never scores D.
  */
 export function getFindingScoringStatus(
   finding: {
-    parameterValues?: Array<any> | null;
+    interviewMentions?: number | null;
+    surveyMentions?: number | null;
     viabilityVotes?: Array<any> | null;
     feasibilityX?: number | null;
     feasibilityY?: number | null;
   },
-  aspects?: Array<{ id: string; framework?: any }> | null
+  aspects?: Array<{ id: string; framework?: any }> | null,
+  researchN?: { interviewN?: number | null; surveyN?: number | null } | null
 ): FindingScoringStatus {
   const votes = finding.viabilityVotes ?? [];
-  let desirabilityScored = (finding.parameterValues?.length ?? 0) > 0;
+  // Desirability is scored only when the research mentions yield a D
+  // (at least one source has a count and a basis N). No source = unscored.
+  const desirabilityScored =
+    calculateDesirabilityFromResearch(
+      finding.interviewMentions ?? null,
+      researchN?.interviewN ?? null,
+      finding.surveyMentions ?? null,
+      researchN?.surveyN ?? null
+    ).score != null;
   let viabilityScored = votes.length > 0;
   // Feasibility is scored only by votes on Feasibility-linked aspects —
   // a placed board position is visual placement, not a score.
@@ -114,10 +128,8 @@ export function getFindingScoringStatus(
           .filter((a) => normalizeFramework(a.framework) === dim)
           .map((a) => a.id)
       );
-    const dIds = idsFor("Desirability");
     const vIds = idsFor("Viability");
     const fIds = idsFor("Feasibility");
-    if (votes.some((v: any) => dIds.has(v.aspectId))) desirabilityScored = true;
     viabilityScored = votes.some((v: any) => vIds.has(v.aspectId));
     if (votes.some((v: any) => fIds.has(v.aspectId))) feasibilityScored = true;
   }
@@ -135,133 +147,69 @@ export function getFindingScoringStatus(
 }
 
 /**
- * Computes Desirability Score with transparent formula breakdown.
+ * Desirability from research numbers (the user's rule, 2026-11-08).
+ * A "mention" is a user mentioning this finding in that source.
  *
- * Workshop-only scoring: coverage comes ONLY from explicit L3 parameter
- * mappings made in the workshop (findingValues). The finding's
- * Sumber/Platform attributes are display tags, not score inputs — a
- * finding must be mapped to L3 segments by the workshop group before it
- * can have a Desirability score.
+ * - Wawancara (interview): N = interview users in this project
+ *   (Cash 3, DVC 2). ≥ 66% mention → 3 (Tinggi), ≥ 33% → 2 (Sedang),
+ *   below 33% → 1 (Rendah).
+ * - Survey: N = survey respondents in this project (Cash 121, DVC
+ *   123). ≥ 30% mention → 3, ≥ 15% → 2, below 15% → 1.
+ * - Internal is NOT a research source and is never counted.
+ * - D = the average of the two source scores, rounded UP (2.5 → 3).
+ *   With only one source, D is that source's score. With no source
+ *   (no count entered, or the project's basis N not set), D is null —
+ *   the finding is not yet scored, never a 0 or a 1.
  *
- * Blend rule (aspect linkage): when Desirability-linked aspects have
- * votes, their validation % is blended with the L3-mapping score as an
- * equal input (average of the available inputs). Pass
- * aspectValidationScore as null when there are no D-linked aspects or
- * no votes on them — the mapping score alone is then the result.
+ * Example: Pengingat otomatis — interview 2 of 3 (67%) = 3, survey
+ * 40 of 121 (33%) = 3, so D = 3.
  */
-export function calculateDesirabilityScore(
-  l1Parameters: Array<{
-    id: string;
-    name: string;
-    scoringRules: ScoringRule[];
-    subCategories: Array<{ id: string; name: string }>;
-  }>,
-  findingValues: Array<{ l3Id: string; l3?: { l2Id: string } }>,
-  aspectValidationScore?: number | null
+export function calculateDesirabilityFromResearch(
+  interviewMentions: number | null | undefined,
+  interviewN: number | null | undefined,
+  surveyMentions: number | null | undefined,
+  surveyN: number | null | undefined
 ): DesirabilityResult {
-  if (!l1Parameters || l1Parameters.length === 0) {
-    const blended = blendDimensionInputs([
-      aspectValidationScore != null
-        ? { label: "Desirability aspects validated", score: aspectValidationScore }
-        : null,
-    ]);
-    return {
-      score: blended.score ?? 0,
-      l1Breakdowns: [],
-      formulaExplanation:
-        blended.inputs.length > 0
-          ? `No Level 1 parameters configured — Desirability from aspects only: ${blended.inputs.map((i) => `${i.label} ${i.score}`).join(" · ")} = ${blended.score}`
-          : "No Level 1 parameters configured.",
-      inputs: blended.inputs,
-    };
-  }
-
-  // Set of covered L2 sub-categories from explicit L3 mappings only.
-  const coveredL2Ids = new Set(
-    findingValues.map((v) => v.l3?.l2Id).filter(Boolean) as string[]
-  );
-
-  const breakdowns: L1Breakdown[] = [];
-  let totalNormalizedScore = 0;
-
-  for (const l1 of l1Parameters) {
-    const totalSub = l1.subCategories.length;
-
-    const coveredSub = l1.subCategories.filter((sub) =>
-      coveredL2Ids.has(sub.id)
-    ).length;
-
-    const coveragePercent =
-      totalSub > 0 ? Number(((coveredSub / totalSub) * 100).toFixed(1)) : 0;
-
-    // Sort rules descending by minPercent
-    const sortedRules = [...(l1.scoringRules || [])].sort(
-      (a, b) => b.minPercent - a.minPercent
-    );
-
-    let matched: ScoringRule | null = null;
-    for (const rule of sortedRules) {
-      if (coveragePercent >= rule.minPercent) {
-        matched = rule;
-        break;
-      }
+  const sourceScore = (
+    source: "Wawancara" | "Survey",
+    mentions: number | null | undefined,
+    total: number | null | undefined,
+    highPct: number,
+    midPct: number
+  ): ResearchSourceScore => {
+    const m = mentions != null && Number.isFinite(Number(mentions)) ? Number(mentions) : null;
+    const n = total != null && Number.isFinite(Number(total)) && Number(total) > 0 ? Number(total) : null;
+    if (m == null || n == null) {
+      return { source, mentions: m, total: n, percent: null, score: null };
     }
-
-    const maxRuleScore = sortedRules.length > 0 ? Math.max(...sortedRules.map((r) => r.score)) : 3;
-    const rawScore = matched ? matched.score : 0;
-    const normalizedScore = maxRuleScore > 0 ? (rawScore / maxRuleScore) * 100 : 0;
-
-    totalNormalizedScore += normalizedScore;
-
-    breakdowns.push({
-      l1Id: l1.id,
-      l1Name: l1.name,
-      totalSubcategories: totalSub,
-      coveredSubcategories: coveredSub,
-      coveragePercent,
-      matchedRule: matched,
-      score: Number(normalizedScore.toFixed(1)),
-      maxScore: 100,
-    });
-  }
-
-  const mappingScore = Number(
-    (totalNormalizedScore / l1Parameters.length).toFixed(1)
-  );
-
-  const explanation = breakdowns
-    .map(
-      (b) =>
-        `[${b.l1Name}: ${b.coveredSubcategories}/${b.totalSubcategories} (${b.coveragePercent}%) -> Score ${b.score}/100]`
-    )
-    .join(" + ");
-
-  // Blend the L3-mapping score with D-linked aspect validation, when
-  // the workshop recorded votes on Desirability-linked aspects. No
-  // mappings means no mapping input at all — an empty mapping must not
-  // contribute a phantom score to the blend.
-  const blended = blendDimensionInputs([
-    findingValues.length > 0
-      ? { label: "L3 mapping", score: mappingScore }
-      : null,
-    aspectValidationScore != null
-      ? { label: "Desirability aspects validated", score: aspectValidationScore }
-      : null,
-  ]);
-  const inputsText = blended.inputs
-    .map((i) => `${i.label} ${i.score}`)
-    .join(" · ");
-  const blendNote =
-    blended.inputs.length > 1
-      ? ` Blend (average of ${blended.inputs.length} inputs): ${inputsText} = ${blended.score}`
-      : "";
-
-  return {
-    score: blended.score ?? mappingScore,
-    l1Breakdowns: breakdowns,
-    formulaExplanation: `Average of categories: (${explanation}) / ${breakdowns.length} = ${mappingScore}.${blendNote}`,
-    inputs: blended.inputs,
+    const frac = m / n;
+    const percent = Number((frac * 100).toFixed(1));
+    const score = frac >= highPct / 100 ? 3 : frac >= midPct / 100 ? 2 : 1;
+    return { source, mentions: m, total: n, percent, score };
   };
+
+  const interview = sourceScore("Wawancara", interviewMentions, interviewN, 66, 33);
+  const survey = sourceScore("Survey", surveyMentions, surveyN, 30, 15);
+  const available = [interview, survey].filter((s) => s.score != null);
+  const inputs: BlendInput[] = available.map((s) => ({
+    label: `${s.source} ${s.score}`,
+    score: s.score as number,
+  }));
+  let score: number | null = null;
+  let formulaExplanation: string;
+  if (available.length === 0) {
+    formulaExplanation =
+      "No research numbers yet — enter how many users mentioned this finding in Wawancara and/or Survey to score Desirability.";
+  } else if (available.length === 1) {
+    const s = available[0];
+    score = s.score;
+    formulaExplanation = `Only one source: D = ${s.source} ${s.score} (${s.mentions} of ${s.total} users, ${s.percent}%).`;
+  } else {
+    const sum = (available[0].score as number) + (available[1].score as number);
+    score = Math.ceil(sum / 2);
+    formulaExplanation = `D = round up average of Wawancara ${available[0].score} and Survey ${available[1].score} = (${sum} / 2) → ${score}.`;
+  }
+  return { score, interview, survey, formulaExplanation, inputs };
 }
 
 /**
@@ -344,79 +292,6 @@ export function scoresForParticipant(
   return {
     viability: entry?.viability ?? null,
     feasibility: entry?.feasibility ?? null,
-  };
-}
-
-export interface AspectValidation {
-  /** Validation % across the given aspects (participants x aspects). */
-  score: number;
-  totalPossibleVotes: number;
-  totalValidatedVotes: number;
-  groupBreakdown: Array<{
-    groupId: string;
-    groupName: string;
-    validatedVotes: number;
-    possibleVotes: number;
-    percentage: number;
-  }>;
-  /** True once any vote row exists for these aspects (validated or not). */
-  hasVotes: boolean;
-}
-
-/**
- * Validation % for one set of linked aspects (e.g. all Desirability-
- * linked aspects). Returns null when there are no aspects in the set or
- * no votes recorded on them yet — an unvoted aspect input is unavailable,
- * not 0, so it never drags a blended score down.
- */
-export function calculateAspectValidation(
-  aspectIds: string[],
-  groups: Array<{
-    id: string;
-    name: string;
-    participants: Array<{ id: string; name: string }>;
-  }>,
-  votes: Array<{ participantId: string; aspectId: string; isValidated: boolean }>
-): AspectValidation | null {
-  if (!aspectIds || aspectIds.length === 0) return null;
-  const ids = new Set(aspectIds);
-  const relevant = (votes || []).filter((v) => ids.has(v.aspectId));
-  if (relevant.length === 0) return null;
-
-  const activeVotes = relevant.filter((v) => v.isValidated);
-  let grandTotalPossible = 0;
-  let grandTotalValidated = 0;
-
-  const groupBreakdown = groups.map((g) => {
-    const participantsCount = g.participants.length;
-    const possible = participantsCount * aspectIds.length;
-    let validated = 0;
-    for (const p of g.participants) {
-      for (const v of activeVotes) {
-        if (v.participantId === p.id) validated++;
-      }
-    }
-    grandTotalPossible += possible;
-    grandTotalValidated += validated;
-    return {
-      groupId: g.id,
-      groupName: g.name,
-      validatedVotes: validated,
-      possibleVotes: possible,
-      percentage:
-        possible > 0 ? Number(((validated / possible) * 100).toFixed(1)) : 0,
-    };
-  });
-
-  return {
-    score:
-      grandTotalPossible > 0
-        ? Number(((grandTotalValidated / grandTotalPossible) * 100).toFixed(1))
-        : 0,
-    totalPossibleVotes: grandTotalPossible,
-    totalValidatedVotes: grandTotalValidated,
-    groupBreakdown,
-    hasVotes: true,
   };
 }
 
@@ -532,11 +407,14 @@ export function calculateBoardPosition(
   const d = desirability ?? null;
   const v = viability ?? null;
   const f = feasibility ?? null;
+  // D and V are both 1–3: normalize each to 0–100, then average.
+  // D 3 = 100, D 2 = 50, D 1 = 0 — same scale as V.
+  const dNorm = d == null ? null : ((d - 1) / 2) * 100;
   const vNorm = v == null ? null : ((v - 1) / 2) * 100;
   const impact =
-    d == null || vNorm == null
+    dNorm == null || vNorm == null
       ? null
-      : Number(((d + vNorm) / 2).toFixed(1));
+      : Number(((dNorm + vNorm) / 2).toFixed(1));
   const x = f == null ? null : Number((((f - 1) / 2) * 100).toFixed(1));
   const y = impact;
   let quadrant: FeasibilityQuadrant | null = null;
