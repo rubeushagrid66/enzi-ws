@@ -220,7 +220,8 @@ export default function FindingDetailView({
                   <span>Calculation Transparency & Formula Breakdown</span>
                 </div>
                 <div className="mt-3 p-3 rounded-lg bg-slate-900 text-emerald-400 font-mono text-xs overflow-x-auto">
-                  {desirability.formulaExplanation || "Calculating formula..."}
+                  {desirability.formulaExplanation ||
+                    "No score yet — map this finding to L1–L3 parameters in the workshop to see how its Desirability score is calculated."}
                 </div>
 
                 <div className="mt-5 space-y-4">
@@ -260,7 +261,8 @@ export default function FindingDetailView({
                     </div>
                   ) : (
                     <p className="text-xs text-slate-400 italic">
-                      No Level 1 parameters configured for this project.
+                      No parameters mapped to this finding yet. Map it in the
+                      workshop (Step 1) and the breakdown will appear here.
                     </p>
                   )}
                 </div>
