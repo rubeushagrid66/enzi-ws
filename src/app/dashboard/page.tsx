@@ -101,7 +101,7 @@ function AspectFrameworkBadge({ framework }: { framework?: string }) {
   return (
     <span
       title={`Linked to ${fw} — votes on this aspect feed the ${fw} score`}
-      className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-bold ${FRAMEWORK_BADGE_CLASS[fw]}`}
+      className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${FRAMEWORK_BADGE_CLASS[fw]}`}
     >
       {fw === "Desirability" ? "D" : fw === "Feasibility" ? "F" : "V"} · {fw}
     </span>
@@ -111,7 +111,7 @@ function AspectFrameworkBadge({ framework }: { framework?: string }) {
 function AspectLabelBadge({ label }: { label?: string | null }) {
   if (!label) {
     return (
-      <span title="No label yet — edit the aspect to set one" className="inline-flex shrink-0 items-center rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-xs font-bold text-slate-400">
+      <span title="No label yet — edit the aspect to set one" className="inline-flex shrink-0 items-center rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-xs font-semibold text-slate-400">
         No label
       </span>
     );
@@ -119,7 +119,7 @@ function AspectLabelBadge({ label }: { label?: string | null }) {
   return (
     <span
       title={`Label: ${label} — used by the viability scoring formula`}
-      className="inline-flex shrink-0 items-center rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700"
+      className="inline-flex shrink-0 items-center rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700"
     >
       {label}
     </span>
@@ -1016,11 +1016,11 @@ export default function AdminDashboardPage() {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="truncate text-xl font-bold text-slate-900">Admin Configuration Center</h1>
-                  <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                  <span className="text-xs font-medium text-slate-500">
                     Logged in: {currentUser?.name} ({currentUser?.role})
                   </span>
                 </div>
-                <p className="text-sm text-slate-600">Configure projects, findings, participants, parameters, and scoring logic.</p>
+                <p className="text-sm text-slate-500">Configure projects, findings, participants, parameters, and scoring logic.</p>
                 {!isAdmin && currentUser && (
                   <p className="mt-1 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-800">
                     You&apos;re signed in as {currentUser.name} ({currentUser.role}) — you can edit Findings; everything else here is view-only.
@@ -1070,10 +1070,10 @@ export default function AdminDashboardPage() {
                     </colgroup>
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
-                        <th scope="col" className="px-4 py-3 font-bold text-slate-700">Finding Title</th>
-                        <th scope="col" className="px-4 py-3 font-bold text-slate-700">Tags</th>
-                        <th scope="col" className="px-4 py-3 font-bold text-slate-700">Origin</th>
-                        <th scope="col" className="px-4 py-3 text-right font-bold text-slate-700">Actions</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Finding Title</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tags</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Origin</th>
+                        <th scope="col" className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -1084,13 +1084,13 @@ export default function AdminDashboardPage() {
                           return (
                             <tr key={f.id} className="transition hover:bg-slate-50">
                               <td className="px-4 py-3">
-                                <div className="font-bold text-slate-900">{f.title}</div>
-                                {f.description && <div className="mt-0.5 line-clamp-1 text-xs text-slate-600">{f.description}</div>}
+                                <div className="font-semibold text-slate-900">{f.title}</div>
+                                {f.description && <div className="mt-0.5 line-clamp-1 text-xs text-slate-500">{f.description}</div>}
                               </td>
                               <td className="px-4 py-3">
                                 <div className="flex flex-wrap gap-1">
                                   {meta.tagsList.map((t: any, i: number) => (
-                                    <span key={i} className="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                                    <span key={i} className="rounded-md bg-slate-50 px-1.5 py-0.5 text-xs font-medium text-slate-500">
                                       {t.category}: {t.value}
                                     </span>
                                   ))}
@@ -1098,9 +1098,9 @@ export default function AdminDashboardPage() {
                               </td>
                               <td className="whitespace-nowrap px-4 py-3">
                                 {isPool ? (
-                                  <span className="whitespace-nowrap rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800">Pool</span>
+                                  <span className="whitespace-nowrap rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">Pool</span>
                                 ) : (
-                                  <span className="whitespace-nowrap rounded border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700">{f.projectName || f.projectSlug || "Project"}</span>
+                                  <span className="whitespace-nowrap text-sm font-medium text-slate-600">{f.projectName || f.projectSlug || "Project"}</span>
                                 )}
                               </td>
                               <td className="whitespace-nowrap px-4 py-3 text-right">
@@ -1154,11 +1154,11 @@ export default function AdminDashboardPage() {
             <section aria-labelledby="weights-heading" className="max-w-3xl space-y-6">
               <div className="card space-y-6 p-6">
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
                     <Sparkles className="h-4 w-4" /> Framework Weighting
                   </div>
-                  <h2 id="weights-heading" className="mt-1 text-xl font-bold text-slate-900">DVF Framework Allocation</h2>
-                  <p className="mt-1 text-sm font-semibold text-emerald-700">Global — applies to all projects.</p>
+                  <h2 id="weights-heading" className="mt-1 text-xl font-semibold text-slate-900">DVF Framework Allocation</h2>
+                  <p className="mt-1 text-sm font-medium text-slate-500">Global — applies to all projects.</p>
                   <p className="mt-1 text-sm text-slate-600">Enter any number for Desirability, Viability, and Feasibility. Weights are saved exactly as you type them — nothing is recalculated or forced to total 100.</p>
                   <p className="mt-1 text-sm text-slate-600">These weights are kept for reference only — scoring no longer uses a composite score. V and F are calculated per participant (1–3).</p>
                   {weightsSource && weightsSource !== "global" && (
@@ -1172,7 +1172,7 @@ export default function AdminDashboardPage() {
                   {weightInputs.map((item, idx) => (
                     <div key={idx} className="space-y-2">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <label htmlFor={`weight-number-${item.name}`} className="text-sm font-bold text-slate-800">{item.name}</label>
+                        <label htmlFor={`weight-number-${item.name}`} className="text-sm font-medium text-slate-700">{item.name}</label>
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-slate-600">Input:</span>
                           {isAdmin ? (
@@ -1188,12 +1188,12 @@ export default function AdminDashboardPage() {
                                 next[idx].weight = val;
                                 setWeightInputs(next);
                               }}
-                              className="input w-24 px-2 py-1 text-right font-bold"
+                              className="input w-24 px-2 py-1 text-right font-semibold"
                             />
                           ) : (
-                            <span className="px-2 py-1 text-right font-bold text-slate-900">{item.weight}</span>
+                            <span className="px-2 py-1 text-right font-semibold text-slate-900">{item.weight}</span>
                           )}
-                          <span className="font-semibold text-slate-600">%</span>
+                          <span className="font-medium text-slate-500">%</span>
                         </div>
                       </div>
                     </div>
@@ -1202,10 +1202,10 @@ export default function AdminDashboardPage() {
 
                 <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                    <span className="font-bold uppercase tracking-wider text-slate-700">
+                    <span className="font-semibold uppercase tracking-wider text-slate-500">
                       Total: <span className="text-slate-900">{totalRawWeight}%</span>
                     </span>
-                    <span className="font-semibold text-slate-600">
+                    <span className="font-medium text-slate-500">
                       Saved exactly as entered
                     </span>
                   </div>
@@ -1221,7 +1221,7 @@ export default function AdminDashboardPage() {
 
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                   <div>
-                    {weightSaveStatus && <span className="text-sm font-semibold text-emerald-700">{weightSaveStatus}</span>}
+                    {weightSaveStatus && <span className="text-sm font-medium text-emerald-600">{weightSaveStatus}</span>}
                   </div>
                   {isAdmin && (<button type="button" onClick={handleSaveWeights} className="btn-primary">Save Weights</button>)}
                 </div>
@@ -1239,7 +1239,7 @@ export default function AdminDashboardPage() {
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {isAdmin && (
                 <div className="card space-y-4 p-5">
-                  <h3 className="text-sm font-bold text-slate-900">Create New Group</h3>
+                  <h3 className="text-sm font-semibold text-slate-900">Create New Group</h3>
                   <form onSubmit={handleCreateGroup} className="flex flex-col gap-2 sm:flex-row">
                     <label htmlFor="new-group-name" className="sr-only">Group name</label>
                     <input id="new-group-name" type="text" required placeholder="e.g. Core Product & Strategy" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} className="input flex-1" />
@@ -1247,7 +1247,7 @@ export default function AdminDashboardPage() {
                   </form>
 
                   <div className="border-t border-slate-100 pt-4">
-                    <h3 className="mb-3 text-sm font-bold text-slate-900">Add Participant to Group</h3>
+                    <h3 className="mb-3 text-sm font-semibold text-slate-900">Add Participant to Group</h3>
                     <form onSubmit={handleCreateParticipant} className="space-y-3">
                       <div>
                         <label htmlFor="participant-group" className="field-label">Target group</label>
@@ -1271,13 +1271,13 @@ export default function AdminDashboardPage() {
                 )}
 
                 <div className="card space-y-4 p-5">
-                  <h3 className="text-sm font-bold text-slate-900">Active Groups &amp; Participants</h3>
+                  <h3 className="text-sm font-semibold text-slate-900">Active Groups &amp; Participants</h3>
                   {activeProject?.groups?.length > 0 ? (
                     <div className="max-h-[500px] space-y-4 overflow-y-auto pr-1">
                       {activeProject.groups.map((group: any) => (
                         <div key={group.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
                           <div className="mb-2 flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold uppercase tracking-wider text-slate-800">{group.name} ({group.participants?.length || 0} participants)</span>
+                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{group.name} ({group.participants?.length || 0} participants)</span>
                             {isAdmin && (
                             <span className="flex items-center gap-1">
                               <button type="button" onClick={() => setEditingGroup({ id: group.id, name: group.name })} aria-label={`Edit group ${group.name}`} className="btn-icon"><Edit2 className="h-4 w-4" /></button>
@@ -1324,7 +1324,7 @@ export default function AdminDashboardPage() {
                 {isAdmin && (
                 <div className="card space-y-5 p-5">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">Add Level 1 Category</h3>
+                    <h3 className="text-sm font-semibold text-slate-900">Add Level 1 Category</h3>
                     <p className="mt-0.5 text-sm text-slate-600">Category dimension for Desirability occurrence calculation (e.g. “Sumber Riset”, “Platform”).</p>
                     <form onSubmit={handleCreateL1} className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <label htmlFor="new-l1-name" className="sr-only">Level 1 category name</label>
@@ -1334,7 +1334,7 @@ export default function AdminDashboardPage() {
                   </div>
 
                   <div className="border-t border-slate-100 pt-4">
-                    <h3 className="text-sm font-bold text-slate-900">Add Level 2 Subcategory</h3>
+                    <h3 className="text-sm font-semibold text-slate-900">Add Level 2 Subcategory</h3>
                     <form onSubmit={handleCreateL2} className="mt-3 space-y-2">
                       <div>
                         <label htmlFor="l2-parent" className="field-label">Parent L1 category</label>
@@ -1352,7 +1352,7 @@ export default function AdminDashboardPage() {
                   </div>
 
                   <div className="border-t border-slate-100 pt-4">
-                    <h3 className="text-sm font-bold text-slate-900">Add Level 3 Segment</h3>
+                    <h3 className="text-sm font-semibold text-slate-900">Add Level 3 Segment</h3>
                     <form onSubmit={handleCreateL3} className="mt-3 space-y-2">
                       <div>
                         <label htmlFor="l3-parent" className="field-label">Parent L2 subcategory</label>
@@ -1376,12 +1376,12 @@ export default function AdminDashboardPage() {
                 )}
 
                 <div className="card space-y-4 p-5">
-                  <h3 className="text-sm font-bold text-slate-900">Configured Hierarchy (L1 → L2 → L3)</h3>
+                  <h3 className="text-sm font-semibold text-slate-900">Configured Hierarchy (L1 → L2 → L3)</h3>
                   <div className="max-h-[500px] space-y-4 overflow-y-auto pr-1">
                     {globalParams.length > 0 ? globalParams.map((l1: any) => (
                       <div key={l1.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">L1: {l1.name}</span>
+                          <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700">L1: {l1.name}</span>
                           <span className="flex items-center gap-1">
                             <span className="mr-1 hidden font-mono text-xs text-slate-500 sm:inline">Rules: &gt;66%=3, &gt;33%=2, &lt;=33%=1</span>
                             {isAdmin && (<>
@@ -1394,7 +1394,7 @@ export default function AdminDashboardPage() {
                           {l1.subCategories?.map((l2: any) => (
                             <div key={l2.id} className="text-sm">
                               <div className="flex items-center justify-between gap-2">
-                                <span className="font-semibold text-slate-800">↳ L2: {l2.name}</span>
+                                <span className="font-medium text-slate-700">↳ L2: {l2.name}</span>
                                 {isAdmin && (
                                 <span className="flex items-center gap-1">
                                   <button type="button" onClick={() => setEditingParam({ level: "L2", id: l2.id, name: l2.name })} aria-label={`Edit L2 ${l2.name}`} className="btn-icon !p-1"><Edit2 className="h-3.5 w-3.5" /></button>
@@ -1436,7 +1436,7 @@ export default function AdminDashboardPage() {
             <section aria-labelledby="aspects-heading" className="max-w-2xl space-y-6">
               <div className="card space-y-5 p-6">
                 <div>
-                  <h2 id="aspects-heading" className="text-base font-bold text-slate-900">Viability Aspects (Aspek)</h2>
+                  <h2 id="aspects-heading" className="text-base font-semibold text-slate-900">Viability Aspects (Aspek)</h2>
                   <p className="mt-0.5 text-sm text-slate-600">Define aspects for the participant validation voting matrix, and link each one to the framework its votes feed — Desirability, Viability, or Feasibility.</p>
                 </div>
                 {isAdmin && (
@@ -1470,12 +1470,12 @@ export default function AdminDashboardPage() {
                 </form>
                 )}
                 <div className="space-y-2 border-t border-slate-100 pt-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">Active Aspects ({activeProject?.viabilityAspects?.length || 0})</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Active Aspects ({activeProject?.viabilityAspects?.length || 0})</h3>
                   {activeProject?.viabilityAspects?.map((aspect: any) => (
                     <div key={aspect.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-semibold text-slate-800">{aspect.name}</span>
+                          <span className="text-sm font-medium text-slate-700">{aspect.name}</span>
                           <AspectFrameworkBadge framework={aspect.framework} />
                           <AspectLabelBadge label={aspect.label} />
                         </div>
@@ -1510,9 +1510,9 @@ export default function AdminDashboardPage() {
                     <div>
                       <div className="flex items-center justify-between gap-2">
                         <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600">/{p.slug}</span>
-                        <span className="text-xs font-semibold text-emerald-600">{p.isActive ? "Active" : "Archived"}</span>
+                        <span className="text-xs font-medium text-emerald-600">{p.isActive ? "Active" : "Archived"}</span>
                       </div>
-                      <h3 className="mt-3 text-base font-bold text-slate-900">{p.name}</h3>
+                      <h3 className="mt-3 text-base font-semibold text-slate-900">{p.name}</h3>
                       {p.description && <p className="mt-1 line-clamp-2 text-sm text-slate-600">{p.description}</p>}
                     </div>
                     {isAdmin && (
@@ -1538,21 +1538,21 @@ export default function AdminDashboardPage() {
               <div className="card space-y-6 p-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h2 id="users-heading" className="text-base font-bold text-slate-900">User Management</h2>
+                    <h2 id="users-heading" className="text-base font-semibold text-slate-900">User Management</h2>
                     <p className="mt-0.5 text-sm text-slate-600">Create and manage facilitator and admin credentials. Assign each user to a project (and a group within it) so their scores land in the right workshop — label-role users (Tech, Product, Business &amp; Ops) can only score in their assigned project, while admins and facilitators work across projects. A user with no project assigned can score anywhere.</p>
                   </div>
                   <button type="button" onClick={openCreateUser} className="btn-primary"><Plus className="h-4 w-4" /> Create User</button>
                 </div>
                 <div className="space-y-2 border-t border-slate-100 pt-4">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">Existing Credentials ({usersList.length})</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Existing Credentials ({usersList.length})</h3>
                   {usersList.map((u) => (
                     <div key={u.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold text-slate-800">{u.name}{u.id === currentUser?.id && <span className="ml-2 text-xs font-medium text-slate-500">(you)</span>}</div>
+                        <div className="text-sm font-medium text-slate-700">{u.name}{u.id === currentUser?.id && <span className="ml-2 text-xs font-medium text-slate-500">(you)</span>}</div>
                         <div className="font-mono text-xs text-slate-600">{u.email}</div>
                       </div>
                       <span className="flex items-center gap-2">
-                        <span className="rounded border border-slate-200 bg-white px-2 py-0.5 font-mono text-xs font-bold text-slate-700">{u.role}</span>
+                        <span className="rounded border border-slate-200 bg-white px-2 py-0.5 font-mono text-xs font-semibold text-slate-600">{u.role}</span>
                         {u.projectName && (
                           <span className="rounded border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800" title="Assigned project">{u.projectName}</span>
                         )}
@@ -1595,7 +1595,7 @@ export default function AdminDashboardPage() {
                   const preview = slugify(projectForm.name) || editingProjectSlug;
                   return preview !== editingProjectSlug ? (
                     <p className="mt-1 text-xs text-amber-700">
-                      Saving will move this project to <span className="font-mono font-bold">/{preview}</span> — the old link <span className="font-mono">/{editingProjectSlug}</span> will stop working.
+                      Saving will move this project to <span className="font-mono font-semibold">/{preview}</span> — the old link <span className="font-mono">/{editingProjectSlug}</span> will stop working.
                     </p>
                   ) : (
                     <p className="mt-1 text-xs text-slate-500">The URL follows the project name — rename the project above to move it.</p>

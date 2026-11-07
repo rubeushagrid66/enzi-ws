@@ -56,25 +56,25 @@ body {
     @apply px-3 py-1.5 text-xs;
   }
   .btn-icon-danger {
-    @apply rounded-lg p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500;
+    @apply rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500;
   }
   .btn-icon {
-    @apply rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500;
+    @apply rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500;
   }
   .input {
     @apply rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500;
   }
   .field-label {
-    @apply mb-1 block text-xs font-bold text-slate-600;
+    @apply mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400;
   }
   .card {
     @apply rounded-2xl border border-slate-200 bg-white shadow-xs;
   }
   .section-title {
-    @apply text-lg font-bold text-slate-900;
+    @apply text-lg font-semibold text-slate-900;
   }
   .section-sub {
-    @apply text-sm text-slate-600;
+    @apply text-sm text-slate-500;
   }
 }
 
