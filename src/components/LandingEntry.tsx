@@ -1,1 +1,162 @@
-InVzZSBjbGllbnQiOwoKaW1wb3J0IHsgdXNlRWZmZWN0LCB1c2VTdGF0ZSB9IGZyb20gInJlYWN0IjsKaW1wb3J0IHsgdXNlUm91dGVyIH0gZnJvbSAibmV4dC9uYXZpZ2F0aW9uIjsKaW1wb3J0IHsgQXJyb3dSaWdodCwgWCB9IGZyb20gImx1Y2lkZS1yZWFjdCI7CgpleHBvcnQgaW50ZXJmYWNlIFBsYXRmb3JtRW50cnkgewogIGlkOiBzdHJpbmc7CiAgbmFtZTogc3RyaW5nOwogIHNsdWc6IHN0cmluZzsKICBmaW5kaW5nczogbnVtYmVyOwogIGdyb3VwczogbnVtYmVyOwp9CgovKioKICogRXhoaWJpdGlvbiBlbnRyeSBmb3IgdGhlIEJld2l6ZSBXb3Jrc2hvcCDigJQgUGhhc2UgRFZGLgogKiBBbGVwaCBrZXlub3RlIGxhbmd1YWdlOiBwdXJlIGJsYWNrLCB3aGl0ZSBQbGF5ZmFpciBzZXJpZiwgbXV0ZWQgZ3JleQogKiBkZXNjcmlwdGlvbiwgb25lIG91dGxpbmVkIGFjdGlvbiwgYW5kIGEgZ2lhbnQgdGVhbC10by1ibHVlIGdyYWRpZW50CiAqICJEVkYiIGJsZWVkaW5nIG9mZiB0aGUgYm90dG9tIGVkZ2UsIGxpa2UgdGhlIGtleW5vdGUncyAiQWdlbmRhIiBzbGlkZS4KICogVGhlIGZvb3RlciBzaXRzIGFib3ZlIHRoZSBnaWFudCB3b3JkIHNvIHRoZSB0d28gbmV2ZXIgY29sbGlkZS4KICovCmV4cG9ydCBkZWZhdWx0IGZ1bmN0aW9uIExhbmRpbmdFbnRyeSh7CiAgcHJvamVjdHMsCn06IHsKICBwcm9qZWN0czogUGxhdGZvcm1FbnRyeVtdOwp9KSB7CiAgY29uc3Qgcm91dGVyID0gdXNlUm91dGVyKCk7CiAgY29uc3QgW29wZW4sIHNldE9wZW5dID0gdXNlU3RhdGUoZmFsc2UpOwoKICAvLyBDbG9zZSBvbiBFc2NhcGUgYW5kIGxvY2sgdGhlIHBhZ2Ugc2Nyb2xsIHdoaWxlIHRoZSBwb3B1cCBpcyBvcGVuLgogIHVzZUVmZmVjdCgoKSA9PiB7CiAgICBpZiAoIW9wZW4pIHJldHVybjsKICAgIGNvbnN0IG9uS2V5ID0gKGU6IEtleWJvYXJkRXZlbnQpID0+IHsKICAgICAgaWYgKGUua2V5ID09PSAiRXNjYXBlIikgc2V0T3BlbihmYWxzZSk7CiAgICB9OwogICAgZG9jdW1lbnQuYWRkRXZlbnRMaXN0ZW5lcigia2V5ZG93biIsIG9uS2V5KTsKICAgIGNvbnN0IHByZXYgPSBkb2N1bWVudC5ib2R5LnN0eWxlLm92ZXJmbG93OwogICAgZG9jdW1lbnQuYm9keS5zdHlsZS5vdmVyZmxvdyA9ICJoaWRkZW4iOwogICAgcmV0dXJuICgpID0+IHsKICAgICAgZG9jdW1lbnQucmVtb3ZlRXZlbnRMaXN0ZW5lcigia2V5ZG93biIsIG9uS2V5KTsKICAgICAgZG9jdW1lbnQuYm9keS5zdHlsZS5vdmVyZmxvdyA9IHByZXY7CiAgICB9OwogIH0sIFtvcGVuIF0pOwoKICByZXR1cm4gKAogICAgPG1haW4KICAgICAgaWQ9Im1haW4tY29udGVudCIKICAgICAgY2xhc3NOYW1lPSJmbGV4IGZsZXgtMSBmbGV4LWNvbCBiZy1ibGFjayB0ZXh0LXdoaXRlIG92ZXJmbG93LWhpZGRlbiIKICAgID4KICAgICAgey8qIFRvcCBibG9jazogbnVtYmVyLCB0aXRsZSwgZGVzY3JpcHRpb24sIGFjdGlvbiAqL30KICAgICAgPGRpdiBjbGFzc05hbWU9InB4LTUgcHQtMTAgc206cHgtMTAgc206cHQtMTQgbGc6cHgtMTYiPgogICAgICAgIDxkaXYgY2xhc3NOYW1lPSJmbGV4IGl0ZW1zLWJhc2VsaW5lIGdhcC00Ij4KICAgICAgICAgIDxzcGFuIGNsYXNzTmFtZT0idGV4dC1zbSB0ZXh0LXdoaXRlLzUwIj4wMTwvc3Bhbj4KICAgICAgICAgIDxzcGFuIGNsYXNzTmFtZT0idGV4dC1bMTFweF0gZm9udC1zZW1pYm9sZCB1cHBlcmNhc2UgdHJhY2tpbmctWzAuMzVlbV0gdGV4dC13aGl0ZS81MCI+CiAgICAgICAgICAgIFBoYXNlIERWRgogICAgICAgICAgPC9zcGFuPgogICAgICAgIDwvZGl2PgoKICAgICAgICA8aDEgY2xhc3NOYW1lPSJtdC02IGZvbnQtZGlzcGxheSB0ZXh0LTR4bCBsZWFkaW5nLVsxLjA4XSB0cmFja2luZy10aWdodCBzbTp0ZXh0LTZ4bCBsZzp0ZXh0LTd4bCI+CiAgICAgICAgICA8c3BhbiBjbGFzc05hbWU9ImJsb2NrIHRleHQtd2hpdGUiPldlbGNvbWUgdG88L3NwYW4+CiAgICAgICAgICA8c3BhbiBjbGFzc05hbWU9ImJsb2NrIGl0YWxpYyB0ZXh0LWFsZXBoLWdyYWRpZW50IHByLTIiPgogICAgICAgICAgICBCZXdpemUgV29ya3Nob3AKICAgICAgICAgIDwvc3Bhbj4KICAgICAgICA8L2gxPgoKICAgICAgICA8cCBjbGFzc05hbWU9Im10LTUgbWF4LXcteGwgdGV4dC1iYXNlIGxlYWRpbmctcmVsYXhlZCB0ZXh0LW5ldXRyYWwtNDAwIHNtOnRleHQtbGciPgogICAgICAgICAgRXhwZXJpZW5jZSB0aGUgZGlnaXRhbCBjb2xsYWJvcmF0aXZlIHBsYXRmb3JtIHRvIGhlbHAgc2hhcGluZyB0aGUKICAgICAgICAgIHJvYWRtYXAKICAgICAgICA8L3A+CgogICAgICAgIDxidXR0b24KICAgICAgICAgIG9uQ2xpY2s9eygpID0+IHNldE9wZW4odHJ1ZSl9CiAgICAgICAgICBjbGFzc05hbWU9Im10LTggaW5saW5lLWZsZXggdy1mdWxsIGl0ZW1zLWNlbnRlciBqdXN0aWZ5LWNlbnRlciBnYXAtMiByb3VuZGVkLWxnIGJvcmRlciBib3JkZXItd2hpdGUvNjAgcHgtNyBweS0zLjUgdGV4dC1zbSBmb250LXNlbWlib2xkIHRleHQtd2hpdGUgdHJhbnNpdGlvbiBob3ZlcjpiZy13aGl0ZSBob3Zlcjp0ZXh0LWJsYWNrIGZvY3VzLXZpc2libGU6b3V0bGluZS1ub25lIGZvY3VzLXZpc2libGU6cmluZy0yIGZvY3VzLXZpc2libGU6cmluZy13aGl0ZSBzbTp3LWF1dG8iCiAgICAgICAgPgogICAgICAgICAgU2VsZWN0IFBsYXRmb3JtCiAgICAgICAgICA8QXJyb3dSaWdodCBjbGFzc05hbWU9ImgtNCB3LTQiIGFyaWEtaGlkZGVuPSJ0cnVlIiAvPgogICAgICAgIDwvYnV0dG9uPgogICAgICA8L2Rpdj4KCiAgICAgIHsvKiBCb3R0b20gYmxvY2s6IGNyZWRpdCBsaW5lLCB0aGVuIHRoZSBnaWFudCB3b3JkICovfQogICAgICA8ZGl2IGNsYXNzTmFtZT0ibXQtYXV0byI+CiAgICAgICAgPGRpdiBjbGFzc05hbWU9ImZsZXggaXRlbXMtY2VudGVyIGp1c3RpZnktYmV0d2VlbiBweC01IHBiLTQgcHQtMTIgdGV4dC1bMTFweF0gZm9udC1tZWRpdW0gdXBwZXJjYXNlIHRyYWNraW5nLVswLjJlbV0gdGV4dC13aGl0ZS80MCBzbTpweC0xMCBsZzpweC0xNiI+CiAgICAgICAgICA8c3Bhbj5CYW5rIEJTSSAmdGltZXM7IEFsZXBoPC9zcGFuPgogICAgICAgICAgPHNwYW4gY2xhc3NOYW1lPSJoaWRkZW4gc206aW5saW5lIj5CZXdpemUgV29ya3Nob3Ag4oCUIFBoYXNlIERWRjwvc3Bhbj4KICAgICAgICA8L2Rpdj4KICAgICAgICA8ZGl2CiAgICAgICAgICBhcmlhLWhpZGRlbj0idHJ1ZSIKICAgICAgICAgIGNsYXNzTmFtZT0icG9pbnRlci1ldmVudHMtbm9uZSBzZWxlY3Qtbm9uZSBvdmVyZmxvdy1oaWRkZW4iCiAgICAgICAgPgogICAgICAgICAgPGRpdiBjbGFzc05hbWU9InRleHQtYWxlcGgtZ3JhZGllbnQgdGV4dC1jZW50ZXIgZm9udC1kaXNwbGF5IHRleHQtW2NsYW1wKDE2MHB4LDM2dncsNTYwcHgpXSBmb250LXNlbWlib2xkIGxlYWRpbmctWzAuNzJdIHRyYWNraW5nLXRpZ2h0IC1tYi1bMC4wOWVtXSI+CiAgICAgICAgICAgIERWRgogICAgICAgICAgPC9kaXY+CiAgICAgICAgPC9kaXY+CiAgICAgIDwvZGl2PgoKICAgICAgey8qIFNlbGVjdCBQbGF0Zm9ybSBwb3B1cCAqL30KICAgICAge29wZW4gJiYgKAogICAgICAgIDxkaXYKICAgICAgICAgIHJvbGU9ImRpYWxvZyIKICAgICAgICAgIGFyaWEtbW9kYWw9InRydWUiCiAgICAgICAgICBhcmlhLWxhYmVsPSJTZWxlY3QgUGxhdGZvcm0iCiAgICAgICAgICBjbGFzc05hbWU9ImZpeGVkIGluc2V0LTAgei1bMTAwXSBmbGV4IGl0ZW1zLWNlbnRlciBqdXN0aWZ5LWNlbnRlciBwLTQiCiAgICAgICAgPgogICAgICAgICAgPGJ1dHRvbgogICAgICAgICAgICBhcmlhLWxhYmVsPSJDbG9zZSIKICAgICAgICAgICAgb25DbGljaz17KCkgPT4gc2V0T3BlbihmYWxzZSl9CiAgICAgICAgICAgIGNsYXNzTmFtZT0iYWJzb2x1dGUgaW5zZXQtMCBiZy1ibGFjay84MCBiYWNrZHJvcC1ibHVyLXNtIgogICAgICAgICAgLz4KICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPSJyZWxhdGl2ZSB3LWZ1bGwgbWF4LXctbGcgcm91bmRlZC0yeGwgYm9yZGVyIGJvcmRlci1bIzAxODc4OF0vNDAgYmctWyMwYjBmMGZdIHAtNiBzaGFkb3ctMnhsIHNtOnAtOCI+CiAgICAgICAgICAgIDxidXR0b24KICAgICAgICAgICAgICBvbkNsaWNrPXsoKSA9PiBzZXRPcGVuKGZhbHNlKX0KICAgICAgICAgICAgICBhcmlhLWxhYmVsPSJDbG9zZSBkaWFsb2ciCiAgICAgICAgICAgICAgY2xhc3NOYW1lPSJhYnNvbHV0ZSByaWdodC00IHRvcC00IHJvdW5kZWQtbGcgcC0xLjUgdGV4dC13aGl0ZS82MCB0cmFuc2l0aW9uIGhvdmVyOmJnLXdoaXRlLzEwIGhvdmVyOnRleHQtd2hpdGUgZm9jdXMtdmlzaWJsZTpvdXRsaW5lLW5vbmUgZm9jdXMtdmlzaWJsZTpyaW5nLTIgZm9jdXMtdmlzaWJsZTpyaW5nLXdoaXRlIgogICAgICAgICAgICA+CiAgICAgICAgICAgICAgPFggY2xhc3NOYW1lPSJoLTUgdy01IiAvPgogICAgICAgICAgICA8L2J1dHRvbj4KCiAgICAgICAgICAgIDxoMiBjbGFzc05hbWU9ImZvbnQtZGlzcGxheSB0ZXh0LTJ4bCBmb250LXNlbWlib2xkIHRleHQtd2hpdGUiPgogICAgICAgICAgICAgIFNlbGVjdCBQbGF0Zm9ybQogICAgICAgICAgICA8L2gyPgogICAgICAgICAgICA8cCBjbGFzc05hbWU9Im10LTEgdGV4dC1zbSB0ZXh0LW5ldXRyYWwtNDAwIj4KICAgICAgICAgICAgICBDaG9vc2UgYSBwbGF0Zm9ybSB0byBvcGVuIGl0cyB3b3Jrc2hvcCBwYWdlLgogICAgICAgICAgICA8L3A+CgogICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT0ibXQtNiBzcGFjZS15LTMiPgogICAgICAgICAgICAgIHtwcm9qZWN0cy5tYXAoKHByb2plY3QsIGkpID0+ICgKICAgICAgICAgICAgICAgIDxidXR0b24KICAgICAgICAgICAgICAgICAga2V5PXtwcm9qZWN0LmlkfQogICAgICAgICAgICAgICAgICBvbkNsaWNrPXsoKSA9PiByb3V0ZXIucHVzaChgLyR7cHJvamVjdC5zbHVnfWApfQogICAgICAgICAgICAgICAgICBjbGFzc05hbWU9Imdyb3VwIGZsZXggdy1mdWxsIGl0ZW1zLWNlbnRlciBnYXAtNCByb3VuZGVkLXhsIGJvcmRlciBib3JkZXItd2hpdGUvMTAgYmctd2hpdGUvWzAuMDRdIHB4LTQgcHktNCB0ZXh0LWxlZnQgdHJhbnNpdGlvbiBob3Zlcjpib3JkZXItWyMwMTg3ODhdIGhvdmVyOmJnLXdoaXRlL1swLjA3XSBmb2N1cy12aXNpYmxlOm91dGxpbmUtbm9uZSBmb2N1cy12aXNpYmxlOnJpbmctMiBmb2N1cy12aXNpYmxlOnJpbmctd2hpdGUiCiAgICAgICAgICAgICAgICA+CiAgICAgICAgICAgICAgICAgIDxzcGFuIGNsYXNzTmFtZT0idGV4dC1hbGVwaC1ncmFkaWVudCBmb250LWRpc3BsYXkgdGV4dC0zeGwgZm9udC1zZW1pYm9sZCBsZWFkaW5nLW5vbmUiPgogICAgICAgICAgICAgICAgICAgIHtTdHJpbmcoaSArIDEpLnBhZFN0YXJ0KDIsICIwIil9CiAgICAgICAgICAgICAgICAgIDwvc3Bhbj4KICAgICAgICAgICAgICAgICAgPHNwYW4gY2xhc3NOYW1lPSJtaW4tdy0wIGZsZXgtMSI+CiAgICAgICAgICAgICAgICAgICAgPHNwYW4gY2xhc3NOYW1lPSJibG9jayB0cnVuY2F0ZSBmb250LWRpc3BsYXkgdGV4dC1sZyBmb250LW1lZGl1bSB0ZXh0LXdoaXRlIj4KICAgICAgICAgICAgICAgICAgICAgIHtwcm9qZWN0Lm5hbWV9CiAgICAgICAgICAgICAgICAgICAgPC9zcGFuPgogICAgICAgICAgICAgICAgICAgIDxzcGFuIGNsYXNzTmFtZT0ibXQtMC41IGJsb2NrIHRleHQteHMgdXBwZXJjYXNlIHRyYWNraW5nLVswLjE0ZW1dIHRleHQtbmV1dHJhbC00MDAiPgogICAgICAgICAgICAgICAgICAgICAge3Byb2plY3QuZmluZGluZ3N9IGZpbmRpbmdzICZtaWRkb3Q7IHtwcm9qZWN0Lmdyb3Vwc317IiAifQogICAgICAgICAgICAgICAgICAgICAgZ3JvdXBzCiAgICAgICAgICAgICAgICAgICAgPC9zcGFuPgogICAgICAgICAgICAgICAgICA8L3NwYW4+CiAgICAgICAgICAgICAgICAgIDxBcnJvd1JpZ2h0CiAgICAgICAgICAgICAgICAgICAgY2xhc3NOYW1lPSJoLTQgdy00IHNocmluay0wIHRleHQtd2hpdGUvNDAgdHJhbnNpdGlvbiBncm91cC1ob3Zlcjp0cmFuc2xhdGUteC0wLjUgZ3JvdXAtaG92ZXI6dGV4dC13aGl0ZSIKICAgICAgICAgICAgICAgICAgICBhcmlhLWhpZGRlbj0idHJ1ZSIKICAgICAgICAgICAgICAgICAgLz4KICAgICAgICAgICAgICAgIDwvYnV0dG9uPgogICAgICAgICAgICAgICkpfQogICAgICAgICAgICA8L2Rpdj4KCiAgICAgICAgICAgIHtwcm9qZWN0cy5sZW5ndGggPT09IDAgJiYgKAogICAgICAgICAgICAgIDxwIGNsYXNzTmFtZT0ibXQtNiB0ZXh0LXNtIHRleHQtbmV1dHJhbC00MDAiPgogICAgICAgICAgICAgICAgTm8gcGxhdGZvcm1zIHlldC4gQ3JlYXRlIG9uZSBpbiB0aGUgZGFzaGJvYXJkIHRvIGdldCBzdGFydGVkLgogICAgICAgICAgICAgIDwvcD4KICAgICAgICAgICAgKX0KICAgICAgICAgIDwvZGl2PgogICAgICAgIDwvZGl2PgogICAgICApfQogICAgPC9tYWluPgogICk7Cn0K
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, X } from "lucide-react";
+
+export interface PlatformEntry {
+  id: string;
+  name: string;
+  slug: string;
+  findings: number;
+  groups: number;
+}
+
+/**
+ * Exhibition entry for the Bewize Workshop — Phase DVF.
+ * Aleph keynote language: pure black, white Playfair serif, muted grey
+ * description, one outlined action, and a giant teal-to-blue gradient
+ * "DVF" bleeding off the bottom edge, like the keynote's "Agenda" slide.
+ * The footer sits above the giant word so the two never collide.
+ */
+export default function LandingEntry({
+  projects,
+}: {
+  projects: PlatformEntry[];
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+
+  // Close on Escape and lock the page scroll while the popup is open.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open ]);
+
+  return (
+    <main
+      id="main-content"
+      className="flex flex-1 flex-col bg-black text-white overflow-hidden"
+    >
+      {/* Top block: number, title, description, action */}
+      <div className="px-5 pt-10 sm:px-10 sm:pt-14 lg:px-16">
+        <div className="flex items-baseline gap-4">
+          <span className="text-sm text-white/50">01</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.35em] text-white/50">
+            Phase DVF
+          </span>
+        </div>
+
+        <h1 className="mt-6 font-display text-4xl leading-[1.08] tracking-tight sm:text-6xl lg:text-7xl">
+          <span className="block text-white">Welcome to</span>
+          <span className="block italic text-aleph-gradient pr-2">
+            Bewize Workshop
+          </span>
+        </h1>
+
+        <p className="mt-5 max-w-xl text-base leading-relaxed text-neutral-400 sm:text-lg">
+          Experience the digital collaborative platform to help shaping the
+          roadmap
+        </p>
+
+        <button
+          onClick={() => setOpen(true)}
+          className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/60 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-white hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:w-auto"
+        >
+          Select Platform
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
+
+      {/* Bottom block: credit line, then the giant word */}
+      <div className="mt-auto">
+        <div className="flex items-center justify-between px-5 pb-4 pt-12 text-[11px] font-medium uppercase tracking-[0.2em] text-white/40 sm:px-10 lg:px-16">
+          <span>Bank BSI &times; Aleph</span>
+          <span className="hidden sm:inline">Bewize Workshop — Phase DVF</span>
+        </div>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none select-none overflow-hidden"
+        >
+          <div className="text-aleph-gradient text-center font-display text-[clamp(160px,36vw,560px)] font-semibold leading-[0.72] tracking-tight -mb-[0.09em]">
+            DVF
+          </div>
+        </div>
+      </div>
+
+      {/* Select Platform popup */}
+      {open && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Select Platform"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        >
+          <button
+            aria-label="Close"
+            onClick={() => setOpen(false)}
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+          />
+          <div className="relative w-full max-w-lg rounded-2xl border border-[#018788]/40 bg-[#0b0f0f] p-6 shadow-2xl sm:p-8">
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Close dialog"
+              className="absolute right-4 top-4 rounded-lg p-1.5 text-white/60 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h2 className="font-display text-2xl font-semibold text-white">
+              Select Platform
+            </h2>
+            <p className="mt-1 text-sm text-neutral-400">
+              Choose a platform to open its workshop page.
+            </p>
+
+            <div className="mt-6 space-y-3">
+              {projects.map((project, i) => (
+                <button
+                  key={project.id}
+                  onClick={() => router.push(`/${project.slug}`)}
+                  className="group flex w-full items-center gap-4 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-4 text-left transition hover:border-[#018788] hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  <span className="text-aleph-gradient font-display text-3xl font-semibold leading-none">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-display text-lg font-medium text-white">
+                      {project.name}
+                    </span>
+                    <span className="mt-0.5 block text-xs uppercase tracking-[0.14em] text-neutral-400">
+                      {project.findings} findings &middot; {project.groups}{" "}
+                      groups
+                    </span>
+                  </span>
+                  <ArrowRight
+                    className="h-4 w-4 shrink-0 text-white/40 transition group-hover:translate-x-0.5 group-hover:text-white"
+                    aria-hidden="true"
+                  />
+                </button>
+              ))}
+            </div>
+
+            {projects.length === 0 && (
+              <p className="mt-6 text-sm text-neutral-400">
+                No platforms yet. Create one in the dashboard to get started.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}

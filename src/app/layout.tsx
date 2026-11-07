@@ -1,1 +1,41 @@
-aW1wb3J0IHR5cGUgeyBNZXRhZGF0YSB9IGZyb20gIm5leHQiOwppbXBvcnQgeyBQbGF5ZmFpcl9EaXNwbGF5IH0gZnJvbSAibmV4dC9mb250L2dvb2dsZSI7CmltcG9ydCAiLi9nbG9iYWxzLmNzcyI7CgovLyBBbGVwaCBrZXlub3RlIHNlcmlmOiB0aGUgRGlkb25lLXN0eWxlIGRpc3BsYXkgZmFjZSB1c2VkIGZvciB0aGUKLy8gZXhoaWJpdGlvbiBlbnRyeSBhbmQgZm9yIHBsYXRmb3JtIC8gZmluZGluZyB0aXRsZXMgYWNyb3NzIHRoZSBzaXRlLgovLyBGYWxscyBiYWNrIHRvIEdlb3JnaWEgd2hlbiB0aGUgd2ViZm9udCBpcyB1bmF2YWlsYWJsZS4KY29uc3QgcGxheWZhaXIgPSBQbGF5ZmFpcl9EaXNwbGF5KHsKICBzdWJzZXRzOiBbImxhdGluIl0sCiAgd2VpZ2h0OiBbIjQwMCIsICI1MDAiLCAiNjAwIiwgIjcwMCJdLAogIHN0eWxlOiBbIm5vcm1hbCIsICJpdGFsaWMiXSwKICB2YXJpYWJsZTogIi0tZm9udC1kaXNwbGF5IiwKfSk7CgpleHBvcnQgY29uc3QgbWV0YWRhdGE6IE1ldGFkYXRhID0gewogIHRpdGxlOiAiQmV3aXplIFdvcmtzaG9wIOKAlCBQaGFzZSBEVkYiLAogIGRlc2NyaXB0aW9uOgogICAgIkV4cGVyaWVuY2UgdGhlIGRpZ2l0YWwgY29sbGFib3JhdGl2ZSBwbGF0Zm9ybSB0byBoZWxwIHNoYXBpbmcgdGhlIHJvYWRtYXAuIERlc2lyYWJpbGl0eSwgVmlhYmlsaXR5ICYgRmVhc2liaWxpdHkgKERWRikgd29ya3Nob3AgZm9yIEJhbmsgQlNJLCBmYWNpbGl0YXRlZCBieSBBbGVwaC4iLAp9OwoKZXhwb3J0IGRlZmF1bHQgZnVuY3Rpb24gUm9vdExheW91dCh7CiAgY2hpbGRyZW4sCn06IFJlYWRvbmx5PHsKICBjaGlsZHJlbjogUmVhY3QuUmVhY3ROb2RlOwp9PikgewogIHJldHVybiAoCiAgICA8aHRtbCBsYW5nPSJlbiI+CiAgICAgIDxib2R5CiAgICAgICAgY2xhc3NOYW1lPXtgJHtwbGF5ZmFpci52YXJpYWJsZX0gbWluLWgtc2NyZWVuIGJnLXNsYXRlLTUwIHRleHQtc2xhdGUtOTAwIGFudGlhbGlhc2VkIHNlbGVjdGlvbjpiZy1lbWVyYWxkLTEwMCBzZWxlY3Rpb246dGV4dC1lbWVyYWxkLTkwMGB9CiAgICAgID4KICAgICAgICA8YQogICAgICAgICAgaHJlZj0iI21haW4tY29udGVudCIKICAgICAgICAgIGNsYXNzTmFtZT0ic3Itb25seSBmb2N1czpub3Qtc3Itb25seSBmb2N1czphYnNvbHV0ZSBmb2N1czpsZWZ0LTQgZm9jdXM6dG9wLTQgZm9jdXM6ei1bMTAwXSBmb2N1czpyb3VuZGVkLWxnIGZvY3VzOmJnLWVtZXJhbGQtNjAwIGZvY3VzOnB4LTQgZm9jdXM6cHktMiBmb2N1czp0ZXh0LXNtIGZvY3VzOmZvbnQtc2VtaWJvbGQgZm9jdXM6dGV4dC13aGl0ZSIKICAgICAgICA+CiAgICAgICAgICBTa2lwIHRvIG1haW4gY29udGVudAogICAgICAgIDwvYT4KICAgICAgICB7Y2hpbGRyZW59CiAgICAgIDwvYm9keT4KICAgIDwvaHRtbD4KICApOwp9Cg==
+import type { Metadata } from "next";
+import { Playfair_Display } from "next/font/google";
+import "./globals.css";
+
+// Aleph keynote serif: the Didone-style display face used for the
+// exhibition entry and for platform / finding titles across the site.
+// Falls back to Georgia when the webfont is unavailable.
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-display",
+});
+
+export const metadata: Metadata = {
+  title: "Bewize Workshop — Phase DVF",
+  description:
+    "Experience the digital collaborative platform to help shaping the roadmap. Desirability, Viability & Feasibility (DVF) workshop for Bank BSI, facilitated by Aleph.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en">
+      <body
+        className={`${playfair.variable} min-h-screen bg-slate-50 text-slate-900 antialiased selection:bg-emerald-100 selection:text-emerald-900`}
+      >
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-emerald-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+        >
+          Skip to main content
+        </a>
+        {children}
+      </body>
+    </html>
+  );
+}

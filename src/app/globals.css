@@ -1,1 +1,111 @@
-QHRhaWx3aW5kIGJhc2U7CkB0YWlsd2luZCBjb21wb25lbnRzOwpAdGFpbHdpbmQgdXRpbGl0aWVzOwoKOnJvb3QgewogIC0tYmFja2dyb3VuZDogI2Y4ZmFmYzsKICAtLWZvcmVncm91bmQ6ICMwZjE3MmE7Cn0KCmJvZHkgewogIGNvbG9yOiB2YXIoLS1mb3JlZ3JvdW5kKTsKICBiYWNrZ3JvdW5kOiB2YXIoLS1iYWNrZ3JvdW5kKTsKICBmb250LWZlYXR1cmUtc2V0dGluZ3M6ICJjdjAyIiwgImN2MDMiLCAiY3YwNCIsICJjdjExIjsKfQoKQGxheWVyIHV0aWxpdGllcyB7CiAgLnRleHQtYmFsYW5jZSB7CiAgICB0ZXh0LXdyYXA6IGJhbGFuY2U7CiAgfQogIC8qIHNoYWRvdy14cyBpcyBub3QgYSBkZWZhdWx0IFRhaWx3aW5kIHNoYWRvdzsgZGVmaW5lIGl0IG9uY2UuICovCiAgLnNoYWRvdy14cyB7CiAgICBib3gtc2hhZG93OiAwIDFweCAycHggMCByZ2IoMCAwIDAgLyAwLjA1KTsKICB9CiAgLyogQWxlcGggZGlzcGxheSBzZXJpZiAoUGxheWZhaXIgdmlhIG5leHQvZm9udCwgR2VvcmdpYSBmYWxsYmFjaykuICovCiAgLmZvbnQtZGlzcGxheSB7CiAgICBmb250LWZhbWlseTogdmFyKC0tZm9udC1kaXNwbGF5KSwgR2VvcmdpYSwgIlRpbWVzIE5ldyBSb21hbiIsIHNlcmlmOwogIH0KICAvKiBBbGVwaCBrZXlub3RlIGdyYWRpZW50OiB0ZWFsICMwMTg3ODggLT4gYmx1ZSAjMmI3YmJiLCBzYW1wbGVkIGZyb20KICAgICB0aGUgQWxlcGgga2V5bm90ZSBzbGlkZS4gVXNlZCBmb3IgaGVybyB3b3JkcywgbnVtYmVycyBhbmQgbWFya3MuICovCiAgLnRleHQtYWxlcGgtZ3JhZGllbnQgewogICAgYmFja2dyb3VuZDogbGluZWFyLWdyYWRpZW50KDkyZGVnLCAjMGJhMDhkIDAlLCAjMDE4Nzg4IDQyJSwgIzJiN2JiYiAxMDAlKTsKICAgIC13ZWJraXQtYmFja2dyb3VuZC1jbGlwOiB0ZXh0OwogICAgYmFja2dyb3VuZC1jbGlwOiB0ZXh0OwogICAgY29sb3I6IHRyYW5zcGFyZW50OwogIH0KICAuYmctYWxlcGgtZ3JhZGllbnQgewogICAgYmFja2dyb3VuZDogbGluZWFyLWdyYWRpZW50KDEzNWRlZywgIzBiYTA4ZCAwJSwgIzAxODc4OCA0NSUsICMyYjdiYmIgMTAwJSk7CiAgfQp9CgpAbGF5ZXIgY29tcG9uZW50cyB7CiAgLmJ0bi1wcmltYXJ5IHsKICAgIEBhcHBseSBpbmxpbmUtZmxleCBpdGVtcy1jZW50ZXIgZ2FwLTEuNSByb3VuZGVkLXhsIGJnLWVtZXJhbGQtNjAwIHB4LTMuNSBweS0yIHRleHQtc20gZm9udC1zZW1pYm9sZCB0ZXh0LXdoaXRlIHNoYWRvdy14cyB0cmFuc2l0aW9uIGhvdmVyOmJnLWVtZXJhbGQtNzAwIGZvY3VzLXZpc2libGU6b3V0bGluZS1ub25lIGZvY3VzLXZpc2libGU6cmluZy0yIGZvY3VzLXZpc2libGU6cmluZy1lbWVyYWxkLTUwMCBmb2N1cy12aXNpYmxlOnJpbmctb2Zmc2V0LTIgZGlzYWJsZWQ6b3BhY2l0eS01MDsKICB9CiAgLmJ0bi1zZWNvbmRhcnkgewogICAgQGFwcGx5IGlubGluZS1mbGV4IGl0ZW1zLWNlbnRlciBnYXAtMS41IHJvdW5kZWQteGwgYm9yZGVyIGJvcmRlci1zbGF0ZS0yMDAgYmctd2hpdGUgcHgtMy41IHB5LTIgdGV4dC1zbSBmb250LXNlbWlib2xkIHRleHQtc2xhdGUtNzAwIHNoYWRvdy14cyB0cmFuc2l0aW9uIGhvdmVyOmJnLXNsYXRlLTUwIGZvY3VzLXZpc2libGU6b3V0bGluZS1ub25lIGZvY3VzLXZpc2libGU6cmluZy0yIGZvY3VzLXZpc2libGU6cmluZy1lbWVyYWxkLTUwMCBmb2N1cy12aXNpYmxlOnJpbmctb2Zmc2V0LTIgZGlzYWJsZWQ6b3BhY2l0eS01MDsKICB9CiAgLmJ0bi1kYW5nZXIgewogICAgQGFwcGx5IGlubGluZS1mbGV4IGl0ZW1zLWNlbnRlciBnYXAtMS41IHJvdW5kZWQteGwgYmctcm9zZS02MDAgcHgtMy41IHB5LTIgdGV4dC1zbSBmb250LXNlbWlib2xkIHRleHQtd2hpdGUgc2hhZG93LXhzIHRyYW5zaXRpb24gaG92ZXI6Ymctcm9zZS03MDAgZm9jdXMtdmlzaWJsZTpvdXRsaW5lLW5vbmUgZm9jdXMtdmlzaWJsZTpyaW5nLTIgZm9jdXMtdmlzaWJsZTpyaW5nLXJvc2UtNTAwIGZvY3VzLXZpc2libGU6cmluZy1vZmZzZXQtMiBkaXNhYmxlZDpvcGFjaXR5LTUwOwogIH0KICAuYnRuLWRhcmsgewogICAgQGFwcGx5IGlubGluZS1mbGV4IGl0ZW1zLWNlbnRlciBnYXAtMS41IHJvdW5kZWQteGwgYmctc2xhdGUtODAwIHB4LTMuNSBweS0yIHRleHQtc20gZm9udC1zZW1pYm9sZCB0ZXh0LXdoaXRlIHNoYWRvdy14cyB0cmFuc2l0aW9uIGhvdmVyOmJnLXNsYXRlLTkwMCBmb2N1cy12aXNpYmxlOm91dGxpbmUtbm9uZSBmb2N1cy12aXNpYmxlOnJpbmctMiBmb2N1cy12aXNpYmxlOnJpbmctc2xhdGUtNTAwIGZvY3VzLXZpc2libGU6cmluZy1vZmZzZXQtMiBkaXNhYmxlZDpvcGFjaXR5LTUwOwogIH0KICAuYnRuLXNtIHsKICAgIEBhcHBseSBweC0zIHB5LTEuNSB0ZXh0LXhzOwogIH0KICAuYnRuLWljb24tZGFuZ2VyIHsKICAgIEBhcHBseSByb3VuZGVkLWxnIHAtMS41IHRleHQtc2xhdGUtNTAwIHRyYW5zaXRpb24gaG92ZXI6Ymctcm9zZS01MCBob3Zlcjp0ZXh0LXJvc2UtNjAwIGZvY3VzLXZpc2libGU6b3V0bGluZS1ub25lIGZvY3VzLXZpc2libGU6cmluZy0yIGZvY3VzLXZpc2libGU6cmluZy1yb3NlLTUwMDsKICB9CiAgLmJ0bi1pY29uIHsKICAgIEBhcHBseSByb3VuZGVkLWxnIHAtMS41IHRleHQtc2xhdGUtNTAwIHRyYW5zaXRpb24gaG92ZXI6Ymctc2xhdGUtMTAwIGhvdmVyOnRleHQtc2xhdGUtODAwIGZvY3VzLXZpc2libGU6b3V0bGluZS1ub25lIGZvY3VzLXZpc2libGU6cmluZy0yIGZvY3VzLXZpc2libGU6cmluZy1lbWVyYWxkLTUwMDsKICB9CiAgLmlucHV0IHsKICAgIEBhcHBseSByb3VuZGVkLXhsIGJvcmRlciBib3JkZXItc2xhdGUtMjAwIGJnLXNsYXRlLTUwIHB4LTMgcHktMiB0ZXh0LWJhc2UgdGV4dC1zbGF0ZS05MDAgcGxhY2Vob2xkZXI6dGV4dC1zbGF0ZS01MDAgZm9jdXM6b3V0bGluZS1ub25lIGZvY3VzOnJpbmctMiBmb2N1czpyaW5nLWVtZXJhbGQtNTAwOwogIH0KICAuZmllbGQtbGFiZWwgewogICAgQGFwcGx5IG1iLTEgYmxvY2sgdGV4dC14cyBmb250LWJvbGQgdGV4dC1zbGF0ZS02MDA7CiAgfQogIC5jYXJkIHsKICAgIEBhcHBseSByb3VuZGVkLTJ4bCBib3JkZXIgYm9yZGVyLXNsYXRlLTIwMCBiZy13aGl0ZSBzaGFkb3cteHM7CiAgfQogIC5zZWN0aW9uLXRpdGxlIHsKICAgIEBhcHBseSB0ZXh0LWxnIGZvbnQtYm9sZCB0ZXh0LXNsYXRlLTkwMDsKICB9CiAgLnNlY3Rpb24tc3ViIHsKICAgIEBhcHBseSB0ZXh0LXNtIHRleHQtc2xhdGUtNjAwOwogIH0KfQoKLyogaU9TIFNhZmFyaSBhdXRvLXpvb21zIHdoZW4gYSBmb2N1c2VkIHRleHQgZmllbGQgaXMgc21hbGxlciB0aGFuIDE2cHgsCiAgIHdoaWNoIG1ha2VzIHR5cGluZyBvbiBtb2JpbGUganVtcHkgYW5kIGFubm95aW5nLiBLZWVwIGV2ZXJ5IHRleHQtbGlrZQogICBmaWVsZCBhdCAxNnB4IG9yIGxhcmdlciwgbm8gbWF0dGVyIHdoYXQgdXRpbGl0eSBjbGFzcyBpdCBhbHNvIGhhcy4KICAgKERlbGliZXJhdGVseSB1bmxheWVyZWQgc28gaXQgd2lucyBvdmVyIFRhaWx3aW5kJ3MgdGV4dC14cy90ZXh0LXNtLikgKi8KaW5wdXRbdHlwZT0idGV4dCJdLAppbnB1dFt0eXBlPSJlbWFpbCJdLAppbnB1dFt0eXBlPSJwYXNzd29yZCJdLAppbnB1dFt0eXBlPSJudW1iZXIiXSwKaW5wdXRbdHlwZT0ic2VhcmNoIl0sCmlucHV0W3R5cGU9InRlbCJdLAppbnB1dFt0eXBlPSJ1cmwiXSwKdGV4dGFyZWEsCnNlbGVjdCB7CiAgZm9udC1zaXplOiAxNnB4Owp9CgovKiBQb3N0LWl0IE5vdGUgQW5pbWF0aW9uICYgU3R5bGluZyAqLwoucG9zdGl0LW5vdGUgewogIHRyYW5zaXRpb246IHRyYW5zZm9ybSAwLjE1cyBjdWJpYy1iZXppZXIoMC40LCAwLCAwLjIsIDEpLCBib3gtc2hhZG93IDAuMTVzIGVhc2U7CiAgdXNlci1zZWxlY3Q6IG5vbmU7Cn0KCi5wb3N0aXQtbm90ZTpob3ZlciB7CiAgdHJhbnNmb3JtOiB0cmFuc2xhdGVZKC0ycHgpIHJvdGF0ZSgtMC41ZGVnKTsKICBib3gtc2hhZG93OiAwIDEwcHggMjVweCAtNXB4IHJnYmEoMCwgMCwgMCwgMC4xKSwgMCA4cHggMTBweCAtNnB4IHJnYmEoMCwgMCwgMCwgMC4xKTsKfQoKLnBvc3RpdC1ub3RlOmFjdGl2ZSB7CiAgY3Vyc29yOiBncmFiYmluZzsKICB0cmFuc2Zvcm06IHNjYWxlKDEuMDMpIHJvdGF0ZSgxZGVnKTsKICBib3gtc2hhZG93OiAwIDIwcHggMjVweCAtNXB4IHJnYmEoMCwgMCwgMCwgMC4xNSksIDAgOHB4IDEwcHggLTZweCByZ2JhKDAsIDAsIDAsIDAuMSk7Cn0K
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  /* shadow-xs is not a default Tailwind shadow; define it once. */
+  .shadow-xs {
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+  /* Aleph display serif (Playfair via next/font, Georgia fallback). */
+  .font-display {
+    font-family: var(--font-display), Georgia, "Times New Roman", serif;
+  }
+  /* Aleph keynote gradient: teal #018788 -> blue #2b7bbb, sampled from
+     the Aleph keynote slide. Used for hero words, numbers and marks. */
+  .text-aleph-gradient {
+    background: linear-gradient(92deg, #0ba08d 0%, #018788 42%, #2b7bbb 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .bg-aleph-gradient {
+    background: linear-gradient(135deg, #0ba08d 0%, #018788 45%, #2b7bbb 100%);
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-xs transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-50;
+  }
+  .btn-danger {
+    @apply inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-3.5 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 disabled:opacity-50;
+  }
+  .btn-dark {
+    @apply inline-flex items-center gap-1.5 rounded-xl bg-slate-800 px-3.5 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2 disabled:opacity-50;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .btn-icon-danger {
+    @apply rounded-lg p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500;
+  }
+  .btn-icon {
+    @apply rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500;
+  }
+  .input {
+    @apply rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500;
+  }
+  .field-label {
+    @apply mb-1 block text-xs font-bold text-slate-600;
+  }
+  .card {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-xs;
+  }
+  .section-title {
+    @apply text-lg font-bold text-slate-900;
+  }
+  .section-sub {
+    @apply text-sm text-slate-600;
+  }
+}
+
+/* iOS Safari auto-zooms when a focused text field is smaller than 16px,
+   which makes typing on mobile jumpy and annoying. Keep every text-like
+   field at 16px or larger, no matter what utility class it also has.
+   (Deliberately unlayered so it wins over Tailwind's text-xs/text-sm.) */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+textarea,
+select {
+  font-size: 16px;
+}
+
+/* Post-it Note Animation & Styling */
+.postit-note {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s ease;
+  user-select: none;
+}
+
+.postit-note:hover {
+  transform: translateY(-2px) rotate(-0.5deg);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.postit-note:active {
+  cursor: grabbing;
+  transform: scale(1.03) rotate(1deg);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}

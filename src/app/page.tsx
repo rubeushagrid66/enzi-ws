@@ -1,1 +1,30 @@
-aW1wb3J0IHsgZGJTZXJ2aWNlIH0gZnJvbSAiQC9saWIvZGItc2VydmljZSI7CmltcG9ydCBOYXZiYXIgZnJvbSAiQC9jb21wb25lbnRzL05hdmJhciI7CmltcG9ydCBBdXRvUmVmcmVzaE9uRm9jdXMgZnJvbSAiQC9jb21wb25lbnRzL0F1dG9SZWZyZXNoT25Gb2N1cyI7CmltcG9ydCBMYW5kaW5nRW50cnksIHsgUGxhdGZvcm1FbnRyeSB9IGZyb20gIkAvY29tcG9uZW50cy9MYW5kaW5nRW50cnkiOwoKZXhwb3J0IGNvbnN0IGR5bmFtaWMgPSAiZm9yY2UtZHluYW1pYyI7CmV4cG9ydCBjb25zdCByZXZhbGlkYXRlID0gMDsKCmV4cG9ydCBkZWZhdWx0IGFzeW5jIGZ1bmN0aW9uIEhvbWVQYWdlKCkgewogIGNvbnN0IHByb2plY3RzID0gYXdhaXQgZGJTZXJ2aWNlLmdldFByb2plY3RzKCk7CgogIC8vIFBsYWluLCBzZXJpYWxpemFibGUgZW50cmllcyBmb3IgdGhlIGNsaWVudC1zaWRlIHBvcHVwIOKAlCB0aGUgcmF3CiAgLy8gcHJvamVjdCByb3dzIG1heSBjYXJyeSBEYXRlIGZpZWxkcyB0aGF0IGNhbm5vdCBjcm9zcyB0aGUKICAvLyBzZXJ2ZXIvY2xpZW50IGJvdW5kYXJ5LgogIGNvbnN0IGVudHJpZXM6IFBsYXRmb3JtRW50cnlbXSA9IHByb2plY3RzLm1hcCgocHJvamVjdDogYW55KSA9PiAoewogICAgaWQ6IHByb2plY3QuaWQsCiAgICBuYW1lOiBwcm9qZWN0Lm5hbWUsCiAgICBzbHVnOiBwcm9qZWN0LnNsdWcsCiAgICBmaW5kaW5nczogcHJvamVjdC5fY291bnQ/LmZpbmRpbmdzID8/IDAsCiAgICBncm91cHM6IHByb2plY3QuX2NvdW50Py5ncm91cHMgPz8gMCwKICB9KSk7CgogIHJldHVybiAoCiAgICA8ZGl2IGNsYXNzTmFtZT0ibWluLWgtc2NyZWVuIGJnLWJsYWNrIGZsZXggZmxleC1jb2wiPgogICAgICA8QXV0b1JlZnJlc2hPbkZvY3VzIC8+CiAgICAgIDxOYXZiYXIgZGFyayAvPgogICAgICA8TGFuZGluZ0VudHJ5IHByb2plY3RzPXtlbnRyaWVzfSAvPgogICAgPC9kaXY+CiAgKTsKfQo=
+import { dbService } from "@/lib/db-service";
+import Navbar from "@/components/Navbar";
+import AutoRefreshOnFocus from "@/components/AutoRefreshOnFocus";
+import LandingEntry, { PlatformEntry } from "@/components/LandingEntry";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export default async function HomePage() {
+  const projects = await dbService.getProjects();
+
+  // Plain, serializable entries for the client-side popup — the raw
+  // project rows may carry Date fields that cannot cross the
+  // server/client boundary.
+  const entries: PlatformEntry[] = projects.map((project: any) => ({
+    id: project.id,
+    name: project.name,
+    slug: project.slug,
+    findings: project._count?.findings ?? 0,
+    groups: project._count?.groups ?? 0,
+  }));
+
+  return (
+    <div className="min-h-screen bg-black flex flex-col">
+      <AutoRefreshOnFocus />
+      <Navbar dark />
+      <LandingEntry projects={entries} />
+    </div>
+  );
+}
