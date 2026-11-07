@@ -57,10 +57,7 @@ export default function Navbar({
                   dark ? "text-white" : "text-slate-900"
                 }`}
               >
-                Bewize
-              </span>
-              <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                Workshop DVF
+                Bewize Workshop
               </span>
             </div>
           </Link>
