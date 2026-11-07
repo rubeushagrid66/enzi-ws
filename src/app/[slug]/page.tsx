@@ -261,6 +261,13 @@ export default function ProjectResultViewer({
     };
   }, [slug]);
 
+  // "Me" MUST be resolved here, before any early return: hooks have to
+  // run in the same order on every render. Calling this hook only after
+  // the project loads threw "Rendered more hooks than during the previous
+  // render" and crashed the viewer on every load (5e87906). During the
+  // loading render project/currentUser are null, so the hook just waits.
+  const meId = useMeParticipantId(project?.slug, currentUser);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex flex-col">
@@ -305,9 +312,8 @@ export default function ProjectResultViewer({
   }
 
   const isAdmin = currentUser?.role === "ADMIN" || currentUser?.role === "FACILITATOR";
-  // "Me": the participant the viewer scores as — the cards show this
-  // participant's own V/F (1–3), never a cross-participant average.
-  const meId = useMeParticipantId(project?.slug, currentUser);
+  // "Me" is resolved above (before the early returns) — the cards show
+  // this participant's own V/F (1–3), never a cross-participant average.
   const findings: any[] = project.findings || [];
   const myScores = (f: any) =>
     scoresForParticipant(f.scores?.participantScores, meId);
