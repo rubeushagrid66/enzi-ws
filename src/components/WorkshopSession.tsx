@@ -5,7 +5,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import FeasibilityMatrix from "./FeasibilityMatrix";
 import ViabilityVoteMatrix from "./ViabilityVoteMatrix";
-import { scoresForParticipant } from "@/lib/scoring";
+import { scoresForParticipant, findingBoardPosition } from "@/lib/scoring";
 import { useMeParticipantId } from "@/lib/useMeParticipant";
 import {
   Target,
@@ -306,6 +306,10 @@ export default function WorkshopSession({
   const mySelected = selectedFinding
     ? scoresForParticipant(selectedFinding.scores?.participantScores, meId)
     : { viability: null, feasibility: null };
+  // Board position of the selected finding for me (pinned or computed).
+  const boardPosWorkshop = selectedFinding
+    ? findingBoardPosition(selectedFinding, meId)
+    : null;
   const stepDone: Record<Step, boolean> = {
     desirability: !!st.desirabilityScored,
     viability: !!st.viabilityScored,
@@ -654,7 +658,9 @@ export default function WorkshopSession({
                         position everyone agrees on, then confirm it. The board
                         position is visual placement only — your Feasibility score
                         comes from the Feasibility-linked aspects you voted on in
-                        Step 2: F = 4 − the average of your Effort scores.
+                        Step 2: F = 4 − the average of your Effort scores. The board
+                        places the card automatically from your D, V and F scores;
+                        dragging it pins it to a manual position instead.
                       </p>
                     </div>
                     <FeasibilityMatrix
@@ -662,6 +668,7 @@ export default function WorkshopSession({
                       allFindings={findings}
                       projectSlug={project.slug}
                       isAdmin={true}
+                      meId={meId}
                       onPositionSaved={(updated) => {
                         applyUpdatedFinding(updated);
                         if (updated.feasibilityX != null && updated.feasibilityY != null) {
@@ -677,9 +684,9 @@ export default function WorkshopSession({
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <p className="text-sm text-slate-600">
                         {mySelected.feasibility != null ? (
-                          <>Placed: <span className="font-bold text-slate-900">{selectedFinding.feasibilityQuadrant?.replace("_", " ")}</span> — Your Feasibility score: <span className="font-extrabold text-amber-700">{mySelected.feasibility} / 3</span> (4 − average of your Effort scores)</>
+                          <>Placed: <span className="font-bold text-slate-900">{boardPosWorkshop?.quadrant?.replace("_", " ") ?? "—"}</span> — Your Feasibility score: <span className="font-extrabold text-amber-700">{mySelected.feasibility} / 3</span> (4 − average of your Effort scores)</>
                         ) : (
-                          "Not scored by you yet — record votes on Feasibility-linked aspects in Step 2. Dragging the card only sets its board position."
+                          "Not scored by you yet — record votes on Feasibility-linked aspects in Step 2. The board places the card once you have D, V and F; dragging it pins it to a manual position."
                         )}
                       </p>
                       <button

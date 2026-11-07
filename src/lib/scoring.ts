@@ -498,3 +498,92 @@ export function getFeasibilityFromCoordinates(
     inputs: blended.inputs,
   };
 }
+
+/**
+ * Impact vs Effort board position (user-defined 2026-11-07; built with
+ * the current Desirability score — D's own formula is still unconfirmed
+ * and will be defined later).
+ *
+ * - Impact (Y, 0–100) = weighted average of D and V. D is 0–100; V is
+ *   1–3, normalized to 0–100 as (V−1)/2×100. Weights are equal (50/50) —
+ *   the same equal split as the 33/33/33 framework weights.
+ * - Effort comes from F (Feasibility, 1–3, where 3 = easiest). X =
+ *   (F−1)/2×100, so F 3 → X 100 (low effort, right) and F 1 → X 0
+ *   (high effort, left).
+ * - A missing dimension (null) means no computed position at all.
+ * - Per participant: D is shared, V and F are the viewer's own, so the
+ *   board position is the viewer's own too.
+ */
+export interface BoardPosition {
+  /** Impact 0–100 (Y), null when D or V is missing. */
+  impact: number | null;
+  /** Effort mapped to X 0–100 (100 = easiest), null when F is missing. */
+  x: number | null;
+  /** Same as impact (Y). */
+  y: number | null;
+  quadrant: FeasibilityQuadrant | null;
+}
+
+export function calculateBoardPosition(
+  desirability: number | null | undefined,
+  viability: number | null | undefined,
+  feasibility: number | null | undefined
+): BoardPosition {
+  const d = desirability ?? null;
+  const v = viability ?? null;
+  const f = feasibility ?? null;
+  const vNorm = v == null ? null : ((v - 1) / 2) * 100;
+  const impact =
+    d == null || vNorm == null
+      ? null
+      : Number(((d + vNorm) / 2).toFixed(1));
+  const x = f == null ? null : Number((((f - 1) / 2) * 100).toFixed(1));
+  const y = impact;
+  let quadrant: FeasibilityQuadrant | null = null;
+  if (x != null && y != null) {
+    quadrant = getFeasibilityFromCoordinates(x, y).quadrant;
+  }
+  return { impact, x, y, quadrant };
+}
+
+/**
+ * The position a finding shows on the board for a viewer: the stored
+ * (pinned) position when the finding was manually placed, otherwise the
+ * computed position from the viewer's own D/V/F. A finding with neither
+ * a pin nor complete scores has no position (nulls) and renders unplaced.
+ */
+export function findingBoardPosition(
+  finding: any,
+  meId: string | null | undefined
+): {
+  x: number | null;
+  y: number | null;
+  quadrant: FeasibilityQuadrant | null;
+  pinned: boolean;
+  impact: number | null;
+} {
+  const pinned =
+    finding?.feasibilityManual === true &&
+    finding?.feasibilityX != null &&
+    finding?.feasibilityY != null;
+  if (pinned) {
+    const quadrant = getFeasibilityFromCoordinates(
+      finding.feasibilityX,
+      finding.feasibilityY
+    ).quadrant;
+    return {
+      x: finding.feasibilityX,
+      y: finding.feasibilityY,
+      quadrant,
+      pinned: true,
+      impact: finding.feasibilityY,
+    };
+  }
+  const my = scoresForParticipant(finding?.scores?.participantScores, meId);
+  const pos = calculateBoardPosition(
+    finding?.scores?.desirability ?? null,
+    my.viability,
+    my.feasibility
+  );
+  return { x: pos.x, y: pos.y, quadrant: pos.quadrant, pinned: false, impact: pos.impact };
+}

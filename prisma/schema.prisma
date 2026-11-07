@@ -62,6 +62,10 @@ model Finding {
   feasibilityQuadrant String?                 // BIG_BETS | QUICK_WINS | AVOID | FILL_INS
   feasibilityImpact   String?                 // HIGH | LOW
   feasibilityEffort   String?                 // HIGH | LOW
+  // True when the board position was set by dragging the card (a manual
+  // pin). False/null means the position is computed from the viewer's
+  // D/V/F scores. Added by docs/global-setup-sql.md (Step 8).
+  feasibilityManual   Boolean?                @default(false)
   createdAt           DateTime                @default(now())
   updatedAt           DateTime                @updatedAt
   project             Project?                @relation(fields: [projectId], references: [id], onDelete: Cascade)

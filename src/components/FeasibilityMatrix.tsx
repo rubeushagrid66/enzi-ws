@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Sparkles, Move, Check, AlertCircle, ShieldAlert } from "lucide-react";
-import { FeasibilityQuadrant } from "@/lib/scoring";
+import { FeasibilityQuadrant, findingBoardPosition } from "@/lib/scoring";
 
 interface FindingItem {
   id: string;
@@ -12,6 +12,10 @@ interface FindingItem {
   feasibilityQuadrant?: string | null;
   feasibilityImpact?: string | null;
   feasibilityEffort?: string | null;
+  /** True when the card was dragged to a manual pin (Step 8 SQL). */
+  feasibilityManual?: boolean | null;
+  /** Desirability + per-participant V/F, for the computed position. */
+  scores?: any;
 }
 
 interface FeasibilityMatrixProps {
@@ -19,6 +23,8 @@ interface FeasibilityMatrixProps {
   allFindings?: FindingItem[];
   projectSlug: string;
   isAdmin: boolean;
+  /** The viewer's participant id — positions are per participant. */
+  meId?: string | null;
   onPositionSaved?: (updatedFinding: FindingItem) => void;
 }
 
@@ -27,11 +33,19 @@ export default function FeasibilityMatrix({
   allFindings = [],
   projectSlug,
   isAdmin,
+  meId,
   onPositionSaved,
 }: FeasibilityMatrixProps) {
+  // The position this finding shows for this viewer: the stored (pinned)
+  // position when the card was dragged, otherwise the computed position
+  // from the viewer's own D/V/F scores (Impact = avg of D and V,
+  // Effort from F). No pin and no complete scores means unplaced.
+  const displayPos = findingBoardPosition(finding, meId);
+  const placedX = displayPos.x ?? 50;
+  const placedY = displayPos.y ?? 50;
   // Local state for optimistic drag
-  const [posX, setPosX] = useState<number>(finding.feasibilityX ?? 50);
-  const [posY, setPosY] = useState<number>(finding.feasibilityY ?? 50);
+  const [posX, setPosX] = useState<number>(placedX);
+  const [posY, setPosY] = useState<number>(placedY);
   const [isDragging, setIsDragging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -40,19 +54,22 @@ export default function FeasibilityMatrix({
   // Latest dragged coordinates. React state updates are async, so reading
   // posX/posY in the pointer-up handler can save the previous position.
   // The ref always holds the newest values from the last pointer move.
-  const latestPosRef = useRef({ x: finding.feasibilityX ?? 50, y: finding.feasibilityY ?? 50 });
+  const latestPosRef = useRef({ x: placedX, y: placedY });
   const isDraggingRef = useRef(false);
 
   useEffect(() => {
     // Never snap the card back while a drag is in progress, and never
     // overwrite the just-dropped position with the pre-save prop value.
+    // A new computed position (scores changed) moves the card; a pin
+    // keeps it where it was dragged.
     if (isDraggingRef.current) return;
-    const x = finding.feasibilityX ?? 50;
-    const y = finding.feasibilityY ?? 50;
+    const x = displayPos.x ?? 50;
+    const y = displayPos.y ?? 50;
     latestPosRef.current = { x, y };
     setPosX(x);
     setPosY(y);
-  }, [finding.id, finding.feasibilityX, finding.feasibilityY]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finding.id, displayPos.x, displayPos.y, displayPos.pinned]);
 
   // Compute quadrant from continuous coordinates
   const computeQuadrant = (x: number, y: number): {
@@ -106,16 +123,19 @@ export default function FeasibilityMatrix({
   };
 
   const currentInfo = computeQuadrant(posX, posY);
-  // A finding with no stored position has not been placed in the
-  // workshop yet. The card still shows at 50/50 as a neutral default so
-  // it can be dragged, but it has no quadrant and no score until the
-  // group drops it somewhere.
-  const isPlaced = finding.feasibilityX != null && finding.feasibilityY != null;
+  // Placed = the viewer has a position for this finding (pinned, or
+  // computed from their D/V/F). An unplaced card still shows at 50/50
+  // as a neutral default so it can be dragged, but it has no quadrant
+  // until it is scored or dropped somewhere.
+  const isPlaced = displayPos.x != null && displayPos.y != null;
+  const isPinned = displayPos.pinned;
 
-  // Save coordinates to backend. On success the parent updates its own
-  // state from the returned finding, so the card stays where it was
-  // dropped. On failure the card stays at the dropped position too and
-  // an error is shown — it must not silently snap back to the old spot.
+  // Save coordinates to backend. A drag pins the card: the stored
+  // position wins over the computed one until it is reset. On success
+  // the parent updates its own state from the returned finding, so the
+  // card stays where it was dropped. On failure the card stays at the
+  // dropped position too and an error is shown — it must not silently
+  // snap back to the old spot.
   const saveCoordinates = async (finalX: number, finalY: number) => {
     setIsSaving(true);
     setSaveSuccess(false);
@@ -142,6 +162,40 @@ export default function FeasibilityMatrix({
     } catch (err: any) {
       console.error("Failed to save feasibility coordinates:", err);
       setSaveError(err?.message || "Failed to save position. Try dragging again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Reset to computed position: clear the manual pin. The card then
+  // moves to where the viewer's D/V/F scores place it (or unplaced
+  // when the scores are incomplete).
+  const resetToComputed = async () => {
+    setIsSaving(true);
+    setSaveSuccess(false);
+    setSaveError(null);
+    try {
+      const res = await fetch(
+        `/api/projects/${projectSlug}/findings/${finding.id}/feasibility`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ manual: false }),
+        }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Reset failed (${res.status})`);
+      }
+      const data = await res.json();
+      setSaveSuccess(true);
+      if (onPositionSaved && data.finding) {
+        onPositionSaved(data.finding);
+      }
+      setTimeout(() => setSaveSuccess(false), 2000);
+    } catch (err: any) {
+      console.error("Failed to reset position:", err);
+      setSaveError(err?.message || "Failed to reset position. Try again.");
     } finally {
       setIsSaving(false);
     }
@@ -198,15 +252,38 @@ export default function FeasibilityMatrix({
             Assigned Quadrant:
           </span>
           {isPlaced ? (
-            <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-xs ${currentInfo.bgBadge}`}
-            >
-              <Sparkles className="h-3 w-3" />
-              {currentInfo.title} ({currentInfo.impact}, {currentInfo.effort})
-            </span>
+            <>
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-xs ${currentInfo.bgBadge}`}
+              >
+                <Sparkles className="h-3 w-3" />
+                {currentInfo.title} ({currentInfo.impact}, {currentInfo.effort})
+              </span>
+              {isPinned ? (
+                <>
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold border border-slate-300 bg-white text-slate-600">
+                    Manual position
+                  </span>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={resetToComputed}
+                      disabled={isSaving}
+                      className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 transition disabled:opacity-60"
+                    >
+                      Reset to computed
+                    </button>
+                  )}
+                </>
+              ) : (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold border border-emerald-200 bg-emerald-50 text-emerald-700">
+                  Computed from your scores
+                </span>
+              )}
+            </>
           ) : (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-amber-200 bg-amber-50 text-amber-800">
-              Not yet placed — drag the card to the agreed position
+              Not yet placed — score the finding and it places itself, or drag the card to the agreed position
             </span>
           )}
         </div>
@@ -312,12 +389,15 @@ export default function FeasibilityMatrix({
             </div>
           </div>
 
-          {/* Ghost / Context Markers of Other Findings in the Project */}
+          {/* Ghost / Context Markers of Other Findings in the Project.
+              Each shows at its own board position for this viewer
+              (pinned, or computed from that viewer's D/V/F). */}
           {allFindings
-            .filter((f) => f.id !== finding.id && f.feasibilityX != null && f.feasibilityY != null)
-            .map((other) => {
-              const ox = other.feasibilityX ?? 50;
-              const oy = other.feasibilityY ?? 50;
+            .map((other) => ({ finding: other, pos: findingBoardPosition(other, meId) }))
+            .filter(({ finding: f, pos }) => f.id !== finding.id && pos.x != null && pos.y != null)
+            .map(({ finding: other, pos }) => {
+              const ox = pos.x ?? 50;
+              const oy = pos.y ?? 50;
               return (
                 <div
                   key={other.id}
@@ -326,7 +406,7 @@ export default function FeasibilityMatrix({
                     bottom: `${oy}%`,
                     transform: "translate(-50%, 50%)",
                   }}
-                  title={`${other.title} (${other.feasibilityQuadrant || "Unassigned"})`}
+                  title={`${other.title} (${pos.quadrant?.replace("_", " ") || "Unassigned"}${pos.pinned ? " · manual" : ""})`}
                   className="absolute pointer-events-none z-10 flex items-center gap-1 opacity-45 hover:opacity-100 transition"
                 >
                   <div className="h-4 w-4 rounded-full bg-slate-400 border-2 border-white shadow-xs" />

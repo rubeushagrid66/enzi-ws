@@ -16,7 +16,26 @@ export async function PATCH(
 
     const { id } = params;
     const body = await request.json();
-    const { x, y } = body;
+    const { x, y, manual } = body;
+
+    // Reset to computed position: clear the manual pin without moving
+    // the card. The board then places it from the viewer's D/V/F scores.
+    if (manual === false && x === undefined && y === undefined) {
+      const updated = await dbService.setFindingFeasibilityManual(id, false);
+      revalidateProjectPages(params.slug);
+      return NextResponse.json({
+        success: true,
+        finding: updated,
+        feasibility: {
+          x: updated.feasibilityX,
+          y: updated.feasibilityY,
+          quadrant: updated.feasibilityQuadrant,
+          impactLabel: updated.feasibilityImpact,
+          effortLabel: updated.feasibilityEffort,
+          manual: false,
+        },
+      });
+    }
 
     if (x === undefined || y === undefined) {
       return NextResponse.json(
@@ -30,13 +49,16 @@ export async function PATCH(
       Number(y)
     );
 
+    // A drag pins the card: the stored position wins over the computed
+    // one until it is reset.
     const updated = await dbService.updateFindingFeasibility(
       id,
       Number(x),
       Number(y),
       quadrant,
       impactLabel,
-      effortLabel
+      effortLabel,
+      true
     );
 
     revalidateProjectPages(params.slug);
@@ -49,6 +71,7 @@ export async function PATCH(
         quadrant,
         impactLabel,
         effortLabel,
+        manual: true,
       },
     });
   } catch (error) {

@@ -152,3 +152,16 @@ Notes: `project_id` is null when no project is assigned. When both a
 project and a group are set, the group must belong to that project
 (the API rejects a mismatch and clears a kept group when the project
 changes). A group on its own implies its project.
+
+## Step 8 — Manual board pin (run once)
+
+A dragged board card is a manual pin: its stored position wins over the
+computed one until it is reset. The pin flag lives on the finding.
+
+```sql
+alter table findings add column if not exists feasibility_manual boolean default false;
+```
+
+Notes: until this column exists, the code still works — a drag saves its
+coordinates but the pin does not persist, so the card returns to its
+computed position on the next load. After the SQL runs, pins persist.

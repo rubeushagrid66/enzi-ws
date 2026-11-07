@@ -12,7 +12,7 @@ import {
   Plus,
 } from "lucide-react";
 
-import { scoresForParticipant } from "@/lib/scoring";
+import { scoresForParticipant, findingBoardPosition } from "@/lib/scoring";
 import { useMeParticipantId } from "@/lib/useMeParticipant";
 
 function FindingCard({
@@ -25,7 +25,10 @@ function FindingCard({
   onSelect: (f: any) => void;
 }) {
   const s = finding.scores || {};
-  const quad = finding.feasibilityQuadrant || "QUICK_WINS";
+  // The quadrant this finding shows for the viewer: its board position
+  // (pinned, or computed from the viewer's D/V/F).
+  const boardPos = findingBoardPosition(finding, meId);
+  const quad = boardPos.quadrant;
   // V/F are per participant: the card shows the logged-in participant's
   // own values (no composite, no cross-participant average).
   const my = scoresForParticipant(s.participantScores, meId);
@@ -41,7 +44,7 @@ function FindingCard({
     >
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          {myScored ? (
+          {quad ? (
             <span
               className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
                 quad === "QUICK_WINS"
@@ -54,6 +57,7 @@ function FindingCard({
               }`}
             >
               {quad.replace("_", " ")}
+              {boardPos.pinned && " · manual"}
             </span>
           ) : (
             <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800">
@@ -334,7 +338,7 @@ export default function ProjectResultViewer({
     }
 
     if (selectedQuadrant !== "ALL") {
-      if (f.feasibilityQuadrant !== selectedQuadrant) return false;
+      if (findingBoardPosition(f, meId).quadrant !== selectedQuadrant) return false;
     }
 
     if (selectedTag !== "ALL") {
@@ -602,6 +606,7 @@ export default function ProjectResultViewer({
                     allFindings={findings}
                     projectSlug={project.slug}
                     isAdmin={isAdmin}
+                    meId={meId}
                     onPositionSaved={(updated) => {
                       applyUpdatedFinding(updated);
                       // Silent background refresh so the board shows the

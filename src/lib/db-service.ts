@@ -263,6 +263,9 @@ export const dbService = {
           feasibilityQuadrant: f.feasibility_quadrant,
           feasibilityImpact: f.feasibility_impact,
           feasibilityEffort: f.feasibility_effort,
+          // True only when the card was dragged to a manual pin (Step 8
+          // SQL adds the column; missing means computed position).
+          feasibilityManual: f.feasibility_manual === true,
           parameterValues: (f.parameterValues || []).map((pv: any) => ({
             id: pv.id,
             l3Id: pv.l3_id,
@@ -522,30 +525,53 @@ export const dbService = {
     return dbService.createFinding(targetProjectId, data);
   },
 
+  /**
+   * Save a board position. A drag pins the card (manual=true): the stored
+   * position then wins over the computed one until it is reset. Pass
+   * manual=false to clear a pin (position becomes computed again).
+   * The feasibility_manual column is added by docs/global-setup-sql.md
+   * (Step 8); when it does not exist yet, the update retries without it
+   * (the drag still saves its coordinates) and warns once.
+   */
   async updateFindingFeasibility(
     id: string,
     x: number,
     y: number,
     quadrant: string,
     impact: string,
-    effort: string
+    effort: string,
+    manual?: boolean
   ) {
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase
+      const payload: any = {
+        feasibility_x: x,
+        feasibility_y: y,
+        feasibility_quadrant: quadrant,
+        feasibility_impact: impact,
+        feasibility_effort: effort,
+        updated_at: new Date().toISOString(),
+      };
+      if (manual !== undefined) payload.feasibility_manual = manual;
+      let res = await supabase
         .from("findings")
-        .update({
-          feasibility_x: x,
-          feasibility_y: y,
-          feasibility_quadrant: quadrant,
-          feasibility_impact: impact,
-          feasibility_effort: effort,
-          updated_at: new Date().toISOString(),
-        })
+        .update(payload)
         .eq("id", id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (res.error && manual !== undefined && /feasibility_manual/i.test(res.error.message || "")) {
+        console.warn("findings.feasibility_manual column missing — saving position without the pin flag; run docs/global-setup-sql.md (Step 8) to enable manual pins.");
+        delete payload.feasibility_manual;
+        res = await supabase
+          .from("findings")
+          .update(payload)
+          .eq("id", id)
+          .select()
+          .single();
+      }
+
+      if (res.error) throw res.error;
+      const data = res.data;
       return {
         id: data.id,
         feasibilityX: Number(data.feasibility_x),
@@ -553,6 +579,7 @@ export const dbService = {
         feasibilityQuadrant: data.feasibility_quadrant,
         feasibilityImpact: data.feasibility_impact,
         feasibilityEffort: data.feasibility_effort,
+        feasibilityManual: data.feasibility_manual === true,
       };
     }
 
@@ -564,17 +591,64 @@ export const dbService = {
         feasibilityQuadrant: quadrant,
         feasibilityImpact: impact,
         feasibilityEffort: effort,
+        ...(manual !== undefined ? { feasibilityManual: manual } : {}),
       },
+    });
+  },
+
+  /** Clear (or set) a board position's manual pin without moving it. */
+  async setFindingFeasibilityManual(id: string, manual: boolean) {
+    if (isSupabaseConfigured && supabase) {
+      let res = await supabase
+        .from("findings")
+        .update({ feasibility_manual: manual, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (res.error && /feasibility_manual/i.test(res.error.message || "")) {
+        console.warn("findings.feasibility_manual column missing — cannot store the pin flag; run docs/global-setup-sql.md (Step 8).");
+        // The pin cannot persist without the column; return the row as-is
+        // so the caller still gets the current coordinates.
+        const fallback = await supabase.from("findings").select("*").eq("id", id).maybeSingle();
+        if (fallback.error || !fallback.data) throw res.error;
+        const data = fallback.data;
+        return {
+          id: data.id,
+          feasibilityX: data.feasibility_x != null ? Number(data.feasibility_x) : null,
+          feasibilityY: data.feasibility_y != null ? Number(data.feasibility_y) : null,
+          feasibilityQuadrant: data.feasibility_quadrant,
+          feasibilityImpact: data.feasibility_impact,
+          feasibilityEffort: data.feasibility_effort,
+          feasibilityManual: false,
+        };
+      }
+
+      if (res.error) throw res.error;
+      const data = res.data;
+      return {
+        id: data.id,
+        feasibilityX: data.feasibility_x != null ? Number(data.feasibility_x) : null,
+        feasibilityY: data.feasibility_y != null ? Number(data.feasibility_y) : null,
+        feasibilityQuadrant: data.feasibility_quadrant,
+        feasibilityImpact: data.feasibility_impact,
+        feasibilityEffort: data.feasibility_effort,
+        feasibilityManual: data.feasibility_manual === true,
+      };
+    }
+
+    return prisma.finding.update({
+      where: { id },
+      data: { feasibilityManual: manual },
     });
   },
 
   /**
    * Upsert a viability vote: a 1-3 score + an Alasan (reason) per aspect.
    * `score` null clears the vote (and its reason). `isValidated` is kept
-   * in sync — true exactly when a score is set — so the current Viability
-   * formula (share of validated votes) keeps working unchanged until the
-   * user defines the new 1-3 formula. When `reason` is undefined the
-   * existing reason is kept; pass null to clear it.
+   * in sync — true exactly when a score is set — because a scored aspect
+   * is what feeds the per-participant V/F formulas. When `reason` is
+   * undefined the existing reason is kept; pass null to clear it.
    */
   async upsertViabilityVote(
     findingId: string,

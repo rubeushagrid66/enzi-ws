@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import FeasibilityMatrix from "./FeasibilityMatrix";
 import ViabilityVoteMatrix from "./ViabilityVoteMatrix";
-import { scoresForParticipant, normalizeFramework } from "@/lib/scoring";
+import { scoresForParticipant, normalizeFramework, findingBoardPosition } from "@/lib/scoring";
 
 interface FindingDetailViewProps {
   finding: any;
@@ -62,6 +62,8 @@ export default function FindingDetailView({
   const myFeasibilityAspects = myAspectScores("Feasibility");
   const myViabilityScored = myViabilityAspects.filter((a: any) => a.score != null);
   const myFeasibilityScored = myFeasibilityAspects.filter((a: any) => a.score != null);
+  // Board position for this viewer (pinned, or computed from my D/V/F).
+  const boardPos = findingBoardPosition(localFinding, meId);
 
   // Your scores (D is shared from the workshop mappings; V and F are
   // the logged-in participant's own 1–3 values). Shown on every tab.
@@ -213,7 +215,7 @@ export default function FindingDetailView({
               <Compass className="hidden sm:block h-4 w-4" />
               <span><span className="hidden sm:inline">Tab 3: </span>Feasibility<span className="hidden sm:inline"> (2x2 Matrix)</span></span>
               <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800">
-                {localFinding.feasibilityQuadrant?.replace("_", " ") ?? "Not placed"}
+                {boardPos.quadrant?.replace("_", " ") ?? "Not placed"}
               </span>
             </button>
           </div>
@@ -370,7 +372,7 @@ export default function FindingDetailView({
                 )}
                 <br />
                 <span className="text-amber-700">
-                  Board position ({localFinding.feasibilityQuadrant?.replace("_", " ") ?? "Not placed"}) is visual placement only — dragging the card does not change your Feasibility score.
+                  Board position ({boardPos.quadrant?.replace("_", " ") ?? "Not placed"}) is {boardPos.pinned ? "a manual pin — dragging the card does not change your Feasibility score" : "computed from your scores — dragging the card pins it to a manual position"}.
                 </span>
               </div>
 
@@ -388,6 +390,7 @@ export default function FindingDetailView({
                 allFindings={allFindings}
                 projectSlug={project.slug}
                 isAdmin={isAdmin}
+                meId={meId}
                 onPositionSaved={handleFeasibilitySaved}
               />
             </div>
