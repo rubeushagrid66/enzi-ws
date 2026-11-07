@@ -53,7 +53,7 @@ export default function FindingDetailView({
   };
 
   return (
-    <div className="mx-auto w-full max-w-4xl">
+    <div className="w-full">
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         {/* Header */}
         <div className="p-6 border-b border-slate-200 bg-gradient-to-b from-slate-50 to-white">
@@ -69,7 +69,7 @@ export default function FindingDetailView({
                     : `Pending scoring${status.pending?.length ? ` — needs: ${status.pending.join(", ")}` : ""}`}
                 </span>
               </div>
-              <h2 id="finding-detail-title" className="font-display text-2xl font-semibold text-slate-900 leading-tight sm:text-3xl">
+              <h2 id="finding-detail-title" className="text-2xl font-semibold text-slate-900 leading-tight sm:text-3xl">
                 {localFinding.title}
               </h2>
               {localFinding.description && (

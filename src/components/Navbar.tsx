@@ -48,12 +48,12 @@ export default function Navbar({
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-aleph-gradient font-display text-lg font-bold text-white shadow-sm">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-aleph-gradient text-lg font-bold text-white shadow-sm">
               B
             </div>
             <div>
               <span
-                className={`font-display text-lg font-semibold tracking-tight ${
+                className={`text-lg font-semibold tracking-tight ${
                   dark ? "text-white" : "text-slate-900"
                 }`}
               >

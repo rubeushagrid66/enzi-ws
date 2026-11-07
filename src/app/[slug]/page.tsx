@@ -60,7 +60,7 @@ function FindingCard({
         </div>
 
         <div>
-          <h3 className="font-display text-base font-semibold text-slate-900 group-hover:text-emerald-700 transition leading-snug line-clamp-2 sm:text-lg">
+          <h3 className="text-base font-semibold text-slate-900 group-hover:text-emerald-700 transition leading-snug line-clamp-2 sm:text-lg">
             {finding.title}
           </h3>
           {finding.description && (
@@ -256,14 +256,10 @@ export default function ProjectResultViewer({
   const isAdmin = currentUser?.role === "ADMIN" || currentUser?.role === "FACILITATOR";
   const findings: any[] = project.findings || [];
 
-  // Collect unique tags
-  const allTags = Array.from(
-    new Set(
-      findings.flatMap((f) =>
-        (f.tagsList || []).map((t: any) => `${t.category}: ${t.value}`)
-      )
-    )
-  );
+  // The tag filter offers Sumber only — the L2s under L1 "Sumber" in the
+  // global parameter tree (Wawancara, Survey). Legacy free-form tag values
+  // such as "Survey Riset" or "FGD Internal" are not offered.
+  const allTags = ["Sumber: Wawancara", "Sumber: Survey"];
 
   // Filter findings
   const filteredFindings = findings.filter((f) => {
@@ -329,7 +325,7 @@ export default function ProjectResultViewer({
                   </span>
                 )}
               </div>
-              <h1 className="font-display text-4xl font-semibold text-slate-900 tracking-tight sm:text-5xl">
+              <h1 className="text-4xl font-semibold text-slate-900 tracking-tight sm:text-5xl">
                 {project.name}
               </h1>
               {/* The DVC description is still the literal placeholder "test"
@@ -353,7 +349,7 @@ export default function ProjectResultViewer({
                   <div className="text-xs font-semibold text-emerald-700 uppercase">
                     Desirability
                   </div>
-                  <div className="font-display text-lg font-semibold text-emerald-950">
+                  <div className="text-lg font-semibold text-emerald-950">
                     {project.weightsMap?.desirability ?? 33.3}%
                   </div>
                 </div>
@@ -361,7 +357,7 @@ export default function ProjectResultViewer({
                   <div className="text-xs font-semibold text-blue-700 uppercase">
                     Viability
                   </div>
-                  <div className="font-display text-lg font-semibold text-blue-950">
+                  <div className="text-lg font-semibold text-blue-950">
                     {project.weightsMap?.viability ?? 33.3}%
                   </div>
                 </div>
@@ -369,7 +365,7 @@ export default function ProjectResultViewer({
                   <div className="text-xs font-semibold text-amber-700 uppercase">
                     Feasibility
                   </div>
-                  <div className="font-display text-lg font-semibold text-amber-950">
+                  <div className="text-lg font-semibold text-amber-950">
                     {project.weightsMap?.feasibility ?? 33.3}%
                   </div>
                 </div>
@@ -495,17 +491,17 @@ export default function ProjectResultViewer({
                   <option value="AVOID">Avoid</option>
                 </select>
 
-                {/* Tag filter */}
+                {/* Sumber filter (Wawancara / Survey only) */}
                 {allTags.length > 0 && (
                   <>
-                  <label htmlFor="viewer-tag" className="sr-only">Filter by tag</label>
+                  <label htmlFor="viewer-tag" className="sr-only">Filter by sumber</label>
                   <select
                     id="viewer-tag"
                     value={selectedTag}
                     onChange={(e) => setSelectedTag(e.target.value)}
                     className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   >
-                    <option value="ALL">All Categories & Tags</option>
+                    <option value="ALL">All Sumber</option>
                     {allTags.map((t, idx) => (
                       <option key={idx} value={t}>
                         {t}
@@ -524,7 +520,7 @@ export default function ProjectResultViewer({
               <div className="space-y-8">
                 {scoredFindings.length > 0 && (
                   <section aria-labelledby="ranked-heading">
-                    <h2 id="ranked-heading" className="font-display text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
+                    <h2 id="ranked-heading" className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
                       Ranked by DVF Score ({scoredFindings.length})
                     </h2>
                     <p className="mt-0.5 text-xs text-slate-500">
@@ -539,7 +535,7 @@ export default function ProjectResultViewer({
                 )}
                 {awaitingFindings.length > 0 && (
                   <section aria-labelledby="awaiting-heading">
-                    <h2 id="awaiting-heading" className="font-display text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
+                    <h2 id="awaiting-heading" className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
                       Awaiting Scoring ({awaitingFindings.length})
                     </h2>
                     <p className="mt-0.5 text-xs text-slate-500">
@@ -584,7 +580,7 @@ export default function ProjectResultViewer({
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100">
                 <div>
-                  <h2 className="font-display text-xl font-semibold text-slate-900">
+                  <h2 className="text-xl font-semibold text-slate-900">
                     Project Feasibility 2x2 Matrix
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5">

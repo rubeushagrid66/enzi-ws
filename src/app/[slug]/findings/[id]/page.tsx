@@ -62,10 +62,10 @@ export default function FindingDetailPage({
     project?.findings?.find((f: any) => f.id === id) ?? null;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       <Navbar projectSlug={project?.slug} projectName={project?.name} />
 
-      <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 flex-1">
+      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-10 flex-1">
         {loading ? (
           <div className="flex items-center justify-center py-24">
             <div className="flex flex-col items-center gap-3">

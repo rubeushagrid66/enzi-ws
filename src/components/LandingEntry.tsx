@@ -98,7 +98,7 @@ export default function LandingEntry({
               <X className="h-5 w-5" />
             </button>
 
-            <h2 className="font-display text-2xl font-semibold text-white">
+            <h2 className="text-2xl font-semibold text-white">
               Select Platform
             </h2>
             <p className="mt-1 text-sm text-neutral-400">
@@ -106,17 +106,14 @@ export default function LandingEntry({
             </p>
 
             <div className="mt-6 space-y-3">
-              {projects.map((project, i) => (
+              {projects.map((project) => (
                 <button
                   key={project.id}
                   onClick={() => router.push(`/${project.slug}`)}
                   className="group flex w-full items-center gap-4 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-4 text-left transition hover:border-[#018788] hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
-                  <span className="text-aleph-gradient font-display text-3xl font-semibold leading-none">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-display text-lg font-medium text-white">
+                    <span className="block truncate text-lg font-medium text-white">
                       {project.name}
                     </span>
                     <span className="mt-0.5 block text-xs uppercase tracking-[0.14em] text-neutral-400">
