@@ -346,11 +346,11 @@ export default function FindingDetailView({
                       />
                     </label>
                     <span className="text-sm text-slate-600 pb-2">
-                      of {interviewN != null ? interviewN : "&mdash;"} interview users
+                      of {interviewN != null ? interviewN : "—"} interview users
                       {interviewPreview.percent != null && <> ({interviewPreview.percent}%)</>}
                     </span>
                     <span className="ml-auto pb-2 text-sm font-bold text-emerald-700">
-                      {interviewPreview.score != null ? `Score ${interviewPreview.score} / 3` : "&mdash;"}
+                      {interviewPreview.score != null ? `Score ${interviewPreview.score} / 3` : "—"}
                     </span>
                   </div>
                   {interviewN == null && (
@@ -380,11 +380,11 @@ export default function FindingDetailView({
                       />
                     </label>
                     <span className="text-sm text-slate-600 pb-2">
-                      of {surveyN != null ? surveyN : "&mdash;"} survey respondents
+                      of {surveyN != null ? surveyN : "—"} survey respondents
                       {surveyPreview.percent != null && <> ({surveyPreview.percent}%)</>}
                     </span>
                     <span className="ml-auto pb-2 text-sm font-bold text-emerald-700">
-                      {surveyPreview.score != null ? `Score ${surveyPreview.score} / 3` : "&mdash;"}
+                      {surveyPreview.score != null ? `Score ${surveyPreview.score} / 3` : "—"}
                     </span>
                   </div>
                   {surveyN == null && (
