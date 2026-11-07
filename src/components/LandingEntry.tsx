@@ -14,10 +14,10 @@ export interface PlatformEntry {
 
 /**
  * Exhibition entry for the Bewize Workshop — Phase DVF.
- * Aleph keynote language: pure black, white Playfair serif, muted grey
- * description, one outlined action, and a giant teal-to-blue gradient
- * "DVF" bleeding off the bottom edge, like the keynote's "Agenda" slide.
- * The footer sits above the giant word so the two never collide.
+ * Option 1, exactly: pure centered Aleph keynote title slide — pure
+ * black, white Playfair serif, "Bewize Workshop" in the teal-to-blue
+ * gradient italic, muted grey description, one outlined action, and the
+ * credit footer. No giant word, no "01" / "Phase DVF" labels.
  */
 export default function LandingEntry({
   projects,
@@ -45,52 +45,35 @@ export default function LandingEntry({
   return (
     <main
       id="main-content"
-      className="flex flex-1 flex-col bg-black text-white overflow-hidden"
+      className="flex flex-1 flex-col bg-black text-white"
     >
-      {/* Top block: number, title, description, action */}
-      <div className="px-5 pt-10 sm:px-10 sm:pt-14 lg:px-16">
-        <div className="flex items-baseline gap-4">
-          <span className="text-sm text-white/50">01</span>
-          <span className="text-[11px] font-semibold uppercase tracking-[0.35em] text-white/50">
-            Phase DVF
-          </span>
-        </div>
-
-        <h1 className="mt-6 font-display text-4xl leading-[1.08] tracking-tight sm:text-6xl lg:text-7xl">
+      {/* Centered hero — option 1 exactly */}
+      <div className="flex flex-1 flex-col items-center justify-center px-5 py-16 text-center sm:px-10">
+        <h1 className="font-display text-5xl leading-[1.08] tracking-tight sm:text-7xl lg:text-8xl">
           <span className="block text-white">Welcome to</span>
           <span className="block italic text-aleph-gradient pr-2">
             Bewize Workshop
           </span>
         </h1>
 
-        <p className="mt-5 max-w-xl text-base leading-relaxed text-neutral-400 sm:text-lg">
+        <p className="mt-6 max-w-xl text-base leading-relaxed text-neutral-400 sm:text-lg">
           Experience the digital collaborative platform to help shaping the
           roadmap
         </p>
 
         <button
           onClick={() => setOpen(true)}
-          className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/60 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-white hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:w-auto"
+          className="mt-9 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/60 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-white hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:w-auto"
         >
           Select Platform
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
 
-      {/* Bottom block: credit line, then the giant word */}
-      <div className="mt-auto">
-        <div className="flex items-center justify-between px-5 pb-4 pt-12 text-[11px] font-medium uppercase tracking-[0.2em] text-white/40 sm:px-10 lg:px-16">
-          <span>Bank BSI &times; Aleph</span>
-          <span className="hidden sm:inline">Bewize Workshop — Phase DVF</span>
-        </div>
-        <div
-          aria-hidden="true"
-          className="pointer-events-none select-none overflow-hidden"
-        >
-          <div className="text-aleph-gradient text-center font-display text-[clamp(160px,36vw,560px)] font-semibold leading-[0.72] tracking-tight -mb-[0.09em]">
-            DVF
-          </div>
-        </div>
+      {/* Credit footer */}
+      <div className="flex items-center justify-between px-5 pb-6 text-[11px] font-medium uppercase tracking-[0.2em] text-white/40 sm:px-10 lg:px-16">
+        <span>Bank BSI &times; Aleph</span>
+        <span>&copy; Enzi 2026</span>
       </div>
 
       {/* Select Platform popup */}
