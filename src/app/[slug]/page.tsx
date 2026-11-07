@@ -124,7 +124,7 @@ function FindingCard({
 
 // Registered parameter values — the only options offered for Sumber and
 // Platform in the Add Finding form, same as the dashboard's finding form.
-const SUMBER_OPTIONS = ["Wawancara", "Survey"];
+const SUMBER_OPTIONS = ["Wawancara", "Survey", "Internal"];
 const PLATFORM_OPTIONS = ["CMS", "DVC"];
 
 export default function ProjectResultViewer({
@@ -304,7 +304,7 @@ export default function ProjectResultViewer({
   // The tag filter offers Sumber only — the L2s under L1 "Sumber" in the
   // global parameter tree (Wawancara, Survey). Legacy free-form tag values
   // such as "Survey Riset" or "FGD Internal" are not offered.
-  const allTags = ["Sumber: Wawancara", "Sumber: Survey"];
+  const allTags = ["Sumber: Wawancara", "Sumber: Survey", "Sumber: Internal"];
 
   // Filter findings
   const filteredFindings = findings.filter((f) => {

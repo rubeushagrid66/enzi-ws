@@ -31,7 +31,7 @@ async function apiCall(url: string, options?: RequestInit) {
   return data;
 }
 
-const SUMBER_OPTIONS = ["Wawancara", "Survey"];
+const SUMBER_OPTIONS = ["Wawancara", "Survey", "Internal"];
 const PLATFORM_OPTIONS = ["CMS", "DVC"];
 
 // Aspect → framework linkage: which DVF dimension an aspect's votes feed.
