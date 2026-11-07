@@ -86,13 +86,18 @@ function findingMeta(f: any) {
       // Leave the defaults: unparseable tags render as nothing.
     }
   }
-  const tagsList: Array<{ category: string; value: string }> =
-    f.tagsList ||
+  const tagsList: Array<{ category: string; value: string }> = (f.tagsList ||
     [
       ...sumber.map((s) => ({ category: "Sumber", value: s })),
       ...(fitur ? [{ category: "Fitur", value: fitur }] : []),
       ...platform.map((p) => ({ category: "Platform", value: p })),
-    ];
+    ]
+  ).filter(
+    // The stored tags can repeat a value (e.g. Platform: CMS twice) —
+    // show each chip once so the Tags column stays quiet.
+    (t: any, i: number, arr: any[]) =>
+      arr.findIndex((x: any) => x.category === t.category && x.value === t.value) === i
+  );
   return { sumber, fitur, platform, tagsList };
 }
 
@@ -1031,7 +1036,7 @@ export default function AdminDashboardPage() {
           </div>
         </header>
 
-        <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-10">
+        <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-10">
           {error && (
             <div role="alert" className="mb-6 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -1100,7 +1105,7 @@ export default function AdminDashboardPage() {
                                 {isPool ? (
                                   <span className="whitespace-nowrap rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">Pool</span>
                                 ) : (
-                                  <span className="whitespace-nowrap text-sm font-medium text-slate-600">{f.projectName || f.projectSlug || "Project"}</span>
+                                  <span className="whitespace-nowrap text-xs font-medium text-slate-400">{f.projectName || f.projectSlug || "Project"}</span>
                                 )}
                               </td>
                               <td className="whitespace-nowrap px-4 py-3 text-right">

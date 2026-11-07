@@ -95,7 +95,7 @@ export default function AdminSidebar({
         )}
         <div className="mt-3 flex flex-col gap-2">
           {isAdmin && (
-            <button type="button" onClick={onNewProject} className="btn-primary btn-sm w-full">
+            <button type="button" onClick={onNewProject} className="btn-secondary btn-sm w-full">
               <Plus className="h-4 w-4" /> New Project
             </button>
           )}
