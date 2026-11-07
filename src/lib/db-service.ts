@@ -218,6 +218,10 @@ export const dbService = {
         slug: project.slug,
         description: project.description,
         isActive: project.is_active,
+        // Research basis N (Step 9 SQL adds the columns; missing means
+        // not set yet — D cannot be computed for that source).
+        interviewN: project.interview_n != null ? Number(project.interview_n) : null,
+        surveyN: project.survey_n != null ? Number(project.survey_n) : null,
         frameworkWeights: globalWeights ?? (weightsRes.data || []).map((w: any) => ({
           id: w.id,
           name: w.name,
