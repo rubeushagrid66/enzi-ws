@@ -12,18 +12,28 @@ import {
   Plus,
 } from "lucide-react";
 
+import { scoresForParticipant } from "@/lib/scoring";
+import { useMeParticipantId } from "@/lib/useMeParticipant";
+
 function FindingCard({
   finding,
-  rank,
+  meId,
   onSelect,
 }: {
   finding: any;
-  rank?: number;
+  meId: string | null;
   onSelect: (f: any) => void;
 }) {
   const s = finding.scores || {};
   const quad = finding.feasibilityQuadrant || "QUICK_WINS";
-  const scored = finding.scoringStatus?.scored;
+  // V/F are per participant: the card shows the logged-in participant's
+  // own values (no composite, no cross-participant average).
+  const my = scoresForParticipant(s.participantScores, meId);
+  const myPending: string[] = [];
+  if (!finding.scoringStatus?.desirabilityScored) myPending.push("Desirability");
+  if (my.viability == null) myPending.push("Viability");
+  if (my.feasibility == null) myPending.push("Feasibility");
+  const myScored = myPending.length === 0;
   return (
     <div
       onClick={() => onSelect(finding)}
@@ -31,7 +41,7 @@ function FindingCard({
     >
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          {scored ? (
+          {myScored ? (
             <span
               className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
                 quad === "QUICK_WINS"
@@ -50,14 +60,6 @@ function FindingCard({
               Awaiting scoring
             </span>
           )}
-
-          <div className="flex items-center gap-1 text-xs font-extrabold text-slate-900 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
-            {rank != null && (
-              <span className="text-xs font-extrabold text-emerald-700">#{rank}</span>
-            )}
-            <span className="text-xs text-slate-500 font-normal">DVF:</span>
-            <span>{s.composite != null ? s.composite : "—"}</span>
-          </div>
         </div>
 
         <div>
@@ -84,9 +86,9 @@ function FindingCard({
           </div>
         )}
 
-        {!scored && finding.scoringStatus?.pending?.length > 0 && (
+        {!myScored && myPending.length > 0 && (
           <p className="text-xs text-amber-700">
-            Needs scoring: {finding.scoringStatus.pending.join(", ")}
+            Needs scoring: {myPending.join(", ")}
           </p>
         )}
       </div>
@@ -102,13 +104,13 @@ function FindingCard({
           <div className="rounded bg-blue-50/80 p-1.5 border border-blue-100">
             <div className="text-blue-700 font-semibold">Viab.</div>
             <div className="font-extrabold text-blue-900 mt-0.5">
-              {s.viability != null ? `${s.viability}%` : "—"}
+              {my.viability != null ? `${my.viability} / 3` : "—"}
             </div>
           </div>
           <div className="rounded bg-amber-50/80 p-1.5 border border-amber-100">
             <div className="text-amber-700 font-semibold">Feas.</div>
             <div className="font-extrabold text-amber-900 mt-0.5">
-              {s.feasibility != null ? s.feasibility : "—"}
+              {my.feasibility != null ? `${my.feasibility} / 3` : "—"}
             </div>
           </div>
         </div>
@@ -299,7 +301,23 @@ export default function ProjectResultViewer({
   }
 
   const isAdmin = currentUser?.role === "ADMIN" || currentUser?.role === "FACILITATOR";
+  // "Me": the participant the viewer scores as — the cards show this
+  // participant's own V/F (1–3), never a cross-participant average.
+  const meId = useMeParticipantId(project?.slug, currentUser);
   const findings: any[] = project.findings || [];
+  const myScores = (f: any) =>
+    scoresForParticipant(f.scores?.participantScores, meId);
+  // Scored FOR ME: Desirability mapped + I scored a Viability aspect +
+  // I scored a Feasibility aspect. Logged-out viewers have no V/F, so
+  // every finding waits in "Awaiting scoring" for them.
+  const myScored = (f: any) => {
+    const my = myScores(f);
+    return (
+      !!f.scoringStatus?.desirabilityScored &&
+      my.viability != null &&
+      my.feasibility != null
+    );
+  };
 
   // The tag filter offers Sumber only — the L2s under L1 "Sumber" in the
   // global parameter tree (Wawancara, Survey). Legacy free-form tag values
@@ -329,24 +347,10 @@ export default function ProjectResultViewer({
     return true;
   });
 
-  // Ranked list = fully scored findings, best composite first.
-  // Unscored findings are never ranked — they wait in "Awaiting scoring".
-  const scoredFindings = filteredFindings
-    .filter((f) => f.scoringStatus?.scored)
-    .sort((a, b) => (b.scores?.composite ?? 0) - (a.scores?.composite ?? 0));
-  const awaitingFindings = filteredFindings.filter(
-    (f) => !f.scoringStatus?.scored
-  );
-
-  // Average composite DVF over scored findings only (unscored ones have
-  // no composite and must not drag the average down with 0s).
-  const avgDvfScore =
-    scoredFindings.length > 0
-      ? (
-          scoredFindings.reduce((acc, curr) => acc + (curr.scores?.composite || 0), 0) /
-          scoredFindings.length
-        ).toFixed(1)
-      : "—";
+  // Scored (for me) first, in creation order — there is no composite
+  // score to rank by. Unscored findings wait in "Awaiting scoring".
+  const scoredFindings = filteredFindings.filter((f) => myScored(f));
+  const awaitingFindings = filteredFindings.filter((f) => !myScored(f));
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -383,48 +387,6 @@ export default function ProjectResultViewer({
                   </p>
                 )}
             </div>
-
-            {/* Framework Weight Distribution Badge */}
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shrink-0 shadow-xs">
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                DVF Framework Weights
-              </div>
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div className="bg-white p-2.5 rounded-xl border border-emerald-200">
-                  <div className="text-xs font-semibold text-emerald-700 uppercase">
-                    Desirability
-                  </div>
-                  <div className="text-lg font-semibold text-emerald-950">
-                    {project.weightsMap?.desirability ?? 33.3}%
-                  </div>
-                </div>
-                <div className="bg-white p-2.5 rounded-xl border border-blue-200">
-                  <div className="text-xs font-semibold text-blue-700 uppercase">
-                    Viability
-                  </div>
-                  <div className="text-lg font-semibold text-blue-950">
-                    {project.weightsMap?.viability ?? 33.3}%
-                  </div>
-                </div>
-                <div className="bg-white p-2.5 rounded-xl border border-amber-200">
-                  <div className="text-xs font-semibold text-amber-700 uppercase">
-                    Feasibility
-                  </div>
-                  <div className="text-lg font-semibold text-amber-950">
-                    {project.weightsMap?.feasibility ?? 33.3}%
-                  </div>
-                </div>
-              </div>
-              <div className="mt-2 text-xs text-center text-slate-500 font-mono">
-                Total:{" "}
-                {(
-                  (project.weightsMap?.desirability ?? 33.3) +
-                  (project.weightsMap?.viability ?? 33.3) +
-                  (project.weightsMap?.feasibility ?? 33.3)
-                ).toFixed(1)}
-                %
-              </div>
-            </div>
           </div>
 
           {/* Quick Metrics Bar */}
@@ -447,15 +409,9 @@ export default function ProjectResultViewer({
                 </span>
               </div>
               <div>
-                <span className="text-slate-400">Avg DVF Score:</span>{" "}
-                <span className="font-extrabold text-emerald-700">
-                  {avgDvfScore === "—" ? "— (no findings scored yet)" : `${avgDvfScore} / 100`}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400">Scored:</span>{" "}
+                <span className="text-slate-400">Scored by you:</span>{" "}
                 <span className="font-bold text-slate-900">
-                  {findings.filter((f) => f.scoringStatus?.scored).length} of {findings.length} findings
+                  {findings.filter((f) => myScored(f)).length} of {findings.length} findings
                 </span>
               </div>
             </div>
@@ -567,14 +523,14 @@ export default function ProjectResultViewer({
                 {scoredFindings.length > 0 && (
                   <section aria-labelledby="ranked-heading">
                     <h2 id="ranked-heading" className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
-                      Ranked by DVF Score ({scoredFindings.length})
+                      Scored by you ({scoredFindings.length})
                     </h2>
                     <p className="mt-0.5 text-xs text-slate-500">
-                      Only findings fully scored in the workshop are ranked.
+                      Findings you fully scored in the workshop — Desirability mapped, plus your own Viability and Feasibility scores.
                     </p>
                     <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                      {scoredFindings.map((finding, i) => (
-                        <FindingCard key={finding.id} finding={finding} rank={i + 1} onSelect={(f) => router.push(`/${slug}/findings/${f.id}`)} />
+                      {scoredFindings.map((finding) => (
+                        <FindingCard key={finding.id} finding={finding} meId={meId} onSelect={(f) => router.push(`/${slug}/findings/${f.id}`)} />
                       ))}
                     </div>
                   </section>
@@ -585,11 +541,11 @@ export default function ProjectResultViewer({
                       Awaiting Scoring ({awaitingFindings.length})
                     </h2>
                     <p className="mt-0.5 text-xs text-slate-500">
-                      Listed only — no scores yet. Score these together with participants in the workshop.
+                      Listed only — no scores from you yet. Score these together with participants in the workshop.
                     </p>
                     <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                       {awaitingFindings.map((finding) => (
-                        <FindingCard key={finding.id} finding={finding} onSelect={(f) => router.push(`/${slug}/findings/${f.id}`)} />
+                        <FindingCard key={finding.id} finding={finding} meId={meId} onSelect={(f) => router.push(`/${slug}/findings/${f.id}`)} />
                       ))}
                     </div>
                   </section>
@@ -648,8 +604,9 @@ export default function ProjectResultViewer({
                     isAdmin={isAdmin}
                     onPositionSaved={(updated) => {
                       applyUpdatedFinding(updated);
-                      // Silent background refresh for recalculated scores
-                      // (quadrant / composite change with the position).
+                      // Silent background refresh so the board shows the
+                      // saved position (the position no longer changes
+                      // any score — F comes only from aspect votes).
                       loadProjectData(true);
                     }}
                   />

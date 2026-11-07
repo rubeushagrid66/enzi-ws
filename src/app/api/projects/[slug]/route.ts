@@ -13,10 +13,8 @@ function notFoundResponse() {
 }
 import {
   calculateDesirabilityScore,
-  calculateViabilityScore,
   calculateAspectValidation,
-  getFeasibilityFromCoordinates,
-  calculateCompositeDVF,
+  calculateAllParticipantScores,
   getFindingScoringStatus,
   normalizeFramework,
   ScoringRule,
@@ -125,12 +123,15 @@ export async function GET(
 
     // Calculate DVF metrics for each finding. Scores are workshop-made:
     // a dimension only has a number once the workshop produced data for
-    // it. Otherwise the dimension (and the composite) is null — "Pending
-    // scoring" — never a 0 that looks like a real score.
-    // Blend rule: within a dimension, the score is the average of the
-    // inputs available for it (L3 mapping and/or linked-aspect
-    // validation for D, V-linked votes for V, quadrant and/or
-    // linked-aspect validation for F).
+    // it. Otherwise the dimension is null — "Pending scoring" — never a
+    // 0 that looks like a real score.
+    // V and F are PER PARTICIPANT (1–3, no composite, no averaging
+    // across participants): V = mean of the participant's Viability
+    // aspect scores; F = 4 − mean of the participant's Feasibility
+    // ("Effort") aspect scores; unscored aspects are skipped, never 0.
+    // The finding shows the logged-in participant's own values, selected
+    // client-side from participantScores. Desirability is unchanged
+    // (explicit L3 mappings, blended with D-linked aspect validation).
     const findingsWithScores = (project.findings || []).map((f: any) => {
       const { sumber, fitur, platform, tagsList } = parseFindingMeta(f.tags);
       const scoringStatus = getFindingScoringStatus(
@@ -161,39 +162,12 @@ export async function GET(
           )
         : null;
 
-      // 2. Viability — participant votes on Viability-linked aspects only.
-      const viabilityData = scoringStatus.viabilityScored
-        ? calculateViabilityScore(
-            vAspectIds.length,
-            project.groups,
-            f.viabilityVotes,
-            vAspectIds
-          )
-        : null;
-
-      // 3. Feasibility — placed matrix position, blended with validation
-      // of Feasibility-linked aspects when the workshop voted on them.
-      const fAspectValidation = calculateAspectValidation(
-        fAspectIds,
-        project.groups,
-        f.viabilityVotes
+      // 2. Viability + Feasibility — per-participant 1–3 scores.
+      const participantScores = calculateAllParticipantScores(
+        f.viabilityVotes,
+        vAspectIds,
+        fAspectIds
       );
-      const feasibilityData = scoringStatus.feasibilityScored
-        ? getFeasibilityFromCoordinates(
-            f.feasibilityX,
-            f.feasibilityY,
-            fAspectValidation?.score ?? null
-          )
-        : null;
-
-      // 4. Composite DVF — only when all three dimensions are scored.
-      const compositeData = scoringStatus.scored
-        ? calculateCompositeDVF(weightsMap, {
-            desirability: desirabilityData!.score,
-            viability: viabilityData!.score,
-            feasibility: feasibilityData!.score,
-          })
-        : null;
 
       return {
         ...f,
@@ -205,14 +179,7 @@ export async function GET(
         scores: {
           desirability: desirabilityData?.score ?? null,
           desirabilityDetails: desirabilityData,
-          viability: viabilityData?.score ?? null,
-          viabilityDetails: viabilityData,
-          feasibility: feasibilityData?.score ?? null,
-          feasibilityDetails: feasibilityData,
-          composite: compositeData?.compositeScore ?? null,
-          compositeFormula:
-            compositeData?.formula ??
-            "Pending scoring — complete Desirability, Viability and Feasibility in the workshop.",
+          participantScores,
         },
       };
     });

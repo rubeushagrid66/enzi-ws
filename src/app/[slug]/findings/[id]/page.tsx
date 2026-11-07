@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import FindingDetailView from "@/components/FindingDetailView";
+import { useMeParticipantId } from "@/lib/useMeParticipant";
 
 export default function FindingDetailPage({
   params,
@@ -58,6 +59,8 @@ export default function FindingDetailPage({
 
   const isAdmin =
     currentUser?.role === "ADMIN" || currentUser?.role === "FACILITATOR";
+  // "Me": the score cards show this participant's own V/F (1–3).
+  const meId = useMeParticipantId(project?.slug, currentUser);
   const finding =
     project?.findings?.find((f: any) => f.id === id) ?? null;
 
@@ -110,6 +113,7 @@ export default function FindingDetailPage({
               project={project}
               isAdmin={isAdmin}
               currentUser={currentUser}
+              meId={meId}
             />
           </div>
         )}

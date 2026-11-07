@@ -26,9 +26,12 @@ import { normalizeFramework } from "@/lib/scoring";
  *   mirror it and never widen it.
  * - Public (logged-out) viewers are read-only.
  *
- * A score counts as validated for the current Viability formula
- * (share of validated votes) until the user defines the new 1-3
- * formula — the scoring math itself is untouched here.
+ * A score counts toward the participant's own V or F (1–3, defined
+ * 2026-11-07): V = average of the participant's Viability aspect
+ * scores; F = 4 − average of the participant's Effort (Feasibility
+ * aspect) scores. Unscored aspects are skipped, never 0. There is no
+ * composite score and no averaging across participants — each
+ * participant's V and F are shown in the strip below the group chips.
  */
 const FRAMEWORK_ORDER = ["Desirability", "Viability", "Feasibility"] as const;
 const FRAMEWORK_HEADER_CLASS: Record<string, string> = {
@@ -292,9 +295,11 @@ export default function ViabilityVoteMatrix({
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
             Score your aspects 1–3 in your own group (marked Me). Other
-            groups are view-only. A scored aspect counts as validated for
-            the Viability score until the new 1–3 formula is defined.
-            Scores and reasons are visible to everyone.
+            groups are view-only. V = average of your Viability aspect
+            scores; F = 4 − average of your Effort aspect scores. Unscored
+            aspects are skipped. Each participant&apos;s V and F (1–3) are
+            shown below for the selected group. Scores and reasons are
+            visible to everyone.
             {myLabel
               ? ` You are signed in as ${myLabel} — you can only score ${myLabel} aspects, in your own group.`
               : ""}
@@ -350,6 +355,32 @@ export default function ViabilityVoteMatrix({
         </div>
       ) : (
         <p className="mt-4 text-xs text-slate-400 italic">No groups in this project yet.</p>
+      )}
+
+      {/* V/F per participant in the selected group (1–3, no composite).
+          Switching groups shows that group's participants' own V/F. */}
+      {activeGroup && orderedParticipants.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2" aria-label="Viability and Feasibility scores per participant">
+          {orderedParticipants.map((p: any) => {
+            const entry = (finding.scores?.participantScores || []).find(
+              (ps: any) => ps.participantId === p.id
+            );
+            return (
+              <span
+                key={p.id}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700"
+              >
+                <span className="font-bold text-slate-900">{p.name}</span>
+                {p.id === meId && (
+                  <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-extrabold text-emerald-800">You</span>
+                )}
+                <span>V {entry?.viability ?? "—"}</span>
+                <span className="text-slate-400">·</span>
+                <span>F {entry?.feasibility ?? "—"}</span>
+              </span>
+            );
+          })}
+        </div>
       )}
 
       {activeGroup && orderedParticipants.length === 0 && (

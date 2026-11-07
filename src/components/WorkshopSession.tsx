@@ -5,6 +5,8 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import FeasibilityMatrix from "./FeasibilityMatrix";
 import ViabilityVoteMatrix from "./ViabilityVoteMatrix";
+import { scoresForParticipant } from "@/lib/scoring";
+import { useMeParticipantId } from "@/lib/useMeParticipant";
 import {
   Target,
   Users2,
@@ -53,6 +55,8 @@ export default function WorkshopSession({
   const [selectedFindingId, setSelectedFindingId] = useState<string | null>(null);
   const [step, setStep] = useState<Step>("desirability");
   const [status, setStatus] = useState<string | null>(null);
+  // "Me": the score lines below show this participant's own V/F (1–3).
+  const meId = useMeParticipantId(slug, currentUser as any);
 
   // Step 1 (Desirability) local mapping: l3Id -> free-text value.
   const [mapping, setMapping] = useState<Record<string, string>>({});
@@ -298,6 +302,10 @@ export default function WorkshopSession({
   }
 
   const st = selectedFinding?.scoringStatus || {};
+  // My V/F on the selected finding (1–3, per participant, no composite).
+  const mySelected = selectedFinding
+    ? scoresForParticipant(selectedFinding.scores?.participantScores, meId)
+    : { viability: null, feasibility: null };
   const stepDone: Record<Step, boolean> = {
     desirability: !!st.desirabilityScored,
     viability: !!st.viabilityScored,
@@ -377,11 +385,6 @@ export default function WorkshopSession({
                         <StatusChip scored={!!fs.viabilityScored} label="V" />
                         <StatusChip scored={!!fs.feasibilityScored} label="F" />
                       </span>
-                      {fs.scored && f.scores?.composite != null && (
-                        <span className="mt-1 block text-xs font-bold text-emerald-700">
-                          DVF {f.scores.composite}
-                        </span>
-                      )}
                     </button>
                   </li>
                 );
@@ -471,11 +474,6 @@ export default function WorkshopSession({
                     <StatusChip scored={!!st.desirabilityScored} label="Desirability" />
                     <StatusChip scored={!!st.viabilityScored} label="Viability" />
                     <StatusChip scored={!!st.feasibilityScored} label="Feasibility" />
-                    {st.scored && selectedFinding.scores?.composite != null && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-600 px-2 py-0.5 text-[11px] font-bold text-white">
-                        Fully scored — DVF {selectedFinding.scores.composite}
-                      </span>
-                    )}
                   </div>
                   {status && (
                     <p role="status" className="mt-3 text-sm font-semibold text-emerald-700">
@@ -614,9 +612,10 @@ export default function WorkshopSession({
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">
                         Score each aspect 1–3 as yourself and write your Alasan
-                        (reason) per aspect. Scores on Viability-linked aspects feed
-                        the Viability score (the share of scored aspects); scores on
-                        Desirability- or Feasibility-linked aspects feed those scores
+                        (reason) per aspect. Your Viability score is the average of
+                        your Viability aspect scores; your Feasibility score is
+                        4 − the average of your Effort (Feasibility-linked) aspect
+                        scores. Scores on Desirability-linked aspects feed that score
                         instead — see the group headings on the matrix. If your role
                         is Business &amp; Ops, Product or Tech you can only score
                         your own label&apos;s aspects in your own group (marked Me) —
@@ -633,10 +632,10 @@ export default function WorkshopSession({
                       }}
                     />
                     <p className="text-sm text-slate-600">
-                      {st.viabilityScored ? (
-                        <>Current Viability score: <span className="font-extrabold text-blue-700">{selectedFinding.scores?.viability}%</span> ({selectedFinding.scores?.viabilityDetails?.totalValidatedVotes ?? 0} of {selectedFinding.scores?.viabilityDetails?.totalPossibleVotes ?? 0} votes)</>
+                      {mySelected.viability != null ? (
+                        <>Your Viability score: <span className="font-extrabold text-blue-700">{mySelected.viability} / 3</span> (average of your Viability aspect scores)</>
                       ) : (
-                        "Not scored yet — record at least one vote to score Viability."
+                        "Not scored by you yet — record at least one vote on a Viability aspect to score it."
                       )}
                     </p>
                   </div>
@@ -652,10 +651,10 @@ export default function WorkshopSession({
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">
                         Discuss impact vs. effort as a group, drag the card to the
-                        position everyone agrees on, then confirm it. The Feasibility
-                        score is the average of the quadrant the card lands in and the
-                        validation of Feasibility-linked aspects (voted on in Step 2) —
-                        whichever inputs exist.
+                        position everyone agrees on, then confirm it. The board
+                        position is visual placement only — your Feasibility score
+                        comes from the Feasibility-linked aspects you voted on in
+                        Step 2: F = 4 − the average of your Effort scores.
                       </p>
                     </div>
                     <FeasibilityMatrix
@@ -677,14 +676,10 @@ export default function WorkshopSession({
                     />
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <p className="text-sm text-slate-600">
-                        {st.feasibilityScored ? (
-                          <>Placed: <span className="font-bold text-slate-900">{selectedFinding.feasibilityQuadrant?.replace("_", " ")}</span> — Feasibility score {selectedFinding.scores?.feasibility} / 100
-                            {selectedFinding.scores?.feasibilityDetails?.inputs?.length > 0 && (
-                              <> ({selectedFinding.scores.feasibilityDetails.inputs.map((i: any) => `${i.label} ${i.score}`).join(" · ")})</>
-                            )}
-                          </>
+                        {mySelected.feasibility != null ? (
+                          <>Placed: <span className="font-bold text-slate-900">{selectedFinding.feasibilityQuadrant?.replace("_", " ")}</span> — Your Feasibility score: <span className="font-extrabold text-amber-700">{mySelected.feasibility} / 3</span> (4 − average of your Effort scores)</>
                         ) : (
-                          "Not placed yet — drag the card to a position first, or record votes on Feasibility-linked aspects."
+                          "Not scored by you yet — record votes on Feasibility-linked aspects in Step 2. Dragging the card only sets its board position."
                         )}
                       </p>
                       <button
@@ -734,7 +729,7 @@ export default function WorkshopSession({
                     </button>
                   ) : (
                     <Link href={`/${project.slug}`} className="btn-primary">
-                      {st.scored ? "Done — view ranked results" : "Back to viewer"} <ArrowRight className="h-4 w-4" />
+                      {st.scored ? "Done — view results" : "Back to viewer"} <ArrowRight className="h-4 w-4" />
                     </Link>
                   )}
                 </div>
@@ -744,9 +739,9 @@ export default function WorkshopSession({
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>
                       <span className="font-bold">Fully scored.</span> This finding now
-                      appears in the ranked list with DVF {selectedFinding.scores?.composite}.
-                      Scores can still be changed by a facilitator — there is no lock
-                      yet; locking is part of the planned Phase 2 session design.
+                      appears in the scored list. Scores can still be changed by a
+                      facilitator — there is no lock yet; locking is part of the
+                      planned Phase 2 session design.
                     </span>
                   </div>
                 )}

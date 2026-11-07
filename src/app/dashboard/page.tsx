@@ -1154,7 +1154,7 @@ export default function AdminDashboardPage() {
                   <h2 id="weights-heading" className="mt-1 text-xl font-bold text-slate-900">DVF Framework Allocation</h2>
                   <p className="mt-1 text-sm font-semibold text-emerald-700">Global — applies to all projects.</p>
                   <p className="mt-1 text-sm text-slate-600">Enter any number for Desirability, Viability, and Feasibility. Weights are saved exactly as you type them — nothing is recalculated or forced to total 100.</p>
-                  <p className="mt-1 text-sm text-slate-600">The composite DVF score uses these weights as-is, so if the total is not 100 the composite will not be out of 100 either.</p>
+                  <p className="mt-1 text-sm text-slate-600">These weights are kept for reference only — scoring no longer uses a composite score. V and F are calculated per participant (1–3).</p>
                   {weightsSource && weightsSource !== "global" && (
                     <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
                       Showing the {weightsSource.replace("project:", "")} project's weights for now. {globalSetupNote || "Run docs/global-setup-sql.md in the Supabase SQL editor to make weights global."}

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import FeasibilityMatrix from "./FeasibilityMatrix";
 import ViabilityVoteMatrix from "./ViabilityVoteMatrix";
+import { scoresForParticipant, normalizeFramework } from "@/lib/scoring";
 
 interface FindingDetailViewProps {
   finding: any;
@@ -16,6 +17,7 @@ interface FindingDetailViewProps {
   project: any;
   isAdmin: boolean;
   currentUser?: { id?: string; name: string; role: string } | null;
+  meId?: string | null;
 }
 
 export default function FindingDetailView({
@@ -24,6 +26,7 @@ export default function FindingDetailView({
   project,
   isAdmin,
   currentUser,
+  meId,
 }: FindingDetailViewProps) {
   const [activeTab, setActiveTab] = useState<"desirability" | "viability" | "feasibility">(
     "desirability"
@@ -32,12 +35,84 @@ export default function FindingDetailView({
 
   const scores = localFinding.scores || {};
   const desirability = scores.desirabilityDetails || {};
-  const viability = scores.viabilityDetails || {};
-  const feasibility = scores.feasibilityDetails || {};
   // Scoring status is derived from workshop data (see lib/scoring).
   // A null score means "not yet scored in the workshop", never a 0.
   const status = localFinding.scoringStatus || {};
   const showNum = (v: number | null | undefined) => (v ?? null) === null ? "—" : v;
+
+  // V and F are per participant (1–3, no composite, no cross-participant
+  // average). These cards show the logged-in participant's own values.
+  const my = scoresForParticipant(scores.participantScores, meId);
+  const myPending: string[] = [];
+  if (!status.desirabilityScored) myPending.push("Desirability");
+  if (my.viability == null) myPending.push("Viability");
+  if (my.feasibility == null) myPending.push("Feasibility");
+  // My aspect scores, for the V/F formula breakdowns below: the aspects
+  // I scored, with the score I gave (unscored aspects are skipped).
+  const myAspectScores = (framework: string) =>
+    (project.viabilityAspects || [])
+      .filter((a: any) => normalizeFramework(a.framework) === framework)
+      .map((a: any) => {
+        const vote = (localFinding.viabilityVotes || []).find(
+          (v: any) => v.participantId === meId && v.aspectId === a.id
+        );
+        return { name: a.name, score: vote?.score != null ? Number(vote.score) : null };
+      });
+  const myViabilityAspects = myAspectScores("Viability");
+  const myFeasibilityAspects = myAspectScores("Feasibility");
+  const myViabilityScored = myViabilityAspects.filter((a: any) => a.score != null);
+  const myFeasibilityScored = myFeasibilityAspects.filter((a: any) => a.score != null);
+
+  // Your scores (D is shared from the workshop mappings; V and F are
+  // the logged-in participant's own 1–3 values). Shown on every tab.
+  const myScoresStrip = (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+        <div className="text-xs font-medium text-emerald-700 uppercase tracking-wider">
+          Desirability Score
+        </div>
+        <div className="mt-1 text-3xl font-extrabold text-emerald-900">
+          {showNum(scores.desirability)}
+          {scores.desirability != null && (
+            <span className="text-sm font-normal text-emerald-600"> / 100</span>
+          )}
+        </div>
+        <p className="mt-1 text-xs text-emerald-700">
+          Evaluated from workshop L1-L3 mapping & custom scoring rules
+        </p>
+      </div>
+
+      <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
+        <div className="text-xs font-medium text-blue-700 uppercase tracking-wider">
+          Viability Score (yours)
+        </div>
+        <div className="mt-1 text-3xl font-extrabold text-blue-900">
+          {my.viability != null ? my.viability : "—"}
+          {my.viability != null && (
+            <span className="text-sm font-normal text-blue-600"> / 3</span>
+          )}
+        </div>
+        <p className="mt-1 text-xs text-blue-700">
+          Average of your Viability aspect scores
+        </p>
+      </div>
+
+      <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+        <div className="text-xs font-medium text-amber-700 uppercase tracking-wider">
+          Feasibility Score (yours)
+        </div>
+        <div className="mt-1 text-3xl font-extrabold text-amber-900">
+          {my.feasibility != null ? my.feasibility : "—"}
+          {my.feasibility != null && (
+            <span className="text-sm font-normal text-amber-600"> / 3</span>
+          )}
+        </div>
+        <p className="mt-1 text-xs text-amber-700">
+          4 − average of your Effort aspect scores
+        </p>
+      </div>
+    </div>
+  );
 
   // Scores update local state only. The viewer list refreshes when
   // navigating back (focus refresh + server revalidation on save).
@@ -64,9 +139,9 @@ export default function FindingDetailView({
                   Finding Detail
                 </span>
                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                  {scores.composite != null
-                    ? `DVF Score: ${scores.composite} / 100`
-                    : `Pending scoring${status.pending?.length ? ` — needs: ${status.pending.join(", ")}` : ""}`}
+                  {myPending.length === 0
+                    ? `Your scores — D ${showNum(scores.desirability)} · V ${showNum(my.viability)} / 3 · F ${showNum(my.feasibility)} / 3`
+                    : `Pending scoring${myPending.length ? ` — needs: ${myPending.join(", ")}` : ""}`}
                 </span>
               </div>
               <h2 id="finding-detail-title" className="text-2xl font-semibold text-slate-900 leading-tight sm:text-3xl">
@@ -123,7 +198,7 @@ export default function FindingDetailView({
               <Users2 className="hidden sm:block h-4 w-4" />
               <span><span className="hidden sm:inline">Tab 2: </span>Viability</span>
               <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-800">
-                {scores.viability != null ? `${scores.viability}%` : "—"}
+                {my.viability != null ? `${my.viability} / 3` : "—"}
               </span>
             </button>
 
@@ -138,7 +213,7 @@ export default function FindingDetailView({
               <Compass className="hidden sm:block h-4 w-4" />
               <span><span className="hidden sm:inline">Tab 3: </span>Feasibility<span className="hidden sm:inline"> (2x2 Matrix)</span></span>
               <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800">
-                {feasibility.quadrant?.replace("_", " ") ?? "Not placed"}
+                {localFinding.feasibilityQuadrant?.replace("_", " ") ?? "Not placed"}
               </span>
             </button>
           </div>
@@ -166,52 +241,7 @@ export default function FindingDetailView({
                   )}
                 </div>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
-                  <div className="text-xs font-medium text-emerald-700 uppercase tracking-wider">
-                    Desirability Score
-                  </div>
-                  <div className="mt-1 text-3xl font-extrabold text-emerald-900">
-                    {showNum(scores.desirability)}
-                    {scores.desirability != null && (
-                      <span className="text-sm font-normal text-emerald-600"> / 100</span>
-                    )}
-                  </div>
-                  <p className="mt-1 text-xs text-emerald-700">
-                    Evaluated from workshop L1-L3 mapping & custom scoring rules
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Weight in Framework
-                  </div>
-                  <div className="mt-1 text-3xl font-extrabold text-slate-900">
-                    {project.weightsMap?.desirability ?? 33.3}%
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Framework allocation
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Weighted Contribution
-                  </div>
-                  <div className="mt-1 text-3xl font-extrabold text-slate-900">
-                    {scores.desirability != null
-                      ? (
-                          ((scores.desirability ?? 0) *
-                            (project.weightsMap?.desirability ?? 33.3)) /
-                          100
-                        ).toFixed(1)
-                      : "—"}
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Points added to total DVF composite score
-                  </p>
-                </div>
-              </div>
+              {myScoresStrip}
 
               {/* Formula Transparency Breakdown */}
               <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
@@ -273,59 +303,35 @@ export default function FindingDetailView({
           {/* TAB 2: VIABILITY */}
           {activeTab === "viability" && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
-                  <div className="text-xs font-medium text-blue-700 uppercase tracking-wider">
-                    Viability Score
-                  </div>
-                  <div className="mt-1 text-3xl font-extrabold text-blue-900">
-                    {scores.viability != null ? `${scores.viability}%` : "—"}
-                  </div>
-                  <p className="mt-1 text-xs text-blue-700">
-                    {viability.totalValidatedVotes ?? 0} of {viability.totalPossibleVotes ?? 0} total possible votes
-                    {viability.aspectsCounted != null && (
-                      <> · counts Viability-linked aspects only ({viability.aspectsCounted} of {project.viabilityAspects?.length ?? 0})</>
-                    )}
-                  </p>
-                </div>
+              {myScoresStrip}
 
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Weight in Framework
-                  </div>
-                  <div className="mt-1 text-3xl font-extrabold text-slate-900">
-                    {project.weightsMap?.viability ?? 33.3}%
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Framework allocation
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Weighted Contribution
-                  </div>
-                  <div className="mt-1 text-3xl font-extrabold text-slate-900">
-                    {scores.viability != null
-                      ? (
-                          ((scores.viability ?? 0) *
-                            (project.weightsMap?.viability ?? 33.3)) /
-                          100
-                        ).toFixed(1)
-                      : "—"}
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Points added to total DVF composite score
-                  </p>
-                </div>
+              {/* How YOUR Viability score is built */}
+              <div role="note" className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+                <span className="font-bold">Your Viability score = average of your Viability aspect scores (1–3).</span>{" "}
+                {myViabilityScored.length > 0 ? (
+                  <>
+                    {myViabilityScored.map((a: any) => `${a.name} ${a.score}`).join("  ·  ")}
+                    {" → ("}
+                    {myViabilityScored.reduce((s: number, a: any) => s + (a.score ?? 0), 0)}
+                    {" / "}
+                    {myViabilityScored.length}
+                    {") = "}
+                    <span className="font-extrabold">{my.viability}</span>
+                  </>
+                ) : (
+                  "You have not scored a Viability aspect on this finding yet."
+                )}
+                {myViabilityAspects.length > myViabilityScored.length && (
+                  <> Unscored aspects are skipped, never counted as 0.</>
+                )}
               </div>
 
-              {!status.viabilityScored && (
+              {my.viability == null && (
                 <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                  <span className="font-bold">Not yet scored in the workshop.</span>{" "}
+                  <span className="font-bold">Not yet scored by you.</span>{" "}
                   Score each aspect 1–3 below (workshop Step 2) with your Alasan
-                  per aspect — the Viability score is the share of scored
-                  (validated) aspects.
+                  per aspect — your Viability score is the average of the
+                  Viability aspects you scored.
                 </div>
               )}
 
@@ -341,65 +347,38 @@ export default function FindingDetailView({
           {/* TAB 3: FEASIBILITY */}
           {activeTab === "feasibility" && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
-                  <div className="text-xs font-medium text-amber-700 uppercase tracking-wider">
-                    Feasibility Quadrant
-                  </div>
-                  <div className="mt-1 text-2xl font-extrabold text-amber-900">
-                    {feasibility.quadrant?.replace("_", " ") ?? "Not placed"}
-                  </div>
-                  <p className="mt-1 text-xs text-amber-700">
-                    Score: {scores.feasibility != null ? `${scores.feasibility} / 100` : "—"}
-                  </p>
-                </div>
+              {myScoresStrip}
 
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Weight in Framework
-                  </div>
-                  <div className="mt-1 text-3xl font-extrabold text-slate-900">
-                    {project.weightsMap?.feasibility ?? 33.3}%
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Framework allocation
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Weighted Contribution
-                  </div>
-                  <div className="mt-1 text-3xl font-extrabold text-slate-900">
-                    {scores.feasibility != null
-                      ? (
-                          ((scores.feasibility ?? 50) *
-                            (project.weightsMap?.feasibility ?? 33.3)) /
-                          100
-                        ).toFixed(1)
-                      : "—"}
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Points added to total DVF composite score
-                  </p>
-                </div>
+              {/* How YOUR Feasibility score is built */}
+              <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                <span className="font-bold">Your Feasibility score = 4 − average of your Effort aspect scores (1–3).</span>{" "}
+                {myFeasibilityScored.length > 0 ? (
+                  <>
+                    {myFeasibilityScored.map((a: any) => `${a.name} ${a.score}`).join("  ·  ")}
+                    {" → 4 − ("}
+                    {myFeasibilityScored.reduce((s: number, a: any) => s + (a.score ?? 0), 0)}
+                    {" / "}
+                    {myFeasibilityScored.length}
+                    {") = "}
+                    <span className="font-extrabold">{my.feasibility}</span>
+                  </>
+                ) : (
+                  "You have not scored a Feasibility aspect on this finding yet."
+                )}
+                {myFeasibilityAspects.length > myFeasibilityScored.length && (
+                  <> Unscored aspects are skipped, never counted as 0.</>
+                )}
+                <br />
+                <span className="text-amber-700">
+                  Board position ({localFinding.feasibilityQuadrant?.replace("_", " ") ?? "Not placed"}) is visual placement only — dragging the card does not change your Feasibility score.
+                </span>
               </div>
 
-              {!status.feasibilityScored && (
+              {my.feasibility == null && (
                 <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                  <span className="font-bold">Not yet placed in the workshop.</span>{" "}
-                  Drag the card to the position the group agrees on (workshop Step 3)
-                  or record votes on Feasibility-linked aspects — the Feasibility
-                  score comes from its quadrant and/or those votes.
-                </div>
-              )}
-              {feasibility.inputs && feasibility.inputs.length > 0 && (
-                <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                  <span className="font-bold">How this score is built (average of available inputs): </span>
-                  {feasibility.inputs.map((i: any) => `${i.label} ${i.score}`).join("  ·  ")}
-                  {feasibility.inputs.length > 1 && (
-                    <> = <span className="font-extrabold">{scores.feasibility}</span></>
-                  )}
+                  <span className="font-bold">Not yet scored by you.</span>{" "}
+                  Record votes on Feasibility-linked aspects (workshop Step 2) — your
+                  Feasibility score comes from those votes, not from the board position.
                 </div>
               )}
 
@@ -417,8 +396,8 @@ export default function FindingDetailView({
 
         {/* Footer */}
         <div className="p-4 border-t border-slate-200 bg-slate-50">
-          <div className="text-xs text-slate-500 font-mono">
-            Composite Formula: {scores.compositeFormula || ""}
+          <div className="text-xs text-slate-500">
+            Scores are per participant (1–3). V = average of your Viability aspect scores; F = 4 − average of your Effort aspect scores. There is no composite score.
           </div>
         </div>
       </div>
