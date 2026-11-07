@@ -320,7 +320,7 @@ export default function WorkshopSession({
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Navbar projectSlug={project.slug} projectName={project.name} />
 
-      <main id="main-content" className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 flex-1">
+      <main id="main-content" className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-10 flex-1">
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>

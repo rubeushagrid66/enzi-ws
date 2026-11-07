@@ -48,7 +48,7 @@ export default function LandingEntry({
       className="flex flex-1 flex-col bg-black text-white"
     >
       {/* Centered hero — option 1 exactly */}
-      <div className="flex flex-1 flex-col items-center justify-center px-5 py-16 text-center sm:px-10">
+      <div className="flex flex-1 flex-col items-center justify-center px-4 py-16 text-center sm:px-6 lg:px-10">
         <h1 className="font-display text-5xl leading-[1.08] tracking-tight sm:text-7xl lg:text-8xl">
           <span className="block text-white">Welcome to</span>
           <span className="block italic text-aleph-gradient pr-2">
@@ -71,7 +71,7 @@ export default function LandingEntry({
       </div>
 
       {/* Credit footer */}
-      <div className="flex items-center justify-between px-5 pb-6 text-[11px] font-medium uppercase tracking-[0.2em] text-white/40 sm:px-10 lg:px-16">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 pb-6 text-[11px] font-medium uppercase tracking-[0.2em] text-white/40 sm:px-6 lg:px-10">
         <span>Bank BSI &times; Aleph</span>
         <span>&copy; Enzi 2026</span>
       </div>

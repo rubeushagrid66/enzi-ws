@@ -998,7 +998,7 @@ export default function AdminDashboardPage() {
 
         {/* Admin header */}
         <header className="border-b border-slate-200 bg-white">
-          <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-4 sm:px-6">
+          <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-4 sm:px-6 lg:px-10">
             <button
               ref={menuButtonRef}
               type="button"
@@ -1031,7 +1031,7 @@ export default function AdminDashboardPage() {
           </div>
         </header>
 
-        <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
+        <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-10">
           {error && (
             <div role="alert" className="mb-6 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
