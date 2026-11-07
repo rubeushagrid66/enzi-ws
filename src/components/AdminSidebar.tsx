@@ -26,7 +26,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
   { id: "findings", label: "Findings & Tags", icon: Tag, badge: "Global" },
   { id: "weights", label: "Framework & Weighting", icon: Sliders, badge: "Global" },
   { id: "groups", label: "Groups & Participants", icon: Users2 },
-  { id: "parameters", label: "L1-L3 Parameters & Rules", icon: Layers, badge: "Global" },
+  { id: "parameters", label: "L1–L3 Parameters", icon: Layers, badge: "Global" },
   { id: "aspects", label: "Viability Aspects", icon: ListChecks },
   { id: "projects", label: "All Projects", icon: FolderGit2 },
   { id: "users", label: "Users & Roles", icon: Shield, badge: "Global" },
@@ -163,7 +163,7 @@ export default function AdminSidebar({
   return (
     <>
       {/* Desktop: fixed sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-[304px] shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-[328px] shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
         {content}
       </aside>
 
@@ -175,7 +175,7 @@ export default function AdminSidebar({
             onClick={onClose}
             aria-hidden="true"
           />
-          <aside className="absolute inset-y-0 left-0 w-[320px] max-w-[85vw] bg-white shadow-xl">
+          <aside className="absolute inset-y-0 left-0 w-[336px] max-w-[85vw] bg-white shadow-xl">
             {content}
           </aside>
         </div>
