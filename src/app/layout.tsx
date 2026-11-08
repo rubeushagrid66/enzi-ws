@@ -21,7 +21,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Bewize Workshop — Phase DVF",
   description:
-    "Experience the digital collaborative platform to help shaping the roadmap. Desirability, Viability & Feasibility (DVF) workshop for Bank BSI, facilitated by Aleph.",
+    "Experience the digital collaborative platform to help shaping the roadmap. Desirability, Viability & Feasibility (DVF) workshop for Bank BSI, made by Enzi.",
 };
 
 export default function RootLayout({
