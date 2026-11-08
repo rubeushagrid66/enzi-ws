@@ -13,8 +13,14 @@ import { normalizeFramework } from "@/lib/scoring";
  * - Rows show ALL aspects of the project (all labels, grouped under the
  *   D/V/F framework headers). The label filter is lifted for viewing:
  *   anyone can read every group's scores and reasons.
- * - Each aspect lists the selected group's participants and their votes
- *   (score + Alasan, or "Not scored yet"). Empty groups show a note.
+ * - Each aspect lists ONLY the selected group's participants assigned
+ *   to that aspect — a participant's role must match the aspect's
+ *   label (Tech scores Tech aspects, Product scores Product aspects,
+ *   Business & Ops scores Business & Ops aspects). ADMIN /
+ *   FACILITATOR have no label role and appear on every aspect, since
+ *   they may score any of them. A Tech user therefore never appears
+ *   under a Viability aspect labelled Business & Ops or Product, nor
+ *   under a Feasibility aspect labelled anything but Tech.
  * - Editing: only in MY group, and only on aspects my role may score
  *   (label-role users: aspects whose label equals their role;
  *   FACILITATOR: any aspect, in their own group). Other groups are
@@ -159,6 +165,18 @@ export default function ViabilityVoteMatrix({
     if (!votesByAspect[v.aspectId]) votesByAspect[v.aspectId] = {};
     votesByAspect[v.aspectId][v.participantId] = v;
   }
+
+  // Participants assigned to a given aspect: only those whose role
+  // matches the aspect's label, plus ADMIN / FACILITATOR (no label
+  // role — they may score any aspect). Everyone else is hidden from
+  // that aspect's rows entirely, so a Tech user never appears under a
+  // Business & Ops or Product aspect.
+  const participantsForAspect = (aspect: any) =>
+    orderedParticipants.filter((p: any) => {
+      const role = p.roleTitle;
+      if (isLabelRole(role)) return role === aspect.label;
+      return role === "ADMIN" || role === "FACILITATOR";
+    });
 
   const canVote = Boolean(currentUser) && meId !== null;
   // Editable only in my own group, and only on aspects my role may
@@ -446,7 +464,14 @@ export default function ViabilityVoteMatrix({
                             )}
                           </td>
                         </tr>
-                        {orderedParticipants.map((p: any) => {
+                        {participantsForAspect(aspect).length === 0 ? (
+                          <tr className="align-top">
+                            <td colSpan={3} className="py-2.5 px-3 text-slate-400 italic">
+                              No {aspect.label || "labelled"} participants in this group.
+                            </td>
+                          </tr>
+                        ) : (
+                          participantsForAspect(aspect).map((p: any) => {
                           const isMe = p.id === meId;
                           const vote = (votesByAspect[aspect.id] || {})[p.id];
                           // Admin edits any participant's row in any
@@ -526,7 +551,8 @@ export default function ViabilityVoteMatrix({
                               </td>
                             </tr>
                           );
-                        })}
+                        })
+                        )}
                       </React.Fragment>
                     );
                   })}
