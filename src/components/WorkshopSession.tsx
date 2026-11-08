@@ -479,7 +479,7 @@ export default function WorkshopSession({
                         Wawancara and in Survey. Show the group the evidence
                         first, then score Viability and Feasibility in the
                         next steps. Counts are entered on the finding&apos;s
-                        detail page (Tab 1: Desirability).
+                        detail page (Desirability tab).
                       </p>
                     </div>
 
@@ -518,7 +518,7 @@ export default function WorkshopSession({
                           {selectedFinding.scores?.desirabilityDetails?.formulaExplanation}
                         </>
                       ) : (
-                        "Not scored yet — enter the research mentions on the finding's detail page (Tab 1: Desirability) and the score appears here."
+                        "Not scored yet — enter the research mentions on the finding's detail page (Desirability tab) and the score appears here."
                       )}
                     </p>
                   </div>
