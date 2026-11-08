@@ -99,19 +99,19 @@ function FindingCard({
       <div className="mt-5 pt-4 border-t border-slate-100 space-y-2">
         <div className="grid grid-cols-3 gap-2 text-center text-xs">
           <div className="rounded bg-emerald-50/80 p-1.5 border border-emerald-100">
-            <div className="text-emerald-700 font-semibold">Desir.</div>
+            <div className="text-emerald-700 font-semibold">Desirability</div>
             <div className="font-extrabold text-emerald-900 mt-0.5">
               {s.desirability != null ? `${s.desirability} / 3` : "—"}
             </div>
           </div>
           <div className="rounded bg-blue-50/80 p-1.5 border border-blue-100">
-            <div className="text-blue-700 font-semibold">Viab.</div>
+            <div className="text-blue-700 font-semibold">Viability</div>
             <div className="font-extrabold text-blue-900 mt-0.5">
               {my.viability != null ? `${my.viability} / 3` : "—"}
             </div>
           </div>
           <div className="rounded bg-amber-50/80 p-1.5 border border-amber-100">
-            <div className="text-amber-700 font-semibold">Feas.</div>
+            <div className="text-amber-700 font-semibold">Feasibility</div>
             <div className="font-extrabold text-amber-900 mt-0.5">
               {my.feasibility != null ? `${my.feasibility} / 3` : "—"}
             </div>
