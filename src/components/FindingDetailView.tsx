@@ -394,6 +394,12 @@ export default function FindingDetailView({
                         value={interviewInput}
                         onChange={(e) => setInterviewInput(e.target.value)}
                         placeholder="e.g. 2"
+                        disabled={!isAdmin}
+                        title={
+                          isAdmin
+                            ? "How many interview users mentioned this finding"
+                            : "Only an admin can change the research numbers"
+                        }
                         className="input w-28"
                       />
                     </label>
@@ -449,6 +455,12 @@ export default function FindingDetailView({
                         value={surveyInput}
                         onChange={(e) => setSurveyInput(e.target.value)}
                         placeholder="e.g. 40"
+                        disabled={!isAdmin}
+                        title={
+                          isAdmin
+                            ? "How many survey respondents mentioned this finding"
+                            : "Only an admin can change the research numbers"
+                        }
                         className="input w-28"
                       />
                     </label>
@@ -499,7 +511,10 @@ export default function FindingDetailView({
                   <button
                     type="button"
                     onClick={handleSaveResearch}
-                    disabled={researchSaving}
+                    disabled={!isAdmin || researchSaving}
+                    title={
+                      isAdmin ? undefined : "Only an admin can change the research numbers"
+                    }
                     className="btn-primary"
                   >
                     {researchSaving ? "Saving\u2026" : "Save research numbers"}

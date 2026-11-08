@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
-import { getSession } from "@/lib/auth";
+import { getSession, requireAdminOrFacilitator } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
 import {
   calculateDesirabilityFromResearch,
@@ -9,12 +9,12 @@ import {
 
 /**
  * Save a finding's research mentions (how many users mentioned it in
- * Wawancara and/or Survey). Open to any logged-in user, like editing a
- * finding. D is computed from these counts against the project's basis
- * N (interview N / survey N) — the counts are the only thing stored.
- * Pass null to clear a count. Returns the finding with its recomputed
- * Desirability score and scoring status, so the detail page can update
- * without a reload.
+ * Wawancara and/or Survey). Admin/facilitator only — regular users and
+ * guests can view the numbers but cannot change them. D is computed
+ * from these counts against the project's basis N (interview N /
+ * survey N) — the counts are the only thing stored. Pass null to clear
+ * a count. Returns the finding with its recomputed Desirability score
+ * and scoring status, so the detail page can update without a reload.
  */
 export async function PUT(
   request: Request,
@@ -22,9 +22,8 @@ export async function PUT(
 ) {
   try {
     const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const forbidden = requireAdminOrFacilitator(session);
+    if (forbidden) return forbidden;
 
     const { slug, id } = params;
     const body = await request.json().catch(() => ({}));
