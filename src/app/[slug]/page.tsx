@@ -20,15 +20,10 @@ function FindingCard({
   finding,
   meId,
   onSelect,
-  group,
 }: {
   finding: any;
   meId: string | null;
   onSelect: (f: any) => void;
-  /** The group this card is shown inside (group view only). When set,
-   *  V and F are that group's members' own scores — not the viewer's —
-   *  so opening Grup 3 shows what Grup 3 scored for this finding. */
-  group?: any;
 }) {
   const s = finding.scores || {};
   // The quadrant this finding shows for the viewer: its board position
@@ -36,26 +31,14 @@ function FindingCard({
   const boardPos = findingBoardPosition(finding, meId);
   const quad = boardPos.quadrant;
   // V/F are per participant: the card shows the logged-in participant's
-  // own values (no composite, no cross-participant average) — unless it
-  // is shown inside a group, where it shows that group's members' own
-  // values instead.
+  // own values (no composite, no cross-participant average), in the
+  // same three-box layout in the global Findings list and inside a
+  // group — a group card is the same card, just group-filtered.
   const my = scoresForParticipant(s.participantScores, meId);
-  const groupMembers: any[] = group?.participants || [];
-  const groupScores = groupMembers.map((p: any) => ({
-    ...p,
-    ...scoresForParticipant(s.participantScores, p.id),
-  }));
   const myPending: string[] = [];
   if (!finding.scoringStatus?.desirabilityScored) myPending.push("Desirability");
-  if (group) {
-    // In a group view, "needs scoring" means a group member has not
-    // scored yet.
-    if (groupScores.some((m: any) => m.viability == null)) myPending.push("Viability");
-    if (groupScores.some((m: any) => m.feasibility == null)) myPending.push("Feasibility");
-  } else {
-    if (my.viability == null) myPending.push("Viability");
-    if (my.feasibility == null) myPending.push("Feasibility");
-  }
+  if (my.viability == null) myPending.push("Viability");
+  if (my.feasibility == null) myPending.push("Feasibility");
   const myScored = myPending.length === 0;
   return (
     <div
@@ -118,57 +101,26 @@ function FindingCard({
       </div>
 
       <div className="mt-5 pt-4 border-t border-slate-100 space-y-2">
-        {group ? (
-          <>
-            <div className="grid grid-cols-3 gap-2 text-center text-xs">
-              <div className="rounded bg-emerald-50/80 p-1.5 border border-emerald-100">
-                <div className="text-emerald-700 font-semibold">Desirability</div>
-                <div className="font-extrabold text-emerald-900 mt-0.5">
-                  {s.desirability != null ? `${s.desirability} / 3` : "—"}
-                </div>
-              </div>
-              <div className="col-span-2 rounded bg-slate-50/80 p-1.5 border border-slate-100 text-left">
-                <div className="text-slate-500 font-semibold px-1">Scores in {group.name}</div>
-                <div className="mt-1 space-y-0.5">
-                  {groupScores.map((m: any) => (
-                    <div key={m.id} className="flex items-center justify-between px-1 text-xs">
-                      <span className="font-medium text-slate-700 truncate">{m.name}</span>
-                      <span className="whitespace-nowrap font-semibold text-slate-900">
-                        V {m.viability != null ? `${m.viability} / 3` : "—"}
-                        {" · "}
-                        F {m.feasibility != null ? `${m.feasibility} / 3` : "—"}
-                      </span>
-                    </div>
-                  ))}
-                  {groupScores.length === 0 && (
-                    <div className="px-1 text-xs text-slate-400">No participants in this group yet.</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="grid grid-cols-3 gap-2 text-center text-xs">
-            <div className="rounded bg-emerald-50/80 p-1.5 border border-emerald-100">
-              <div className="text-emerald-700 font-semibold">Desirability</div>
-              <div className="font-extrabold text-emerald-900 mt-0.5">
-                {s.desirability != null ? `${s.desirability} / 3` : "—"}
-              </div>
-            </div>
-            <div className="rounded bg-blue-50/80 p-1.5 border border-blue-100">
-              <div className="text-blue-700 font-semibold">Viability</div>
-              <div className="font-extrabold text-blue-900 mt-0.5">
-                {my.viability != null ? `${my.viability} / 3` : "—"}
-              </div>
-            </div>
-            <div className="rounded bg-amber-50/80 p-1.5 border border-amber-100">
-              <div className="text-amber-700 font-semibold">Feasibility</div>
-              <div className="font-extrabold text-amber-900 mt-0.5">
-                {my.feasibility != null ? `${my.feasibility} / 3` : "—"}
-              </div>
+        <div className="grid grid-cols-3 gap-2 text-center text-xs">
+          <div className="rounded bg-emerald-50/80 p-1.5 border border-emerald-100">
+            <div className="text-emerald-700 font-semibold">Desirability</div>
+            <div className="font-extrabold text-emerald-900 mt-0.5">
+              {s.desirability != null ? `${s.desirability} / 3` : "—"}
             </div>
           </div>
-        )}
+          <div className="rounded bg-blue-50/80 p-1.5 border border-blue-100">
+            <div className="text-blue-700 font-semibold">Viability</div>
+            <div className="font-extrabold text-blue-900 mt-0.5">
+              {my.viability != null ? `${my.viability} / 3` : "—"}
+            </div>
+          </div>
+          <div className="rounded bg-amber-50/80 p-1.5 border border-amber-100">
+            <div className="text-amber-700 font-semibold">Feasibility</div>
+            <div className="font-extrabold text-amber-900 mt-0.5">
+              {my.feasibility != null ? `${my.feasibility} / 3` : "—"}
+            </div>
+          </div>
+        </div>
 
         <div className="flex items-center justify-between text-xs text-emerald-600 font-semibold pt-1">
           <span>View 3-Tab breakdown</span>
@@ -241,7 +193,6 @@ function GroupsView({
                 finding={finding}
                 meId={meId}
                 onSelect={onSelectFinding}
-                group={selectedGroup}
               />
             ))}
           </div>
@@ -552,10 +503,7 @@ export default function ProjectResultViewer({
     return true;
   });
 
-  // Scored (for me) first, in creation order — there is no composite
-  // score to rank by. Unscored findings wait in "Awaiting scoring".
-  const scoredFindings = filteredFindings.filter((f) => myScored(f));
-  const awaitingFindings = filteredFindings.filter((f) => !myScored(f));
+  // (myScored above is still used by the hero "Scored by you" count.)
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -718,39 +666,14 @@ export default function ProjectResultViewer({
 
 
 
-            {/* Findings List — ranked (scored) first, awaiting scoring below */}
+            {/* Findings List — one flat list of all global findings,
+                scored or not, assigned to a group or not. No "Scored by
+                you" / "Awaiting scoring" split. */}
             {filteredFindings.length > 0 ? (
-              <div className="space-y-8">
-                {scoredFindings.length > 0 && (
-                  <section aria-labelledby="ranked-heading">
-                    <h2 id="ranked-heading" className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
-                      Scored by you ({scoredFindings.length})
-                    </h2>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Findings you fully scored in the workshop — Desirability scored from research, plus your own Viability and Feasibility scores.
-                    </p>
-                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                      {scoredFindings.map((finding) => (
-                        <FindingCard key={finding.id} finding={finding} meId={meId} onSelect={(f) => router.push(`/${slug}/findings/${f.id}`)} />
-                      ))}
-                    </div>
-                  </section>
-                )}
-                {awaitingFindings.length > 0 && (
-                  <section aria-labelledby="awaiting-heading">
-                    <h2 id="awaiting-heading" className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
-                      Awaiting Scoring ({awaitingFindings.length})
-                    </h2>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Listed only — no scores from you yet. Score these together with participants in the workshop.
-                    </p>
-                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                      {awaitingFindings.map((finding) => (
-                        <FindingCard key={finding.id} finding={finding} meId={meId} onSelect={(f) => router.push(`/${slug}/findings/${f.id}`)} />
-                      ))}
-                    </div>
-                  </section>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredFindings.map((finding) => (
+                  <FindingCard key={finding.id} finding={finding} meId={meId} onSelect={(f) => router.push(`/${slug}/findings/${f.id}`)} />
+                ))}
               </div>
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
