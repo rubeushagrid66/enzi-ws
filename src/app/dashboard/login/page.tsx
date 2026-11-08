@@ -38,11 +38,6 @@ export default function AdminLoginPage() {
     }
   };
 
-  const handleQuickDemo = (userEmail: string, userPass: string) => {
-    setEmail(userEmail);
-    setPassword(userPass);
-  };
-
   return (
     <main id="main-content" className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
@@ -84,7 +79,7 @@ export default function AdminLoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@enzi.io"
+                  placeholder="Email"
                   className="w-full pl-10 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50"
                 />
               </div>
@@ -123,34 +118,6 @@ export default function AdminLoginPage() {
               )}
             </button>
           </form>
-
-          {/* Quick Demo Credentials */}
-          <div className="mt-6 pt-6 border-t border-slate-100">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-500 text-center mb-3">
-              Quick 1-Click Demo Logins
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickDemo("admin@enzi.io", "admin123")}
-                className="p-2.5 rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/50 text-left transition"
-              >
-                <div className="text-xs font-bold text-slate-800">Lead Admin</div>
-                <div className="text-xs text-slate-500">admin@enzi.io</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  handleQuickDemo("facilitator@enzi.io", "facilitator123")
-                }
-                className="p-2.5 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 text-left transition"
-              >
-                <div className="text-xs font-bold text-slate-800">Facilitator</div>
-                <div className="text-xs text-slate-500">facilitator@enzi.io</div>
-              </button>
-            </div>
-          </div>
         </div>
 
         <div className="text-center mt-6">
