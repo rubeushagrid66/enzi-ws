@@ -342,7 +342,7 @@ export default function FindingDetailView({
               }`}
             >
               <Users2 className="hidden sm:block h-4 w-4" />
-              <span>Viability</span>
+              <span>Viability &amp; Feasibility</span>
               <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-800">
                 {my.viability != null ? `${my.viability} / 3` : "—"}
               </span>
@@ -357,7 +357,7 @@ export default function FindingDetailView({
               }`}
             >
               <Compass className="hidden sm:block h-4 w-4" />
-              <span>Feasibility</span>
+              <span>Impact vs Effort Matrix</span>
               <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800">
                 {my.feasibility != null ? `${my.feasibility} / 3` : "—"}
               </span>
