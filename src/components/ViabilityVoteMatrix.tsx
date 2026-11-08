@@ -17,10 +17,11 @@ import { normalizeFramework } from "@/lib/scoring";
  *   to that aspect — a participant's role must match the aspect's
  *   label (Tech scores Tech aspects, Product scores Product aspects,
  *   Business & Ops scores Business & Ops aspects). ADMIN /
- *   FACILITATOR have no label role and appear on every aspect, since
- *   they may score any of them. A Tech user therefore never appears
- *   under a Viability aspect labelled Business & Ops or Product, nor
- *   under a Feasibility aspect labelled anything but Tech.
+ *   FACILITATOR are not listed anywhere in this matrix: the admin
+ *   account is not a scorer, so it never appears under any aspect.
+ *   A Tech user therefore never appears under a Viability aspect
+ *   labelled Business & Ops or Product, nor under a Feasibility
+ *   aspect labelled anything but Tech.
  * - Editing: only in MY group, and only on aspects my role may score
  *   (label-role users: aspects whose label equals their role;
  *   FACILITATOR: any aspect, in their own group). Other groups are
@@ -166,16 +167,24 @@ export default function ViabilityVoteMatrix({
     votesByAspect[v.aspectId][v.participantId] = v;
   }
 
+  // Participants shown anywhere in this matrix (V/F chips, aspect
+  // rows): the admin / facilitator account is not a scorer and is
+  // never listed. Label-role participants are listed; the per-aspect
+  // filter below narrows that to the matching label.
+  const displayParticipants = orderedParticipants.filter(
+    (p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR"
+  );
+
   // Participants assigned to a given aspect: only those whose role
-  // matches the aspect's label, plus ADMIN / FACILITATOR (no label
-  // role — they may score any aspect). Everyone else is hidden from
-  // that aspect's rows entirely, so a Tech user never appears under a
-  // Business & Ops or Product aspect.
+  // matches the aspect's label. ADMIN / FACILITATOR are not listed
+  // anywhere here — the admin account is not a scorer and must not
+  // appear under any aspect, so a Tech user never appears under a
+  // Business & Ops or Product aspect, and the admin never appears
+  // under any of them.
   const participantsForAspect = (aspect: any) =>
     orderedParticipants.filter((p: any) => {
       const role = p.roleTitle;
-      if (isLabelRole(role)) return role === aspect.label;
-      return role === "ADMIN" || role === "FACILITATOR";
+      return isLabelRole(role) && role === aspect.label;
     });
 
   const canVote = Boolean(currentUser) && meId !== null;
@@ -378,9 +387,9 @@ export default function ViabilityVoteMatrix({
 
       {/* V/F per participant in the selected group (1–3, no composite).
           Switching groups shows that group's participants' own V/F. */}
-      {activeGroup && orderedParticipants.length > 0 && (
+      {activeGroup && displayParticipants.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2" aria-label="Viability and Feasibility scores per participant">
-          {orderedParticipants.map((p: any) => {
+          {displayParticipants.map((p: any) => {
             const entry = (finding.scores?.participantScores || []).find(
               (ps: any) => ps.participantId === p.id
             );
@@ -402,7 +411,7 @@ export default function ViabilityVoteMatrix({
         </div>
       )}
 
-      {activeGroup && orderedParticipants.length === 0 && (
+      {activeGroup && displayParticipants.length === 0 && (
         <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
           No participants in {activeGroup.name} yet — add participants in the
           Dashboard to see their scores here.

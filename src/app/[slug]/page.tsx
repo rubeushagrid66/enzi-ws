@@ -176,7 +176,7 @@ function GroupsView({
             {selectedGroup.name}
           </h2>
           <p className="mt-0.5 text-xs text-slate-500">
-            {(selectedGroup.participants || []).map((p: any) => p.name).join(", ") || "No participants yet"}
+            {(selectedGroup.participants || []).filter((p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR").map((p: any) => p.name).join(", ") || "No participants yet"}
             {" · "}
             {findings ? `${findings.length} finding${findings.length === 1 ? "" : "s"}` : "…"}
           </p>
@@ -221,7 +221,7 @@ function GroupsView({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {groups.map((g: any) => {
             const count = groupFindings[g.id]?.length;
-            const participants: any[] = g.participants || [];
+            const participants: any[] = (g.participants || []).filter((p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR");
             return (
               <button
                 key={g.id}

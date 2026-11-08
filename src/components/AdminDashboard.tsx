@@ -1483,7 +1483,7 @@ export default function AdminDashboard() {
                       {activeProject.groups.map((group: any) => (
                         <div key={group.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
                           <div className="mb-2 flex items-center justify-between gap-2">
-                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{group.name} ({group.participants?.length || 0} participants)</span>
+                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{group.name} ({(group.participants || []).filter((p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR").length} participants)</span>
                             {isAdmin && (
                             <span className="flex items-center gap-1">
                               <button type="button" onClick={() => setEditingGroup({ id: group.id, name: group.name })} aria-label={`Edit group ${group.name}`} className="btn-icon"><Edit2 className="h-4 w-4" /></button>
@@ -1492,7 +1492,7 @@ export default function AdminDashboard() {
                             )}
                           </div>
                           <div className="space-y-1.5 border-l-2 border-slate-200 pl-2">
-                            {group.participants?.map((p: any) => (
+                            {(group.participants || []).filter((p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR").map((p: any) => (
                               <div key={p.id} className="flex items-center justify-between gap-2 text-sm text-slate-700">
                                 <span className="min-w-0"><span className="font-medium">{p.name}</span>{p.roleTitle && <span className="text-xs text-slate-500"> — {p.roleTitle}</span>}</span>
                                 {isAdmin && (
@@ -1503,7 +1503,7 @@ export default function AdminDashboard() {
                                 )}
                               </div>
                             ))}
-                            {(!group.participants || group.participants.length === 0) && <p className="text-xs italic text-slate-500">No participants yet.</p>}
+                            {(!(group.participants || []).filter((p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR").length) && <p className="text-xs italic text-slate-500">No participants yet.</p>}
                           </div>
                         </div>
                       ))}
