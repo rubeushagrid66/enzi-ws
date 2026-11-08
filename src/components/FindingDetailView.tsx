@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import FeasibilityMatrix from "./FeasibilityMatrix";
 import ViabilityVoteMatrix from "./ViabilityVoteMatrix";
-import { scoresForParticipant, normalizeFramework, findingBoardPosition } from "@/lib/scoring";
+import { scoresForParticipant, normalizeFramework } from "@/lib/scoring";
 
 interface FindingDetailViewProps {
   finding: any;
@@ -114,11 +114,7 @@ export default function FindingDetailView({
         return { name: a.name, score: vote?.score != null ? Number(vote.score) : null };
       });
   const myViabilityAspects = myAspectScores("Viability");
-  const myFeasibilityAspects = myAspectScores("Feasibility");
   const myViabilityScored = myViabilityAspects.filter((a: any) => a.score != null);
-  const myFeasibilityScored = myFeasibilityAspects.filter((a: any) => a.score != null);
-  // Board position for this viewer (pinned, or computed from my D/V/F).
-  const boardPos = findingBoardPosition(localFinding, meId);
 
   // Your scores (D is shared from the workshop mappings; V and F are
   // the logged-in participant's own 1–3 values). Shown on every tab.
@@ -573,39 +569,6 @@ export default function FindingDetailView({
           {activeTab === "feasibility" && (
             <div className="space-y-6">
               {myScoresStrip}
-
-              {/* How YOUR Feasibility score is built */}
-              <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                <span className="font-bold">Your Feasibility score = 4 − average of your Effort aspect scores (1–3).</span>{" "}
-                {myFeasibilityScored.length > 0 ? (
-                  <>
-                    {myFeasibilityScored.map((a: any) => `${a.name} ${a.score}`).join("  ·  ")}
-                    {" → 4 − ("}
-                    {myFeasibilityScored.reduce((s: number, a: any) => s + (a.score ?? 0), 0)}
-                    {" / "}
-                    {myFeasibilityScored.length}
-                    {") = "}
-                    <span className="font-extrabold">{my.feasibility}</span>
-                  </>
-                ) : (
-                  "You have not scored a Feasibility aspect on this finding yet."
-                )}
-                {myFeasibilityAspects.length > myFeasibilityScored.length && (
-                  <> Unscored aspects are skipped, never counted as 0.</>
-                )}
-                <br />
-                <span className="text-amber-700">
-                  Board position ({boardPos.quadrant?.replace("_", " ") ?? "Not placed"}) is {boardPos.pinned ? "a manual pin — dragging the card does not change your Feasibility score" : "computed from your scores — dragging the card pins it to a manual position"}.
-                </span>
-              </div>
-
-              {my.feasibility == null && (
-                <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                  <span className="font-bold">Not yet scored by you.</span>{" "}
-                  Record votes on Feasibility-linked aspects (workshop Step 2) — your
-                  Feasibility score comes from those votes, not from the board position.
-                </div>
-              )}
 
               {/* Interactive 2x2 Feasibility Matrix */}
               <FeasibilityMatrix
