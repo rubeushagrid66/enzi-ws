@@ -137,7 +137,7 @@ export default function FindingDetailView({
 
       <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
         <div className="text-xs font-medium text-blue-700 uppercase tracking-wider">
-          Viability Score (yours)
+          Viability &amp; Feasibility Score (yours)
         </div>
         <div className="mt-1 text-3xl font-extrabold text-blue-900">
           {my.viability != null ? my.viability : "—"}
@@ -152,7 +152,7 @@ export default function FindingDetailView({
 
       <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
         <div className="text-xs font-medium text-amber-700 uppercase tracking-wider">
-          Feasibility Score (yours)
+          Matrix Score (yours)
         </div>
         <div className="mt-1 text-3xl font-extrabold text-amber-900">
           {my.feasibility != null ? my.feasibility : "—"}

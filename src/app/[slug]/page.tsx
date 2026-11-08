@@ -109,13 +109,13 @@ function FindingCard({
             </div>
           </div>
           <div className="rounded bg-blue-50/80 p-1.5 border border-blue-100">
-            <div className="text-blue-700 font-semibold">Viability</div>
+            <div className="text-blue-700 font-semibold">Viability &amp; Feasibility</div>
             <div className="font-extrabold text-blue-900 mt-0.5">
               {my.viability != null ? `${my.viability} / 3` : "—"}
             </div>
           </div>
           <div className="rounded bg-amber-50/80 p-1.5 border border-amber-100">
-            <div className="text-amber-700 font-semibold">Feasibility</div>
+            <div className="text-amber-700 font-semibold">Matrix</div>
             <div className="font-extrabold text-amber-900 mt-0.5">
               {my.feasibility != null ? `${my.feasibility} / 3` : "—"}
             </div>
