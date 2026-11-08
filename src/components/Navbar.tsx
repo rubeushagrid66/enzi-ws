@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LogIn, LogOut, Shield, LayoutDashboard } from "lucide-react";
+import { LogIn, LogOut, LayoutDashboard } from "lucide-react";
 
 interface User {
   id: string;
@@ -100,71 +100,55 @@ export default function Navbar({
 
         <div className="flex items-center gap-2 sm:gap-3">
           {user ? (
-            <Link
-              href="/dashboard"
-              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium shadow-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                dark
-                  ? "border-white/25 bg-transparent text-white hover:bg-white/10"
-                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
-              }`}
-            >
-              <LayoutDashboard
-                className={`h-4 w-4 ${dark ? "text-teal-300" : "text-emerald-600"}`}
-                aria-hidden="true"
-              />
-              <span className="hidden sm:inline">Dashboard</span>
-            </Link>
-          ) : (
-            <Link
-              href="/dashboard/login"
-              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium shadow-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                dark
-                  ? "border-white/25 bg-transparent text-white hover:bg-white/10"
-                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
-              }`}
-            >
-              <Shield
-                className={`h-4 w-4 ${dark ? "text-teal-300" : "text-emerald-600"}`}
-                aria-hidden="true"
-              />
-              <span className="hidden sm:inline">Admin Login</span>
-            </Link>
-          )}
-
-          {user ? (
-            <div
-              className={`flex items-center gap-2 pl-2 border-l ${
-                dark ? "border-white/10" : "border-slate-200"
-              }`}
-            >
-              <div className="text-right hidden sm:block">
-                <div
-                  className={`text-xs font-semibold ${
-                    dark ? "text-white" : "text-slate-800"
-                  }`}
-                >
-                  {user.name}
-                </div>
-                <div
-                  className={`text-xs font-mono ${
-                    dark ? "text-teal-300" : "text-emerald-600"
-                  }`}
-                >
-                  {user.role}
-                </div>
-              </div>
-              <button
-                onClick={handleLogout}
-                aria-label="Log out"
-                className={`rounded-lg p-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+            <>
+              <Link
+                href="/dashboard"
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium shadow-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
                   dark
-                    ? "text-white/60 hover:bg-white/10 hover:text-white"
-                    : "text-slate-500 hover:bg-rose-50 hover:text-rose-600"
+                    ? "border-white/25 bg-transparent text-white hover:bg-white/10"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
                 }`}
               >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </div>
+                <LayoutDashboard
+                  className={`h-4 w-4 ${dark ? "text-teal-300" : "text-emerald-600"}`}
+                  aria-hidden="true"
+                />
+                <span className="hidden sm:inline">Dashboard</span>
+              </Link>
+              <div
+                className={`flex items-center gap-2 pl-2 border-l ${
+                  dark ? "border-white/10" : "border-slate-200"
+                }`}
+              >
+                <div className="text-right hidden sm:block">
+                  <div
+                    className={`text-xs font-semibold ${
+                      dark ? "text-white" : "text-slate-800"
+                    }`}
+                  >
+                    {user.name}
+                  </div>
+                  <div
+                    className={`text-xs font-mono ${
+                      dark ? "text-teal-300" : "text-emerald-600"
+                    }`}
+                  >
+                    {user.role}
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  aria-label="Log out"
+                  className={`rounded-lg p-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                    dark
+                      ? "text-white/60 hover:bg-white/10 hover:text-white"
+                      : "text-slate-500 hover:bg-rose-50 hover:text-rose-600"
+                  }`}
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
+            </>
           ) : (
             <Link
               href="/dashboard/login"
@@ -175,7 +159,7 @@ export default function Navbar({
               }`}
             >
               <LogIn className="h-4 w-4" aria-hidden="true" />
-              <span className="hidden sm:inline">User login</span>
+              <span>Login</span>
             </Link>
           )}
         </div>
