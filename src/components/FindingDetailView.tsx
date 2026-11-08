@@ -136,27 +136,6 @@ export default function FindingDetailView({
 
   const scores = localFinding.scores || {};
   const desirability = scores.desirabilityDetails || {};
-  // The selected group's per-aspect Viability averages (for the
-  // breakdown note): each aspect's average across the group members who
-  // scored it. An aspect nobody in the group scored is null.
-  const groupViabilityAspects = (project.viabilityAspects || [])
-    .filter((a: any) => normalizeFramework(a.framework) === "Viability")
-    .map((a: any) => {
-      const vals = (localFinding.viabilityVotes || [])
-        .filter(
-          (v: any) =>
-            v.aspectId === a.id &&
-            groupParticipantIds.includes(v.participantId) &&
-            v.score != null
-        )
-        .map((v: any) => Number(v.score));
-      const avg =
-        vals.length > 0
-          ? Math.round((vals.reduce((s: number, x: number) => s + x, 0) / vals.length) * 10) / 10
-          : null;
-      return { name: a.name, score: avg };
-    });
-  const groupViabilityScored = groupViabilityAspects.filter((a: any) => a.score != null);
 
   // The score strip shows the SELECTED group's values for this finding
   // (D, V, F on the 1–3 scale). A group that did not select this
@@ -631,36 +610,6 @@ export default function FindingDetailView({
           {activeTab === "viability" && (
             <div className="space-y-6">
               {groupScoresStrip}
-
-              {/* How the selected group's Viability score is built */}
-              <div role="note" className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-                <span className="font-bold">{groupLabel}&apos;s Viability score = average of {groupLabel}&apos;s Viability aspect scores (1–3).</span>{" "}
-                {groupViabilityScored.length > 0 ? (
-                  <>
-                    {groupViabilityScored.map((a: any) => `${a.name} ${a.score}`).join("  ·  ")}
-                    {" → ("}
-                    {groupViabilityScored.reduce((s: number, a: any) => s + (a.score ?? 0), 0)}
-                    {" / "}
-                    {groupViabilityScored.length}
-                    {") = "}
-                    <span className="font-extrabold">{groupV != null ? groupV : "N/A"}</span>
-                  </>
-                ) : (
-                  `${groupLabel} has not scored a Viability aspect on this finding yet.`
-                )}
-                {groupViabilityAspects.length > groupViabilityScored.length && (
-                  <> Unscored aspects are skipped, never counted as 0.</>
-                )}
-              </div>
-
-              {groupV == null && (
-                <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                  <span className="font-bold">Not yet scored by {groupLabel}.</span>{" "}
-                  {isGroupAssigned
-                    ? `Score each aspect 1–3 below (workshop Step 2) with your Alasan per aspect — ${groupLabel}'s Viability score is the average of the Viability aspects its members scored.`
-                    : `${groupLabel} did not select this finding, so it has no scores here.`}
-                </div>
-              )}
 
               <ViabilityVoteMatrix
                 project={project}
