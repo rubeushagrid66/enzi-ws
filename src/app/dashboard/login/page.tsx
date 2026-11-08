@@ -29,7 +29,13 @@ export default function AdminLoginPage() {
         throw new Error(data.error || "Login failed");
       }
 
-      router.push("/dashboard");
+      // After login, go straight to the user's platform — Cash
+      // Management System or Digital Value Chain, depending on the
+      // project they are assigned to. Never the dashboard. ADMIN /
+      // FACILITATOR have no single project, so they land on the
+      // homepage where the Select Platform picker chooses one (the
+      // navbar still reaches the Dashboard).
+      router.push(data.user?.projectSlug ? `/${data.user.projectSlug}` : "/");
       router.refresh();
     } catch (err: any) {
       setError(err.message || "Something went wrong");

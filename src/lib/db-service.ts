@@ -1091,6 +1091,7 @@ export const dbService = {
         passwordHash: data.password_hash,
         role: data.role,
         isActive: data.is_active,
+        projectId: data.project_id ?? null,
       };
     }
 
@@ -1118,20 +1119,20 @@ export const dbService = {
     return { id: u.id, name: u.name, email: u.email, role: u.role, isActive: u.isActive, groupId: (u as any).groupId ?? null, projectId: (u as any).projectId ?? null, createdAt: u.createdAt };
   },
 
-  /** Fetch one project by id (id, name) or null when missing. */
+  /** Fetch one project by id (id, name, slug) or null when missing. */
   async getProjectById(id: string) {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase
         .from("projects")
-        .select("id, name")
+        .select("id, name, slug")
         .eq("id", id)
         .single();
       if (error || !data) return null;
-      return { id: data.id, name: data.name };
+      return { id: data.id, name: data.name, slug: data.slug };
     }
-    const p = await prisma.project.findUnique({ where: { id }, select: { id: true, name: true } });
+    const p = await prisma.project.findUnique({ where: { id }, select: { id: true, name: true, slug: true } });
     if (!p) return null;
-    return { id: p.id, name: p.name };
+    return { id: p.id, name: p.name, slug: p.slug };
   },
 
   /** Fetch one group by id (id, name, projectId) or null when missing. */

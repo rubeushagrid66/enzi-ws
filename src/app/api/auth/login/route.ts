@@ -27,6 +27,7 @@ export async function POST(request: Request) {
           passwordHash: "$2a$10$6qunsWXdTmBZudw39PHtE.x68Aqsr8caFU2jWGpwS.TggWhAfqU52",
           role: "ADMIN",
           isActive: true,
+          projectId: null,
         };
       } else if (isDefaultFacilitator) {
         user = {
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
           passwordHash: "$2a$10$Jtxy/dp7asEw5AAC45GstOY/0KW4O0x0AA7N6wtKriVmFVxtedeaa",
           role: "FACILITATOR",
           isActive: true,
+          projectId: null,
         };
       } else {
         return NextResponse.json(
@@ -64,11 +66,23 @@ export async function POST(request: Request) {
       );
     }
 
+    // Resolve the user's assigned project (label-role users) so the
+    // client can redirect to that project's viewer page after login.
+    // ADMIN / FACILITATOR have no single project (projectSlug null).
+    let projectSlug: string | null = null;
+    const projectId = (user as any).projectId ?? null;
+    if (projectId) {
+      const proj = await dbService.getProjectById(projectId).catch(() => null);
+      projectSlug = proj?.slug ?? null;
+    }
+
     const token = signToken({
       id: user.id,
       name: user.name,
       email: user.email,
       role: user.role as "ADMIN" | "FACILITATOR",
+      projectId,
+      projectSlug,
     });
 
     const response = NextResponse.json({
@@ -78,6 +92,8 @@ export async function POST(request: Request) {
         name: user.name,
         email: user.email,
         role: user.role,
+        projectId,
+        projectSlug,
       },
     });
 

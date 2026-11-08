@@ -59,6 +59,11 @@ export interface SessionUser {
   name: string;
   email: string;
   role: UserRole;
+  /** The user's assigned project (label-role users), if any. ADMIN /
+   *  FACILITATOR work across projects and have none. Drives the
+   *  post-login redirect to that project's viewer page. */
+  projectId?: string | null;
+  projectSlug?: string | null;
 }
 
 /**
@@ -126,6 +131,8 @@ export function verifyToken(token: string): SessionUser | null {
       name: payload.name,
       email: payload.email,
       role: payload.role,
+      projectId: payload.projectId ?? null,
+      projectSlug: payload.projectSlug ?? null,
     };
   } catch {
     return null;
