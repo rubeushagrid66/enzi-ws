@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LogIn, LogOut, Shield, LayoutDashboard } from "lucide-react";
 
@@ -20,6 +21,7 @@ export default function Navbar({
   projectName?: string;
   dark?: boolean;
 }) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -34,7 +36,10 @@ export default function Navbar({
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
-    window.location.reload();
+    // Smooth sign-out: go home and refresh server state instead of a
+    // full page reload.
+    router.push("/");
+    router.refresh();
   };
 
   return (

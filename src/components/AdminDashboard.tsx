@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import AdminSidebar from "@/components/AdminSidebar";
-import { type AdminTab } from "@/lib/admin-nav";
+import { type AdminTab, TAB_BY_SLUG } from "@/lib/admin-nav";
 import { Modal, ConfirmDialog } from "@/components/Modal";
 import { slugify } from "@/lib/slugify";
 import {
@@ -133,8 +133,16 @@ function AspectLabelBadge({ label }: { label?: string | null }) {
   );
 }
 
-export default function AdminDashboard({ initialTab }: { initialTab: AdminTab }) {
+// The dashboard shell lives in the (main) layout, so it stays mounted
+// across tab navigations — switching tabs swaps the content instantly
+// without a reload or a data refetch. The active tab is read from the
+// URL itself (/dashboard/<slug>).
+export default function AdminDashboard() {
   const router = useRouter();
+  const pathname = usePathname();
+  // The tab the URL points at (unknown slugs fall back to Findings;
+  // the [tab] page also redirects those server-side).
+  const urlTab: AdminTab = TAB_BY_SLUG[pathname.split("/").pop() || ""] ?? "findings";
   const [currentUser, setCurrentUser] = useState<any>(null);
   // Access rule: only ADMIN edits config. Everyone else can edit
   // Findings only; everything else in the admin area is view-only.
@@ -152,23 +160,23 @@ export default function AdminDashboard({ initialTab }: { initialTab: AdminTab })
   const [selectedProjectSlug, setSelectedProjectSlug] = useState<string>("");
   const [activeProject, setActiveProject] = useState<any>(null);
   // The active tab follows the URL (/dashboard/<slug>). It is set from
-  // initialTab on mount and re-synced whenever the URL tab changes
-  // (sidebar link, back/forward, or a pasted URL) — the component stays
-  // mounted across tab navigations, so the data loaded once on mount is
-  // NOT refetched when switching tabs.
-  const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
+  // the pathname on mount and re-synced whenever the URL changes
+  // (sidebar link, back/forward, or a pasted URL). Because this shell
+  // lives in the layout, it stays mounted across tab navigations, so the
+  // data loaded once on mount is NOT refetched when switching tabs.
+  const [activeTab, setActiveTab] = useState<AdminTab>(urlTab);
   useEffect(() => {
     // Users & Roles is admin-only: a non-admin landing on /dashboard/user
     // (e.g. via a pasted URL) falls back to Findings & Tags.
-    if (!loading && initialTab === "users" && !isAdmin) {
+    if (!loading && urlTab === "users" && !isAdmin) {
       setActiveTab("findings");
     } else {
-      setActiveTab(initialTab);
+      setActiveTab(urlTab);
     }
     setError(null);
     setSidebarOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialTab, loading, isAdmin]);
+  }, [pathname, loading, isAdmin]);
 
   // Confirm dialog
   const [confirm, setConfirm] = useState<{ title: string; message: string; confirmLabel?: string } | null>(null);
