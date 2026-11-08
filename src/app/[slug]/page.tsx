@@ -329,7 +329,6 @@ export default function ProjectResultViewer({
 
   // Filters & State
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedQuadrant, setSelectedQuadrant] = useState<string>("ALL");
   const [selectedTag, setSelectedTag] = useState<string>("ALL");
 
   // Groups view — separate from the global findings list. A group shows
@@ -530,10 +529,9 @@ export default function ProjectResultViewer({
     );
   };
 
-  // The tag filter offers Sumber only — the L2s under L1 "Sumber" in the
-  // global parameter tree (Wawancara, Survey). Legacy free-form tag values
-  // such as "Survey Riset" or "FGD Internal" are not offered.
-  const allTags = ["Sumber: Wawancara", "Sumber: Survey", "Sumber: Internal"];
+  // The tag filter offers Sumber only — Wawancara and Survey. Internal
+  // is not offered as a filter (it does not count toward Desirability).
+  const allTags = ["Sumber: Wawancara", "Sumber: Survey"];
 
   // Filter findings
   const filteredFindings = findings.filter((f) => {
@@ -542,10 +540,6 @@ export default function ProjectResultViewer({
       const matchTitle = f.title.toLowerCase().includes(q);
       const matchDesc = (f.description || "").toLowerCase().includes(q);
       if (!matchTitle && !matchDesc) return false;
-    }
-
-    if (selectedQuadrant !== "ALL") {
-      if (findingBoardPosition(f, meId).quadrant !== selectedQuadrant) return false;
     }
 
     if (selectedTag !== "ALL") {
@@ -700,21 +694,6 @@ export default function ProjectResultViewer({
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                {/* Quadrant filter */}
-                <label htmlFor="viewer-quadrant" className="sr-only">Filter by quadrant</label>
-                <select
-                  id="viewer-quadrant"
-                  value={selectedQuadrant}
-                  onChange={(e) => setSelectedQuadrant(e.target.value)}
-                  className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="ALL">All Quadrants</option>
-                  <option value="QUICK_WINS">Quick Wins</option>
-                  <option value="BIG_BETS">Big Bets</option>
-                  <option value="FILL_INS">Fill-ins</option>
-                  <option value="AVOID">Avoid</option>
-                </select>
-
                 {/* Sumber filter (Wawancara / Survey only) */}
                 {allTags.length > 0 && (
                   <>
@@ -780,12 +759,11 @@ export default function ProjectResultViewer({
                   No Findings Match Your Filters
                 </h3>
                 <p className="mt-1 text-xs text-slate-500">
-                  Try clearing the search text or reset the quadrant filter.
+                  Try clearing the search text or resetting the filters.
                 </p>
                 <button
                   onClick={() => {
                     setSearchQuery("");
-                    setSelectedQuadrant("ALL");
                     setSelectedTag("ALL");
                   }}
                   className="mt-4 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
