@@ -1,40 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { X, Plus, ExternalLink, FolderGit2, Layers, Users2, Sliders, Tag, Shield, ListChecks } from "lucide-react";
+import { ADMIN_NAV, type AdminTab } from "@/lib/admin-nav";
 
-export type AdminTab =
-  | "projects"
-  | "findings"
-  | "weights"
-  | "groups"
-  | "parameters"
-  | "aspects"
-  | "users";
-
-export interface AdminNavItem {
-  id: AdminTab;
-  label: string;
-  count?: number;
-  badge?: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-export const ADMIN_NAV: AdminNavItem[] = [
-  // "Global" = shared across all projects (findings pool, one D/V/F
-  // weighting, one L1–L3 tree, one user list). Groups, aspects and the
-  // projects themselves stay per-project.
-  { id: "findings", label: "Findings & Tags", icon: Tag, badge: "Global" },
-  { id: "weights", label: "Framework & Weighting", icon: Sliders, badge: "Global" },
-  { id: "groups", label: "Groups & Participants", icon: Users2 },
-  { id: "parameters", label: "L1–L3 Parameters", icon: Layers, badge: "Global" },
-  { id: "aspects", label: "Viability Aspects", icon: ListChecks },
-  { id: "projects", label: "All Projects", icon: FolderGit2 },
-  { id: "users", label: "Users & Roles", icon: Shield, badge: "Global" },
-];
+// Icons live here (client-side); the nav data (id/label/href/badge)
+// lives in @/lib/admin-nav so the server-side [tab] page can use it too.
+const NAV_ICONS: Record<AdminTab, React.ComponentType<{ className?: string }>> = {
+  findings: Tag,
+  weights: Sliders,
+  groups: Users2,
+  parameters: Layers,
+  aspects: ListChecks,
+  projects: FolderGit2,
+  users: Shield,
+};
 
 export default function AdminSidebar({
   activeTab,
-  onSelect,
   projects,
   selectedProjectSlug,
   onSelectProject,
@@ -46,7 +29,6 @@ export default function AdminSidebar({
   onClose,
 }: {
   activeTab: AdminTab;
-  onSelect: (tab: AdminTab) => void;
   projects: any[];
   selectedProjectSlug: string;
   onSelectProject: (slug: string) => void;
@@ -119,14 +101,14 @@ export default function AdminSidebar({
         </p>
         <ul className="space-y-1">
           {items.map((item) => {
-            const Icon = item.icon;
+            const Icon = NAV_ICONS[item.id];
             const active = activeTab === item.id;
             const count = counts[item.id];
             return (
               <li key={item.id}>
-                <button
-                  type="button"
-                  onClick={() => onSelect(item.id)}
+                <Link
+                  href={item.href}
+                  onClick={onClose}
                   aria-current={active ? "page" : undefined}
                   className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
                     active
@@ -146,7 +128,7 @@ export default function AdminSidebar({
                       {count}
                     </span>
                   )}
-                </button>
+                </Link>
               </li>
             );
           })}
