@@ -26,7 +26,21 @@ export default function FindingDetailPage({
         throw new Error("Project not found");
       }
       const data = await res.json();
-      setProject(data.project);
+      let proj = data.project;
+      // Cross-project finding: when this finding is not in the slug's
+      // project (it belongs to the other project but is assigned to one
+      // of this project's groups), load it with D/V/F computed in this
+      // project's context, so it opens and scores here like a local one.
+      if (proj && !(proj.findings || []).some((f: any) => f.id === id)) {
+        const fRes = await fetch(`/api/projects/${slug}/findings/${id}`, { cache: "no-store" });
+        if (fRes.ok) {
+          const fData = await fRes.json();
+          if (fData.finding) {
+            proj = { ...proj, findings: [...(proj.findings || []), fData.finding] };
+          }
+        }
+      }
+      setProject(proj);
 
       const userRes = await fetch("/api/auth/me");
       if (userRes.ok) {

@@ -38,6 +38,22 @@ export function requireAdmin(session: SessionUser | null): NextResponse | null {
   return null;
 }
 
+/**
+ * Admin-or-facilitator gate: finding → group assignment is done by the
+ * people running the workshop (admin and facilitator), not by the
+ * participants scoring in it. Returns 401 logged out, 403 for any
+ * other role, null when the caller may assign.
+ */
+export function requireAdminOrFacilitator(session: SessionUser | null): NextResponse | null {
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (session.role !== "ADMIN" && session.role !== "FACILITATOR") {
+    return NextResponse.json({ error: "Admin or facilitator access required" }, { status: 403 });
+  }
+  return null;
+}
+
 export interface SessionUser {
   id: string;
   name: string;

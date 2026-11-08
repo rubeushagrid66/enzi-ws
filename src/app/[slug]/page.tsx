@@ -9,6 +9,8 @@ import {
   Target,
   ArrowRight,
   Plus,
+  Users,
+  ArrowLeft,
 } from "lucide-react";
 
 import { scoresForParticipant, findingBoardPosition } from "@/lib/scoring";
@@ -127,6 +129,131 @@ function FindingCard({
   );
 }
 
+/** Groups view — separate from the global findings list. Lists the
+ *  project's groups; opening a group shows its assigned findings as the
+ *  same cards with D/V/F. A finding assigned to this group shows here
+ *  even when its home project is the other one. */
+function GroupsView({
+  project,
+  slug,
+  meId,
+  selectedGroupId,
+  groupFindings,
+  groupFindingsLoading,
+  onOpenGroup,
+  onBackToGroups,
+  onSelectFinding,
+}: {
+  project: any;
+  slug: string;
+  meId: string | null;
+  selectedGroupId: string | null;
+  groupFindings: Record<string, any[]>;
+  groupFindingsLoading: boolean;
+  onOpenGroup: (groupId: string) => void;
+  onBackToGroups: () => void;
+  onSelectFinding: (f: any) => void;
+}) {
+  const groups: any[] = project.groups || [];
+  const selectedGroup = groups.find((g: any) => g.id === selectedGroupId) || null;
+
+  if (selectedGroup) {
+    const findings: any[] = groupFindings[selectedGroup.id];
+    const isLoading = findings === undefined && groupFindingsLoading;
+    return (
+      <div className="space-y-6">
+        <div>
+          <button
+            type="button"
+            onClick={onBackToGroups}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-emerald-700 transition"
+          >
+            <ArrowLeft className="h-4 w-4" /> All groups
+          </button>
+          <h2 className="mt-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
+            {selectedGroup.name}
+          </h2>
+          <p className="mt-0.5 text-xs text-slate-500">
+            {(selectedGroup.participants || []).map((p: any) => p.name).join(", ") || "No participants yet"}
+            {" · "}
+            {findings ? `${findings.length} finding${findings.length === 1 ? "" : "s"}` : "…"}
+          </p>
+        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+          </div>
+        ) : findings && findings.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {findings.map((finding: any) => (
+              <FindingCard key={finding.id} finding={finding} meId={meId} onSelect={onSelectFinding} />
+            ))}
+          </div>
+        ) : (
+          <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+            <Users className="h-10 w-10 text-slate-300 mx-auto" />
+            <h3 className="mt-3 text-base font-bold text-slate-800">No findings in this group yet</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              An admin or facilitator assigns findings to this group from the dashboard (Findings &amp; Tags).
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">Groups</h2>
+        <p className="mt-0.5 text-xs text-slate-500">
+          Each group holds the findings assigned to it, with their D, V and F. Open a group to see its findings.
+        </p>
+      </div>
+      {groups.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {groups.map((g: any) => {
+            const count = groupFindings[g.id]?.length;
+            const participants: any[] = g.participants || [];
+            return (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => onOpenGroup(g.id)}
+                className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-xs transition hover:border-emerald-300 hover:shadow-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+                    <Users className="h-4.5 w-4.5" />
+                  </span>
+                  <span className="text-base font-bold text-slate-900">{g.name}</span>
+                </div>
+                <p className="mt-3 text-xs text-slate-500">
+                  {participants.length > 0
+                    ? participants.map((p: any) => p.name).join(", ")
+                    : "No participants yet"}
+                </p>
+                <p className="mt-2 text-xs font-semibold text-emerald-700">
+                  {count != null ? `${count} finding${count === 1 ? "" : "s"}` : "Loading findings…"}
+                </p>
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
+                  View findings <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+          <Users className="h-10 w-10 text-slate-300 mx-auto" />
+          <h3 className="mt-3 text-base font-bold text-slate-800">No groups yet</h3>
+          <p className="mt-1 text-xs text-slate-500">Create a group in the dashboard (Groups &amp; Participants tab).</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Registered parameter values — the only options offered for Sumber and
 // Platform in the Add Finding form, same as the dashboard's finding form.
 const SUMBER_OPTIONS = ["Wawancara", "Survey", "Internal"];
@@ -148,6 +275,47 @@ export default function ProjectResultViewer({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedQuadrant, setSelectedQuadrant] = useState<string>("ALL");
   const [selectedTag, setSelectedTag] = useState<string>("ALL");
+
+  // Groups view — separate from the global findings list. A group shows
+  // the findings assigned to it (admin + facilitator assign them in the
+  // dashboard), as the same cards with D/V/F. `groupFindings` is loaded
+  // per group from the group-findings endpoint, so a finding from the
+  // other project assigned to this group shows here too.
+  const [view, setView] = useState<"findings" | "groups">("findings");
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [groupFindings, setGroupFindings] = useState<Record<string, any[]>>({});
+  const [groupFindingsLoading, setGroupFindingsLoading] = useState(false);
+
+  const loadGroupFindings = async (groupId: string) => {
+    setGroupFindingsLoading(true);
+    try {
+      const res = await fetch(`/api/projects/${slug}/groups/${groupId}/findings`, { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to load group findings");
+      const data = await res.json();
+      setGroupFindings((prev) => ({ ...prev, [groupId]: data.findings || [] }));
+    } catch {
+      setGroupFindings((prev) => ({ ...prev, [groupId]: [] }));
+    } finally {
+      setGroupFindingsLoading(false);
+    }
+  };
+
+  const openGroup = (groupId: string) => {
+    setSelectedGroupId(groupId);
+    if (!groupFindings[groupId]) loadGroupFindings(groupId);
+  };
+
+  // When the Groups view opens, load every group's findings in parallel
+  // so the tiles show accurate counts and opening a group is instant.
+  // (The endpoint includes findings from the other project assigned to
+  // this group, which the project's own findings list would miss.)
+  useEffect(() => {
+    if (view !== "groups" || !project) return;
+    for (const g of project.groups || []) {
+      loadGroupFindings(g.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, project?.slug]);
 
   // Add Finding — same fields as the dashboard's finding modal. Creates the
   // finding in THIS project; open to any logged-in user, like editing
@@ -420,6 +588,44 @@ export default function ProjectResultViewer({
 
       {/* Main Content Area */}
       <main id="main-content" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-10 flex-1 w-full">
+        {/* Findings / Groups — the group view is separate from the
+            global findings list. Inside a group are the findings
+            assigned to it, as the same cards with D/V/F. */}
+        <div className="mb-6 flex items-center gap-2" role="tablist" aria-label="Findings or groups">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === "findings"}
+            onClick={() => { setView("findings"); setSelectedGroupId(null); }}
+            className={`rounded-full px-4 py-2 text-xs font-semibold transition ${view === "findings" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+          >
+            Findings
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === "groups"}
+            onClick={() => { setView("groups"); setSelectedGroupId(null); }}
+            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition ${view === "groups" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+          >
+            <Users className="h-3.5 w-3.5" /> Groups
+          </button>
+        </div>
+
+        {view === "groups" ? (
+          <GroupsView
+            project={project}
+            slug={slug}
+            meId={meId}
+            selectedGroupId={selectedGroupId}
+            groupFindings={groupFindings}
+            groupFindingsLoading={groupFindingsLoading}
+            onOpenGroup={openGroup}
+            onBackToGroups={() => setSelectedGroupId(null)}
+            onSelectFinding={(f: any) => router.push(`/${slug}/findings/${f.id}`)}
+          />
+        ) : (
+        <>
         {/* FINDINGS DIRECTORY */}
           <div className="space-y-6">
             {/* Filter and Search Bar */}
@@ -533,6 +739,8 @@ export default function ProjectResultViewer({
               </div>
             )}
           </div>
+        </>
+        )}
       </main>
 
       {/* Credit footer — same text as the homepage, styled for the white page */}

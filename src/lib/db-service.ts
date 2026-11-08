@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from "./supabase";
 import { prisma } from "./prisma";
+import { Prisma } from "@prisma/client";
 import { slugify } from "./slugify";
 import { USER_ROLES, isLabelRole } from "./auth";
 
@@ -211,6 +212,11 @@ export const dbService = {
       const l1All = l1Res.data || [];
       const l1Global = l1All.filter((r: any) => !r.project_id);
       const l1Rows = l1Global.length > 0 ? l1Global : l1All.filter((r: any) => r.project_id === project.id);
+      // Group assignment (Step 10): which groups each finding is
+      // assigned to. A missing table reads as no assignment.
+      const groupMap = await dbService.getFindingsGroupMap(
+        (findingsRes.data || []).map((f: any) => f.id)
+      );
 
       return {
         id: project.id,
@@ -274,6 +280,9 @@ export const dbService = {
           // means not entered yet — D is unscored, never 0).
           interviewMentions: f.interview_mentions != null ? Number(f.interview_mentions) : null,
           surveyMentions: f.survey_mentions != null ? Number(f.survey_mentions) : null,
+          // Group assignment (Step 10): the groups this finding is
+          // assigned to; [] when unassigned.
+          groupIds: groupMap[f.id] || [],
           parameterValues: (f.parameterValues || []).map((pv: any) => ({
             id: pv.id,
             l3Id: pv.l3_id,
@@ -346,6 +355,14 @@ export const dbService = {
     ]);
     if (globalWeights) (project as any).frameworkWeights = globalWeights;
     if (globalL1.length > 0) (project as any).parametersL1 = globalL1;
+    // Group assignment (Step 10) on each finding; [] when unassigned.
+    const prismaGroupMap = await dbService.getFindingsGroupMap(
+      (project.findings || []).map((f: any) => f.id)
+    );
+    (project as any).findings = (project.findings || []).map((f: any) => ({
+      ...f,
+      groupIds: prismaGroupMap[f.id] || [],
+    }));
     return project;
   },
 
@@ -446,6 +463,9 @@ export const dbService = {
         supabase.from("projects").select("id, slug, name"),
       ]);
       const byId = new Map((projectsRes.data || []).map((p: any) => [p.id, p]));
+      const allGroupMap = await dbService.getFindingsGroupMap(
+        (findingsRes.data || []).map((f: any) => f.id)
+      );
       return (findingsRes.data || []).map((f: any) => {
         const proj = f.project_id ? byId.get(f.project_id) : null;
         return {
@@ -460,6 +480,7 @@ export const dbService = {
           // means not entered yet).
           interviewMentions: f.interview_mentions != null ? Number(f.interview_mentions) : null,
           surveyMentions: f.survey_mentions != null ? Number(f.survey_mentions) : null,
+          groupIds: allGroupMap[f.id] || [],
           projectId: f.project_id ?? null,
           projectSlug: proj?.slug ?? null,
           projectName: proj?.name ?? null,
@@ -470,6 +491,7 @@ export const dbService = {
       include: { project: { select: { slug: true, name: true } } },
       orderBy: { createdAt: "asc" },
     });
+    const prismaAllGroupMap = await dbService.getFindingsGroupMap(rows.map((f: any) => f.id));
     return rows.map((f: any) => ({
       id: f.id,
       title: f.title,
@@ -480,6 +502,7 @@ export const dbService = {
       feasibilityQuadrant: f.feasibilityQuadrant,
       interviewMentions: f.interviewMentions ?? null,
       surveyMentions: f.surveyMentions ?? null,
+      groupIds: prismaAllGroupMap[f.id] || [],
       projectId: f.projectId ?? null,
       projectSlug: f.project?.slug ?? null,
       projectName: f.project?.name ?? null,
@@ -494,6 +517,222 @@ export const dbService = {
       return data;
     }
     return prisma.finding.findUnique({ where: { id } });
+  },
+
+  // ── Finding → group assignment (Step 10 SQL) ─────────────────────────
+  // A finding can be assigned to one or more groups, in its own project
+  // or in the other project — assignment is always to a group, never
+  // directly to a project. The assignment puts the finding inside that
+  // group's view and scopes scoring to that group's participants. A
+  // missing finding_groups table (Step 10 not run yet) reads as "no
+  // assignment", so scoring stays open as before.
+
+  /** Group ids a finding is assigned to (empty when unassigned). */
+  async getFindingGroupIds(findingId: string): Promise<string[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("finding_groups")
+        .select("group_id")
+        .eq("finding_id", findingId);
+      if (error || !data) return [];
+      return (data as any[]).map((r: any) => r.group_id).filter(Boolean);
+    }
+    try {
+      const rows = await prisma.$queryRaw<Array<{ group_id: string }>>`
+        SELECT group_id FROM finding_groups WHERE finding_id = ${findingId}
+      `;
+      return rows.map((r: any) => r.group_id).filter(Boolean);
+    } catch {
+      return [];
+    }
+  },
+
+  /** Group ids for many findings at once: { findingId: [groupId...] }. */
+  async getFindingsGroupMap(findingIds: string[]): Promise<Record<string, string[]>> {
+    const map: Record<string, string[]> = {};
+    if (!findingIds || findingIds.length === 0) return map;
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("finding_groups")
+        .select("finding_id, group_id")
+        .in("finding_id", findingIds);
+      if (error || !data) return map;
+      for (const r of data as any[]) {
+        if (!r.finding_id || !r.group_id) continue;
+        (map[r.finding_id] ||= []).push(r.group_id);
+      }
+      return map;
+    }
+    try {
+      const rows = await prisma.$queryRaw<Array<{ finding_id: string; group_id: string }>>`
+        SELECT finding_id, group_id FROM finding_groups WHERE finding_id IN (${Prisma.join(findingIds)})
+      `;
+      for (const r of rows) {
+        if (!r.finding_id || !r.group_id) continue;
+        (map[r.finding_id] ||= []).push(r.group_id);
+      }
+    } catch {
+      // No finding_groups table yet (Step 10 not run) — no assignments.
+    }
+    return map;
+  },
+
+  /** Finding ids assigned to one group. */
+  async getGroupFindingIds(groupId: string): Promise<string[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("finding_groups")
+        .select("finding_id")
+        .eq("group_id", groupId);
+      if (error || !data) return [];
+      return (data as any[]).map((r: any) => r.finding_id).filter(Boolean);
+    }
+    try {
+      const rows = await prisma.$queryRaw<Array<{ finding_id: string }>>`
+        SELECT finding_id FROM finding_groups WHERE group_id = ${groupId}
+      `;
+      return rows.map((r: any) => r.finding_id).filter(Boolean);
+    } catch {
+      return [];
+    }
+  },
+
+  /** Replace a finding's group assignment (admin + facilitator only at
+   *  the route). Unknown group ids are dropped, so a deleted group
+   *  never leaves a dangling assignment behind. */
+  async setFindingGroups(findingId: string, groupIds: string[]): Promise<string[]> {
+    const clean = Array.from(new Set((groupIds || []).filter((g) => typeof g === "string" && g.trim() !== "")));
+    if (isSupabaseConfigured && supabase) {
+      // Only keep groups that exist (any project — assignment is
+      // cross-project by design).
+      let valid = clean;
+      if (clean.length > 0) {
+        const { data } = await supabase.from("groups").select("id").in("id", clean);
+        const existing = new Set(((data as any[]) || []).map((g: any) => g.id));
+        valid = clean.filter((g) => existing.has(g));
+      }
+      const del = await supabase.from("finding_groups").delete().eq("finding_id", findingId);
+      if (del.error) throw del.error;
+      if (valid.length > 0) {
+        const ins = await supabase
+          .from("finding_groups")
+          .insert(valid.map((group_id) => ({ finding_id: findingId, group_id })));
+        if (ins.error) throw ins.error;
+      }
+      return valid;
+    }
+    // Prisma branch (local dev): raw SQL against the finding_groups
+    // table; a missing table means Step 10 has not been created here.
+    await prisma.$executeRaw`DELETE FROM finding_groups WHERE finding_id = ${findingId}`;
+    for (const gid of clean) {
+      const exists = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "Group" WHERE id = ${gid}
+      `;
+      if (exists.length === 0) continue;
+      await prisma.$executeRaw`
+        INSERT INTO finding_groups (finding_id, group_id) VALUES (${findingId}, ${gid})
+        ON CONFLICT (finding_id, group_id) DO NOTHING
+      `;
+    }
+    return this.getFindingGroupIds(findingId);
+  },
+
+  /** Every group in every project, with its project — for the
+   *  dashboard's finding → group assignment picker (assignment is
+   *  cross-project). */
+  async getAllGroups(): Promise<any[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("groups")
+        .select("id, name, project_id, projects(id, slug, name)")
+        .order("created_at", { ascending: true });
+      if (error || !data) return [];
+      return (data as any[]).map((g: any) => ({
+        id: g.id,
+        name: g.name,
+        projectId: g.project_id,
+        projectSlug: g.projects?.slug ?? null,
+        projectName: g.projects?.name ?? null,
+      }));
+    }
+    const rows = await prisma.group.findMany({
+      include: { project: { select: { slug: true, name: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+    return rows.map((g: any) => ({
+      id: g.id,
+      name: g.name,
+      projectId: g.projectId,
+      projectSlug: g.project?.slug ?? null,
+      projectName: g.project?.name ?? null,
+    }));
+  },
+
+  /** Full findings (mapped like getProjectBySlug's findings, with votes
+   *  and group assignment) for a list of ids — used by the group view,
+   *  which can show findings from any project. Empty list → []. */
+  async getFindingsByIds(ids: string[]): Promise<any[]> {
+    if (!ids || ids.length === 0) return [];
+    const groupMap = await dbService.getFindingsGroupMap(ids);
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("findings")
+        .select("*, viabilityVotes:viability_votes(*)")
+        .in("id", ids);
+      if (error || !data) return [];
+      return (data as any[]).map((f: any) => ({
+        id: f.id,
+        title: f.title,
+        description: f.description,
+        tags: typeof f.tags === "string" ? f.tags : JSON.stringify(f.tags || []),
+        feasibilityX: f.feasibility_x != null ? Number(f.feasibility_x) : null,
+        feasibilityY: f.feasibility_y != null ? Number(f.feasibility_y) : null,
+        feasibilityQuadrant: f.feasibility_quadrant,
+        feasibilityImpact: f.feasibility_impact,
+        feasibilityEffort: f.feasibility_effort,
+        feasibilityManual: f.feasibility_manual === true,
+        interviewMentions: f.interview_mentions != null ? Number(f.interview_mentions) : null,
+        surveyMentions: f.survey_mentions != null ? Number(f.survey_mentions) : null,
+        groupIds: groupMap[f.id] || [],
+        projectId: f.project_id ?? null,
+        viabilityVotes: (f.viabilityVotes || []).map((v: any) => ({
+          id: v.id,
+          participantId: v.participant_id,
+          aspectId: v.aspect_id,
+          isValidated: v.is_validated,
+          score: v.score != null ? Number(v.score) : null,
+          reason: v.reason ?? null,
+        })),
+      }));
+    }
+    const rows = await prisma.finding.findMany({
+      where: { id: { in: ids } },
+      include: { viabilityVotes: true },
+    });
+    return rows.map((f: any) => ({
+      id: f.id,
+      title: f.title,
+      description: f.description,
+      tags: f.tags,
+      feasibilityX: f.feasibilityX,
+      feasibilityY: f.feasibilityY,
+      feasibilityQuadrant: f.feasibilityQuadrant,
+      feasibilityImpact: f.feasibilityImpact,
+      feasibilityEffort: f.feasibilityEffort,
+      feasibilityManual: f.feasibilityManual ?? false,
+      interviewMentions: f.interviewMentions ?? null,
+      surveyMentions: f.surveyMentions ?? null,
+      groupIds: groupMap[f.id] || [],
+      projectId: f.projectId ?? null,
+      viabilityVotes: (f.viabilityVotes || []).map((v: any) => ({
+        id: v.id,
+        participantId: v.participantId,
+        aspectId: v.aspectId,
+        isValidated: v.isValidated,
+        score: v.score != null ? Number(v.score) : null,
+        reason: v.reason ?? null,
+      })),
+    }));
   },
 
   /**

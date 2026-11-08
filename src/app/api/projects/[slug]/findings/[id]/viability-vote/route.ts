@@ -94,6 +94,33 @@ export async function POST(
       }
     }
 
+    // Group-scoped scoring: a finding assigned to one or more groups
+    // may only be scored by participants in those groups. The check is
+    // on the voter (the participant being scored for), so an admin
+    // editing another participant's score is judged by that
+    // participant's group, not the admin's own. A finding with no group
+    // assignment yet stays open to anyone in the project, as before.
+    const assignedGroupIds = await dbService.getFindingGroupIds(findingId);
+    if (assignedGroupIds.length > 0) {
+      let voterGroupId: string | null = null;
+      if (voterId === me.id) {
+        voterGroupId = (me as any).groupId ?? null;
+      } else {
+        for (const g of project.groups || []) {
+          if ((g.participants || []).some((p: any) => p.id === voterId)) {
+            voterGroupId = g.id;
+            break;
+          }
+        }
+      }
+      if (!voterGroupId || !assignedGroupIds.includes(voterGroupId)) {
+        return NextResponse.json(
+          { error: "This finding is assigned to other groups — only participants in its assigned groups can score it" },
+          { status: 403 }
+        );
+      }
+    }
+
     // A reason-only update (score omitted) keeps the existing score;
     // an explicit null clears the vote.
     let effectiveScore = score;

@@ -16,6 +16,7 @@ import {
   Sparkles,
   Menu,
   Copy,
+  Users,
 } from "lucide-react";
 
 async function apiCall(url: string, options?: RequestInit) {
@@ -137,6 +138,9 @@ export default function AdminDashboardPage() {
   // Access rule: only ADMIN edits config. Everyone else can edit
   // Findings only; everything else in the admin area is view-only.
   const isAdmin = currentUser?.role === "ADMIN";
+  // Finding → group assignment is admin + facilitator (not the
+  // participants scoring in the workshop).
+  const canAssignGroups = isAdmin || currentUser?.role === "FACILITATOR";
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -186,6 +190,14 @@ export default function AdminDashboardPage() {
   const [poolFindings, setPoolFindings] = useState<any[]>([]);
   const [globalParams, setGlobalParams] = useState<any[]>([]);
   const [globalSetupNote, setGlobalSetupNote] = useState<string | null>(null);
+
+  // Finding → group assignment (admin + facilitator, dashboard only).
+  // All groups across all projects — assignment is cross-project, so
+  // the picker lists every group with its project.
+  const [allGroups, setAllGroups] = useState<any[]>([]);
+  const [assignFinding, setAssignFinding] = useState<any | null>(null);
+  const [assignSelected, setAssignSelected] = useState<string[]>([]);
+  const [assignSaving, setAssignSaving] = useState(false);
 
   // Finding form (create + edit)
   const [findingModalOpen, setFindingModalOpen] = useState(false);
@@ -254,10 +266,11 @@ export default function AdminDashboardPage() {
   // by all projects and do not depend on the selected project.
   const loadGlobalData = async () => {
     try {
-      const [w, p, f] = await Promise.all([
+      const [w, p, f, g] = await Promise.all([
         apiCall("/api/global/weights"),
         apiCall("/api/global/parameters"),
         apiCall("/api/global/findings"),
+        apiCall("/api/global/groups"),
       ]);
       if (w.weights) {
         setWeightInputs(w.weights.map((x: any) => ({ name: x.name, weight: x.weight })));
@@ -265,6 +278,7 @@ export default function AdminDashboardPage() {
       }
       setGlobalParams(p.parameters || []);
       setPoolFindings(f.findings || []);
+      setAllGroups(g.groups || []);
       // Surface the "run the SQL" note once, from whichever endpoint
       // reported it (weights and parameters share the same setup).
       setGlobalSetupNote(w.note || p.note || null);
@@ -613,6 +627,43 @@ export default function AdminDashboardPage() {
         setError(err.message || "Failed to delete finding");
       }
     });
+  };
+
+  /** Finding → group assignment (admin + facilitator, dashboard only).
+   *  Opens the picker with the finding's current groups checked. The
+   *  finding is loaded by id, so a pool finding or a finding from the
+   *  other project can be assigned from any project's dashboard. */
+  const openAssignGroups = (f: any) => {
+    setAssignFinding(f);
+    setAssignSelected(Array.isArray(f.groupIds) ? [...f.groupIds] : []);
+  };
+  const toggleAssignGroup = (groupId: string) => {
+    setAssignSelected((prev) =>
+      prev.includes(groupId) ? prev.filter((g) => g !== groupId) : [...prev, groupId]
+    );
+  };
+  const saveAssignGroups = async () => {
+    if (!assignFinding) return;
+    setAssignSaving(true);
+    try {
+      setError(null);
+      const slug = assignFinding.projectSlug || selectedProjectSlug;
+      if (!slug) {
+        setError("Select a project in the sidebar first, then assign this finding.");
+        return;
+      }
+      await apiCall(`/api/projects/${slug}/findings/${assignFinding.id}/groups`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ groupIds: assignSelected }),
+      });
+      setAssignFinding(null);
+      await loadGlobalData();
+    } catch (err: any) {
+      setError(err.message || "Failed to assign finding to groups");
+    } finally {
+      setAssignSaving(false);
+    }
   };
 
   /** Copy a pool finding into the selected project. The copy is a new,
@@ -1108,15 +1159,17 @@ export default function AdminDashboardPage() {
                   <table className="w-full min-w-[760px] border-collapse text-left text-sm">
                     <caption className="sr-only">All findings: the shared pool and every project's findings</caption>
                     <colgroup>
-                      <col className="w-[38%]" />
-                      <col className="w-[34%]" />
-                      <col className="w-[16%]" />
+                      <col className="w-[30%]" />
+                      <col className="w-[26%]" />
+                      <col className="w-[18%]" />
                       <col className="w-[12%]" />
+                      <col className="w-[14%]" />
                     </colgroup>
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
                         <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Finding Title</th>
                         <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tags</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Groups</th>
                         <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Origin</th>
                         <th scope="col" className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Actions</th>
                       </tr>
@@ -1141,6 +1194,29 @@ export default function AdminDashboardPage() {
                                   ))}
                                 </div>
                               </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-wrap gap-1">
+                                  {Array.isArray(f.groupIds) && f.groupIds.length > 0 ? (
+                                    f.groupIds.map((gid: string) => {
+                                      const g = allGroups.find((x: any) => x.id === gid);
+                                      const short =
+                                        g?.projectSlug === "cash-management-system"
+                                          ? "CMS"
+                                          : g?.projectSlug === "digital-value-chain"
+                                            ? "DVC"
+                                            : g?.projectName || "";
+                                      return (
+                                        <span key={gid} className="whitespace-nowrap rounded-md bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-700">
+                                          {short ? `${short} · ` : ""}
+                                          {g?.name || gid}
+                                        </span>
+                                      );
+                                    })
+                                  ) : (
+                                    <span className="text-xs font-medium text-slate-400">—</span>
+                                  )}
+                                </div>
+                              </td>
                               <td className="whitespace-nowrap px-4 py-3">
                                 {isPool ? (
                                   <span className="whitespace-nowrap rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">Pool</span>
@@ -1150,6 +1226,17 @@ export default function AdminDashboardPage() {
                               </td>
                               <td className="whitespace-nowrap px-4 py-3 text-right">
                                 <div className="flex items-center justify-end gap-1">
+                                  {canAssignGroups && (
+                                    <button
+                                      type="button"
+                                      onClick={() => openAssignGroups(f)}
+                                      aria-label={`Assign ${f.title} to groups`}
+                                      title="Assign to groups"
+                                      className="btn-icon"
+                                    >
+                                      <Users className="h-4 w-4" />
+                                    </button>
+                                  )}
                                   {isPool ? (
                                     <button
                                       type="button"
@@ -1184,7 +1271,7 @@ export default function AdminDashboardPage() {
                         })
                       ) : (
                         <tr>
-                          <td colSpan={4} className="py-8 text-center italic text-slate-600">No findings yet. Click “Add Finding” above.</td>
+                          <td colSpan={5} className="py-8 text-center italic text-slate-600">No findings yet. Click “Add Finding” above.</td>
                         </tr>
                       )}
                     </tbody>
@@ -1781,6 +1868,55 @@ export default function AdminDashboardPage() {
               <button type="submit" disabled={savingFinding} className="btn-primary disabled:opacity-60">{savingFinding ? "Saving…" : editingFindingId ? "Save Changes" : "Create Finding"}</button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {/* ASSIGN FINDING TO GROUPS (admin + facilitator) */}
+      {assignFinding && (
+        <Modal title={`Assign to groups — ${assignFinding.title}`} onClose={() => setAssignFinding(null)}>
+          <div className="space-y-3">
+            <p className="text-sm text-slate-600">
+              Tick the groups this finding belongs to. It will show inside those groups on the project page, and only
+              participants in those groups can score it. A finding with no group ticked stays visible in the global
+              findings and can be scored by anyone in its project, as before.
+            </p>
+            {(() => {
+              // Groups grouped by project (assignment is cross-project).
+              const byProject = new Map<string, any[]>();
+              for (const g of allGroups) {
+                const key = g.projectName || g.projectSlug || "Project";
+                if (!byProject.has(key)) byProject.set(key, []);
+                byProject.get(key)!.push(g);
+              }
+              if (byProject.size === 0) {
+                return <p className="text-sm italic text-slate-500">No groups yet — create a group first (Groups &amp; Participants tab).</p>;
+              }
+              return Array.from(byProject.entries()).map(([projectName, groups]) => (
+                <fieldset key={projectName} className="rounded-xl border border-slate-200 px-3 py-2">
+                  <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">{projectName}</legend>
+                  <div className="space-y-1.5 py-1">
+                    {groups.map((g: any) => (
+                      <label key={g.id} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={assignSelected.includes(g.id)}
+                          onChange={() => toggleAssignGroup(g.id)}
+                          className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
+                        />
+                        {g.name}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ));
+            })()}
+            <div className="flex items-center justify-end gap-2 pt-3">
+              <button type="button" onClick={() => setAssignFinding(null)} className="btn-secondary">Cancel</button>
+              <button type="button" onClick={saveAssignGroups} disabled={assignSaving} className="btn-primary disabled:opacity-60">
+                {assignSaving ? "Saving…" : "Save assignment"}
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
 

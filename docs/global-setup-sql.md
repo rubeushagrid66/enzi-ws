@@ -201,3 +201,29 @@ Research Basis, admin only), and "Pengingat otomatis" shows D = 3.
 Other findings get a D once their mention counts are entered on their
 detail page (Tab 1: Desirability). Internal is not a research source
 and is never counted.
+
+## Step 10 — Finding → group assignment (run once)
+
+A finding can be assigned to one or more groups (in its own project or
+in the other project — assignment is always to a group, never directly
+to a project). The assignment is what puts a finding inside a group's
+view on the project page, and what scopes scoring: a participant can
+only score a finding that is assigned to their own group (a finding
+with no assignment yet can still be scored by anyone in its project,
+as before). Assigning is done in the dashboard (Findings & Tags),
+admin and facilitator only.
+
+```sql
+create table if not exists finding_groups (
+  finding_id text not null,
+  group_id text not null,
+  created_at timestamptz default now(),
+  primary key (finding_id, group_id)
+);
+```
+
+Notes: until this SQL runs, the code still works — every finding reads
+as assigned to no group, so the group views are empty and scoring
+stays open to everyone in the project (the previous behaviour). After
+it runs, assignments made in the dashboard persist and the group
+scoring rule applies.
