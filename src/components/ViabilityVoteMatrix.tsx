@@ -61,11 +61,15 @@ export default function ViabilityVoteMatrix({
   project,
   finding,
   currentUser,
+  selectedGroupId,
   onVotesChanged,
 }: {
   project: any;
   finding: any;
   currentUser?: { id?: string; name: string; role: string } | null;
+  /** The group to show, chosen by the parent (the chips sit above the
+      detail tabs and scope the whole page). Null = auto (my group). */
+  selectedGroupId?: string | null;
   onVotesChanged?: (updatedFinding: any) => void;
 }) {
   const myLabel = isLabelRole(currentUser?.role) ? currentUser!.role : null;
@@ -114,13 +118,9 @@ export default function ViabilityVoteMatrix({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.slug, currentUser?.id]);
 
-  // Group selection: null = auto (my group when logged in, else the
-  // first group). A new signed-in user re-selects automatically.
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  useEffect(() => {
-    setSelectedGroupId(null);
-  }, [currentUser?.id]);
-
+  // Group selection comes from the parent (the chips above the detail
+  // tabs). Fall back to my group, else the first group, when the parent
+  // has not chosen one yet.
   const autoGroupId = meGroupId ?? groups[0]?.id ?? null;
   const activeGroupId =
     selectedGroupId && groups.some((g: any) => g.id === selectedGroupId)
@@ -349,41 +349,9 @@ export default function ViabilityVoteMatrix({
         </p>
       )}
 
-      {/* Group selector chips */}
-      {groups.length > 0 ? (
-        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Choose a group to view">
-          {groups.map((g: any) => {
-            const isMe = Boolean(meGroupId && g.id === meGroupId);
-            const selected = g.id === activeGroupId;
-            return (
-              <button
-                key={g.id}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => setSelectedGroupId(g.id)}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
-                  selected
-                    ? "border-blue-600 bg-blue-600 text-white shadow-xs"
-                    : "border-slate-300 bg-white text-slate-700 hover:border-blue-400"
-                }`}
-              >
-                {g.name}
-                {isMe && (
-                  <span
-                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${
-                      selected ? "bg-white/25 text-white" : "bg-emerald-100 text-emerald-800"
-                    }`}
-                  >
-                    • Me
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="mt-4 text-xs text-slate-400 italic">No groups in this project yet.</p>
-      )}
+      {/* Group chips live in the parent (above the detail tabs) and
+          scope the whole page — this matrix only shows the group the
+          parent selected. */}
 
       {/* V/F per participant in the selected group (1–3, no composite).
           Switching groups shows that group's participants' own V/F. */}

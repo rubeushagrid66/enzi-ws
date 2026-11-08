@@ -295,6 +295,30 @@ export function scoresForParticipant(
   };
 }
 
+/**
+ * A group's V and F for a finding: the average of the V (resp. F) of
+ * the given participants who scored that dimension, rounded to 1
+ * decimal. A dimension no participant scored is null — never 0, and
+ * never an average across participants who did not score it.
+ */
+export function groupAverageScores(
+  participantScores: ParticipantScores[] | null | undefined,
+  participantIds: string[]
+): { viability: number | null; feasibility: number | null } {
+  const entries = (participantScores || []).filter((p) =>
+    participantIds.includes(p.participantId)
+  );
+  const avg = (vals: (number | null | undefined)[]) => {
+    const nums = vals.filter((v): v is number => v != null);
+    if (nums.length === 0) return null;
+    return Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10;
+  };
+  return {
+    viability: avg(entries.map((e) => e.viability)),
+    feasibility: avg(entries.map((e) => e.feasibility)),
+  };
+}
+
 export type FeasibilityQuadrant =
   | "BIG_BETS"
   | "QUICK_WINS"
@@ -463,5 +487,43 @@ export function findingBoardPosition(
     my.viability,
     my.feasibility
   );
+  return { x: pos.x, y: pos.y, quadrant: pos.quadrant, pinned: false, impact: pos.impact };
+}
+
+/**
+ * Same as findingBoardPosition, but from explicit D/V/F values instead
+ * of a participant id — used when the board is scoped to a whole group
+ * (the group's average V/F) rather than to one viewer.
+ */
+export function findingBoardPositionForScores(
+  finding: any,
+  desirability: number | null | undefined,
+  viability: number | null | undefined,
+  feasibility: number | null | undefined
+): {
+  x: number | null;
+  y: number | null;
+  quadrant: FeasibilityQuadrant | null;
+  pinned: boolean;
+  impact: number | null;
+} {
+  const pinned =
+    finding?.feasibilityManual === true &&
+    finding?.feasibilityX != null &&
+    finding?.feasibilityY != null;
+  if (pinned) {
+    const quadrant = getFeasibilityFromCoordinates(
+      finding.feasibilityX,
+      finding.feasibilityY
+    ).quadrant;
+    return {
+      x: finding.feasibilityX,
+      y: finding.feasibilityY,
+      quadrant,
+      pinned: true,
+      impact: finding.feasibilityY,
+    };
+  }
+  const pos = calculateBoardPosition(desirability ?? null, viability ?? null, feasibility ?? null);
   return { x: pos.x, y: pos.y, quadrant: pos.quadrant, pinned: false, impact: pos.impact };
 }

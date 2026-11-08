@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Sparkles, Move, Check, AlertCircle, ShieldAlert } from "lucide-react";
-import { FeasibilityQuadrant, findingBoardPosition } from "@/lib/scoring";
+import { FeasibilityQuadrant, findingBoardPosition, findingBoardPositionForScores, groupAverageScores } from "@/lib/scoring";
 
 interface FindingItem {
   id: string;
@@ -16,6 +16,8 @@ interface FindingItem {
   feasibilityManual?: boolean | null;
   /** Desirability + per-participant V/F, for the computed position. */
   scores?: any;
+  /** Groups this finding is assigned to (empty = open to every group). */
+  groupIds?: string[];
 }
 
 interface FeasibilityMatrixProps {
@@ -25,6 +27,16 @@ interface FeasibilityMatrixProps {
   isAdmin: boolean;
   /** The viewer's participant id — positions are per participant. */
   meId?: string | null;
+  /** The selected group's D/V/F for this finding (from the parent).
+      When given, the board is scoped to the group instead of to the
+      viewer: N/A values render the card unplaced. */
+  groupScores?: { desirability: number | null; viability: number | null; feasibility: number | null } | null;
+  /** Id of the selected group, used to check whether other findings on
+      the board are assigned to it. */
+  selectedGroupId?: string | null;
+  /** Participant ids of the selected group, used to position the other
+      findings on the board by the same group's scores. */
+  groupParticipantIds?: string[] | null;
   onPositionSaved?: (updatedFinding: FindingItem) => void;
 }
 
@@ -34,13 +46,35 @@ export default function FeasibilityMatrix({
   projectSlug,
   isAdmin,
   meId,
+  groupScores,
+  selectedGroupId,
+  groupParticipantIds,
   onPositionSaved,
 }: FeasibilityMatrixProps) {
-  // The position this finding shows for this viewer: the stored (pinned)
-  // position when the card was dragged, otherwise the computed position
-  // from the viewer's own D/V/F scores (Impact = avg of D and V,
-  // Effort from F). No pin and no complete scores means unplaced.
-  const displayPos = findingBoardPosition(finding, meId);
+  // The position this finding shows: when the parent scopes the page to
+  // a group, the stored (pinned) position still wins, otherwise the
+  // computed position comes from the GROUP's D/V/F (Impact = avg of D
+  // and V, Effort from F). Without a group scope it falls back to the
+  // viewer's own D/V/F. No pin and no complete scores = unplaced.
+  const displayPos = groupScores
+    ? findingBoardPositionForScores(
+        finding,
+        groupScores.desirability,
+        groupScores.viability,
+        groupScores.feasibility
+      )
+    : findingBoardPosition(finding, meId);
+  // A position for another finding on the same board, scoped to the
+  // selected group when one is given (that group's average V/F for that
+  // finding, and its D only if the group is assigned to it).
+  const otherPos = (other: FindingItem) => {
+    if (!groupScores || !groupParticipantIds) return findingBoardPosition(other, meId);
+    const assigned = other.groupIds || [];
+    const isAssigned = assigned.length === 0 || (selectedGroupId != null && assigned.includes(selectedGroupId));
+    const d = isAssigned ? (other.scores?.desirability ?? null) : null;
+    const vf = groupAverageScores(other.scores?.participantScores, groupParticipantIds);
+    return findingBoardPositionForScores(other, d, vf.viability, vf.feasibility);
+  };
   const placedX = displayPos.x ?? 50;
   const placedY = displayPos.y ?? 50;
   // Local state for optimistic drag
@@ -393,7 +427,7 @@ export default function FeasibilityMatrix({
               Each shows at its own board position for this viewer
               (pinned, or computed from that viewer's D/V/F). */}
           {allFindings
-            .map((other) => ({ finding: other, pos: findingBoardPosition(other, meId) }))
+            .map((other) => ({ finding: other, pos: otherPos(other) }))
             .filter(({ finding: f, pos }) => f.id !== finding.id && pos.x != null && pos.y != null)
             .map(({ finding: other, pos }) => {
               const ox = pos.x ?? 50;

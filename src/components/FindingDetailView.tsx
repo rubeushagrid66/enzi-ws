@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import FeasibilityMatrix from "./FeasibilityMatrix";
 import ViabilityVoteMatrix from "./ViabilityVoteMatrix";
-import { scoresForParticipant, normalizeFramework } from "@/lib/scoring";
+import { groupAverageScores, normalizeFramework } from "@/lib/scoring";
 
 interface FindingDetailViewProps {
   finding: any;
@@ -32,6 +32,52 @@ export default function FindingDetailView({
     "desirability"
   );
   const [localFinding, setLocalFinding] = useState(finding);
+
+  // ── Group scope ──────────────────────────────────────────────────
+  // The group chips sit above the three tabs and scope the whole page:
+  // the score strip, the tab badges, the matrix and the board all show
+  // the SELECTED group's values. Default is the viewer's own group
+  // (the group holding their participant row), else the first group.
+  const groups = (project.groups || []).filter((g: any) => g.isActive !== false);
+  const myGroupId =
+    groups.find((g: any) =>
+      (g.participants || []).some((p: any) => p.id === meId)
+    )?.id ?? null;
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const activeGroupId =
+    selectedGroupId && groups.some((g: any) => g.id === selectedGroupId)
+      ? selectedGroupId
+      : myGroupId ?? groups[0]?.id ?? null;
+  const activeGroup = groups.find((g: any) => g.id === activeGroupId) || null;
+  // Participants of the selected group who can score (the admin /
+  // facilitator account is not a scorer and is never listed).
+  const groupParticipantIds: string[] = (activeGroup?.participants || [])
+    .filter((p: any) => p.isActive !== false && p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR")
+    .map((p: any) => p.id);
+  // Is this finding assigned to the selected group? A finding assigned
+  // to no group is open to every group; a finding assigned to ≥1 group
+  // only counts for those groups.
+  const assignedGroupIds: string[] = localFinding.groupIds || [];
+  const isGroupAssigned =
+    assignedGroupIds.length === 0 || assignedGroupIds.includes(activeGroupId);
+  // The selected group's values for this finding. V/F are the average
+  // of the group's participants who scored that dimension (1 decimal);
+  // a dimension nobody in the group scored is null. D is the finding's
+  // research score — but only when the group is assigned to (or the
+  // finding is open to) this finding; otherwise the group has no value
+  // here at all and every tab shows N/A.
+  const groupVF = groupAverageScores(
+    localFinding.scores?.participantScores,
+    groupParticipantIds
+  );
+  const groupD = isGroupAssigned ? (localFinding.scores?.desirability ?? null) : null;
+  const groupV = isGroupAssigned ? groupVF.viability : null;
+  const groupF = isGroupAssigned ? groupVF.feasibility : null;
+  // "N/A" when the selected group has no value for this finding,
+  // "—" only when a value exists but is genuinely unscored at the
+  // finding level (kept distinct so N/A always means "not this group").
+  const showGroupNum = (v: number | null | undefined) =>
+    v == null ? "N/A" : v;
 
   // Research basis N for this project: the total users per source.
   // It is per project, not per finding — editing it here updates every
@@ -90,44 +136,46 @@ export default function FindingDetailView({
 
   const scores = localFinding.scores || {};
   const desirability = scores.desirabilityDetails || {};
-  // Scoring status is derived from workshop data (see lib/scoring).
-  // A null score means "not yet scored in the workshop", never a 0.
-  const status = localFinding.scoringStatus || {};
-  const showNum = (v: number | null | undefined) => (v ?? null) === null ? "—" : v;
+  // The selected group's per-aspect Viability averages (for the
+  // breakdown note): each aspect's average across the group members who
+  // scored it. An aspect nobody in the group scored is null.
+  const groupViabilityAspects = (project.viabilityAspects || [])
+    .filter((a: any) => normalizeFramework(a.framework) === "Viability")
+    .map((a: any) => {
+      const vals = (localFinding.viabilityVotes || [])
+        .filter(
+          (v: any) =>
+            v.aspectId === a.id &&
+            groupParticipantIds.includes(v.participantId) &&
+            v.score != null
+        )
+        .map((v: any) => Number(v.score));
+      const avg =
+        vals.length > 0
+          ? Math.round((vals.reduce((s: number, x: number) => s + x, 0) / vals.length) * 10) / 10
+          : null;
+      return { name: a.name, score: avg };
+    });
+  const groupViabilityScored = groupViabilityAspects.filter((a: any) => a.score != null);
 
-  // V and F are per participant (1–3, no composite, no cross-participant
-  // average). These cards show the logged-in participant's own values.
-  const my = scoresForParticipant(scores.participantScores, meId);
-  const myPending: string[] = [];
-  if (!status.desirabilityScored) myPending.push("Desirability");
-  if (my.viability == null) myPending.push("Viability");
-  if (my.feasibility == null) myPending.push("Feasibility");
-  // My aspect scores, for the V/F formula breakdowns below: the aspects
-  // I scored, with the score I gave (unscored aspects are skipped).
-  const myAspectScores = (framework: string) =>
-    (project.viabilityAspects || [])
-      .filter((a: any) => normalizeFramework(a.framework) === framework)
-      .map((a: any) => {
-        const vote = (localFinding.viabilityVotes || []).find(
-          (v: any) => v.participantId === meId && v.aspectId === a.id
-        );
-        return { name: a.name, score: vote?.score != null ? Number(vote.score) : null };
-      });
-  const myViabilityAspects = myAspectScores("Viability");
-  const myViabilityScored = myViabilityAspects.filter((a: any) => a.score != null);
-
-  // Your scores (D is shared from the workshop mappings; V and F are
-  // the logged-in participant's own 1–3 values). Shown on every tab.
-  const myScoresStrip = (
+  // The score strip shows the SELECTED group's values for this finding
+  // (D, V, F on the 1–3 scale). A group that did not select this
+  // finding has no value here and shows N/A on every card.
+  const groupLabel = activeGroup ? activeGroup.name : "—";
+  const groupScoresStrip = (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
         <div className="text-xs font-medium text-emerald-700 uppercase tracking-wider">
-          Desirability Score
+          Desirability Score ({groupLabel})
         </div>
         <div className="mt-1 text-3xl font-extrabold text-emerald-900">
-          {showNum(scores.desirability)}
-          {scores.desirability != null && (
-            <span className="text-sm font-normal text-emerald-600"> / 3</span>
+          {groupD != null ? (
+            <>
+              {groupD}
+              <span className="text-sm font-normal text-emerald-600"> / 3</span>
+            </>
+          ) : (
+            "N/A"
           )}
         </div>
         <p className="mt-1 text-xs text-emerald-700">
@@ -137,31 +185,39 @@ export default function FindingDetailView({
 
       <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
         <div className="text-xs font-medium text-blue-700 uppercase tracking-wider">
-          Viability &amp; Feasibility Score (yours)
+          Viability &amp; Feasibility Score ({groupLabel})
         </div>
         <div className="mt-1 text-3xl font-extrabold text-blue-900">
-          {my.viability != null ? my.viability : "—"}
-          {my.viability != null && (
-            <span className="text-sm font-normal text-blue-600"> / 3</span>
+          {groupV != null ? (
+            <>
+              {groupV}
+              <span className="text-sm font-normal text-blue-600"> / 3</span>
+            </>
+          ) : (
+            "N/A"
           )}
         </div>
         <p className="mt-1 text-xs text-blue-700">
-          Average of your Viability aspect scores
+          Average of {groupLabel}&apos;s Viability aspect scores
         </p>
       </div>
 
       <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
         <div className="text-xs font-medium text-amber-700 uppercase tracking-wider">
-          Matrix Score (yours)
+          Matrix Score ({groupLabel})
         </div>
         <div className="mt-1 text-3xl font-extrabold text-amber-900">
-          {my.feasibility != null ? my.feasibility : "—"}
-          {my.feasibility != null && (
-            <span className="text-sm font-normal text-amber-600"> / 3</span>
+          {groupF != null ? (
+            <>
+              {groupF}
+              <span className="text-sm font-normal text-amber-600"> / 3</span>
+            </>
+          ) : (
+            "N/A"
           )}
         </div>
         <p className="mt-1 text-xs text-amber-700">
-          4 − average of your Effort aspect scores
+          4 − average of {groupLabel}&apos;s Effort aspect scores
         </p>
       </div>
     </div>
@@ -281,9 +337,7 @@ export default function FindingDetailView({
                   Finding Detail
                 </span>
                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                  {myPending.length === 0
-                    ? `Your scores — D ${showNum(scores.desirability)}${scores.desirability != null ? " / 3" : ""} · V ${showNum(my.viability)} / 3 · F ${showNum(my.feasibility)} / 3`
-                    : `Pending scoring${myPending.length ? ` — needs: ${myPending.join(", ")}` : ""}`}
+                  {groupLabel} — D {showGroupNum(groupD)}{groupD != null ? " / 3" : ""} · V {showGroupNum(groupV)}{groupV != null ? " / 3" : ""} · F {showGroupNum(groupF)}{groupF != null ? " / 3" : ""}
                 </span>
               </div>
               <h2 id="finding-detail-title" className="text-2xl font-semibold text-slate-900 leading-tight sm:text-3xl">
@@ -312,6 +366,43 @@ export default function FindingDetailView({
             </div>
           )}
 
+          {/* Group selector — sits above the three tabs and scopes the
+              whole page (score strip, tab badges, matrix, board) to the
+              selected group. A group that did not select this finding
+              shows N/A on every value. */}
+          {groups.length > 0 && (
+            <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Choose a group to view">
+              {groups.map((g: any) => {
+                const isMe = Boolean(meId && myGroupId && g.id === myGroupId);
+                const selected = g.id === activeGroupId;
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setSelectedGroupId(g.id)}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+                      selected
+                        ? "border-blue-600 bg-blue-600 text-white shadow-xs"
+                        : "border-slate-300 bg-white text-slate-700 hover:border-blue-400"
+                    }`}
+                  >
+                    {g.name}
+                    {isMe && (
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${
+                          selected ? "bg-white/25 text-white" : "bg-emerald-100 text-emerald-800"
+                        }`}
+                      >
+                        • Me
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Tab Navigation */}
           <div className="mt-6 flex border-b border-slate-200 overflow-x-auto">
             <button
@@ -325,7 +416,7 @@ export default function FindingDetailView({
               <Target className="hidden sm:block h-4 w-4" />
               <span>Desirability</span>
               <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800">
-                {showNum(scores.desirability)}
+                {groupD != null ? groupD : "N/A"}
               </span>
             </button>
 
@@ -340,7 +431,7 @@ export default function FindingDetailView({
               <Users2 className="hidden sm:block h-4 w-4" />
               <span>Viability &amp; Feasibility</span>
               <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-800">
-                {my.viability != null ? `${my.viability} / 3` : "—"}
+                {groupV != null ? `${groupV} / 3` : "N/A"}
               </span>
             </button>
 
@@ -355,7 +446,7 @@ export default function FindingDetailView({
               <Compass className="hidden sm:block h-4 w-4" />
               <span>Impact vs Effort Matrix</span>
               <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800">
-                {my.feasibility != null ? `${my.feasibility} / 3` : "—"}
+                {groupF != null ? `${groupF} / 3` : "N/A"}
               </span>
             </button>
           </div>
@@ -366,7 +457,7 @@ export default function FindingDetailView({
           {/* TAB 1: DESIRABILITY */}
           {activeTab === "desirability" && (
             <div className="space-y-6">
-              {myScoresStrip}
+              {groupScoresStrip}
 
               {/* Research mentions — the only input to D */}
               <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
@@ -539,35 +630,35 @@ export default function FindingDetailView({
           {/* TAB 2: VIABILITY */}
           {activeTab === "viability" && (
             <div className="space-y-6">
-              {myScoresStrip}
+              {groupScoresStrip}
 
-              {/* How YOUR Viability score is built */}
+              {/* How the selected group's Viability score is built */}
               <div role="note" className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-                <span className="font-bold">Your Viability score = average of your Viability aspect scores (1–3).</span>{" "}
-                {myViabilityScored.length > 0 ? (
+                <span className="font-bold">{groupLabel}&apos;s Viability score = average of {groupLabel}&apos;s Viability aspect scores (1–3).</span>{" "}
+                {groupViabilityScored.length > 0 ? (
                   <>
-                    {myViabilityScored.map((a: any) => `${a.name} ${a.score}`).join("  ·  ")}
+                    {groupViabilityScored.map((a: any) => `${a.name} ${a.score}`).join("  ·  ")}
                     {" → ("}
-                    {myViabilityScored.reduce((s: number, a: any) => s + (a.score ?? 0), 0)}
+                    {groupViabilityScored.reduce((s: number, a: any) => s + (a.score ?? 0), 0)}
                     {" / "}
-                    {myViabilityScored.length}
+                    {groupViabilityScored.length}
                     {") = "}
-                    <span className="font-extrabold">{my.viability}</span>
+                    <span className="font-extrabold">{groupV != null ? groupV : "N/A"}</span>
                   </>
                 ) : (
-                  "You have not scored a Viability aspect on this finding yet."
+                  `${groupLabel} has not scored a Viability aspect on this finding yet.`
                 )}
-                {myViabilityAspects.length > myViabilityScored.length && (
+                {groupViabilityAspects.length > groupViabilityScored.length && (
                   <> Unscored aspects are skipped, never counted as 0.</>
                 )}
               </div>
 
-              {my.viability == null && (
+              {groupV == null && (
                 <div role="note" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                  <span className="font-bold">Not yet scored by you.</span>{" "}
-                  Score each aspect 1–3 below (workshop Step 2) with your Alasan
-                  per aspect — your Viability score is the average of the
-                  Viability aspects you scored.
+                  <span className="font-bold">Not yet scored by {groupLabel}.</span>{" "}
+                  {isGroupAssigned
+                    ? `Score each aspect 1–3 below (workshop Step 2) with your Alasan per aspect — ${groupLabel}'s Viability score is the average of the Viability aspects its members scored.`
+                    : `${groupLabel} did not select this finding, so it has no scores here.`}
                 </div>
               )}
 
@@ -575,6 +666,7 @@ export default function FindingDetailView({
                 project={project}
                 finding={localFinding}
                 currentUser={currentUser}
+                selectedGroupId={activeGroupId}
                 onVotesChanged={handleVotesChanged}
               />
             </div>
@@ -583,15 +675,21 @@ export default function FindingDetailView({
           {/* TAB 3: FEASIBILITY */}
           {activeTab === "feasibility" && (
             <div className="space-y-6">
-              {myScoresStrip}
+              {groupScoresStrip}
 
-              {/* Interactive 2x2 Feasibility Matrix */}
+              {/* Interactive 2x2 Feasibility Matrix — scoped to the
+                  selected group: the card sits at the group's D/V/F
+                  position (or N/A / unplaced when the group has no
+                  value for this finding). */}
               <FeasibilityMatrix
                 finding={localFinding}
                 allFindings={allFindings}
                 projectSlug={project.slug}
                 isAdmin={isAdmin}
                 meId={meId}
+                groupScores={{ desirability: groupD, viability: groupV, feasibility: groupF }}
+                selectedGroupId={activeGroupId}
+                groupParticipantIds={groupParticipantIds}
                 onPositionSaved={handleFeasibilitySaved}
               />
             </div>
