@@ -33,10 +33,40 @@ export default function FindingDetailView({
   );
   const [localFinding, setLocalFinding] = useState(finding);
 
-  // Research basis N for this project (admin sets it in the dashboard;
-  // null = not set yet, so that source cannot score D).
-  const interviewN = project.interviewN ?? null;
-  const surveyN = project.surveyN ?? null;
+  // Research basis N for this project: the total users per source.
+  // It is per project, not per finding — editing it here updates every
+  // finding in this project. The saved values come from the project;
+  // the inputs below are what the user is typing.
+  const [savedInterviewN, setSavedInterviewN] = useState<number | null>(
+    project.interviewN ?? null
+  );
+  const [savedSurveyN, setSavedSurveyN] = useState<number | null>(
+    project.surveyN ?? null
+  );
+  const [interviewNInput, setInterviewNInput] = useState<string>(
+    project.interviewN != null ? String(project.interviewN) : ""
+  );
+  const [surveyNInput, setSurveyNInput] = useState<string>(
+    project.surveyN != null ? String(project.surveyN) : ""
+  );
+  // Parse a typed total: blank/invalid/non-positive means "not set".
+  const parseN = (raw: string): number | null => {
+    if (raw.trim() === "") return null;
+    const n = Math.floor(Number(raw));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  // The totals driving the live preview are what the user is typing.
+  const interviewN = parseN(interviewNInput);
+  const surveyN = parseN(surveyNInput);
+  // Sync the totals when a different project opens (they are
+  // project-level, so they do not reset when switching findings).
+  React.useEffect(() => {
+    setSavedInterviewN(project.interviewN ?? null);
+    setSavedSurveyN(project.surveyN ?? null);
+    setInterviewNInput(project.interviewN != null ? String(project.interviewN) : "");
+    setSurveyNInput(project.surveyN != null ? String(project.surveyN) : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project.slug]);
   // Research mention inputs (local until saved). Synced when a different
   // finding is opened; typing is never clobbered by a background refresh.
   const [interviewInput, setInterviewInput] = useState<string>(
@@ -166,12 +196,34 @@ export default function FindingDetailView({
     return Math.ceil(((ss[0].score as number) + (ss[1].score as number)) / 2);
   })();
 
-  // Save the research mentions; the server recomputes D and the status,
-  // and the response merges into local state like a vote save.
+  // Save the research numbers: the per-project totals (admin only)
+  // and this finding's mention counts. The totals go first — the
+  // project PUT is a partial update, so only the totals are sent, and
+  // saving the basis before the counts means D is computed from the
+  // fresh totals. The response merges into local state like a vote save.
   const handleSaveResearch = async () => {
     setResearchSaving(true);
     setResearchStatus(null);
     try {
+      const newInterviewN = parseN(interviewNInput);
+      const newSurveyN = parseN(surveyNInput);
+      const nChanged =
+        newInterviewN !== savedInterviewN || newSurveyN !== savedSurveyN;
+      if (isAdmin && nChanged) {
+        const resN = await fetch(`/api/projects/${project.slug}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            interviewN: newInterviewN,
+            surveyN: newSurveyN,
+          }),
+        });
+        const dataN = await resN.json().catch(() => ({}));
+        if (!resN.ok)
+          throw new Error(dataN.error || `Could not save the project totals (${resN.status})`);
+        setSavedInterviewN(newInterviewN);
+        setSavedSurveyN(newSurveyN);
+      }
       const res = await fetch(
         `/api/projects/${project.slug}/findings/${localFinding.id}/research`,
         {
@@ -196,9 +248,13 @@ export default function FindingDetailView({
           scores: { ...prev.scores, ...(data.finding.scores || {}) },
         }));
       }
-      setResearchStatus("Research mentions saved — Desirability updated.");
+      setResearchStatus(
+        isAdmin && nChanged
+          ? "Research numbers saved — totals and Desirability updated."
+          : "Research mentions saved — Desirability updated."
+      );
     } catch (e: any) {
-      setResearchStatus(e.message || "Failed to save research mentions.");
+      setResearchStatus(e.message || "Failed to save research numbers.");
     } finally {
       setResearchSaving(false);
     }
@@ -323,7 +379,7 @@ export default function FindingDetailView({
                   <span>Research mentions — how many users mentioned this finding</span>
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
-                  D comes from research numbers only. A mention is a user mentioning this finding in that source. Internal is not counted. A source with no count entered does not score D.
+                  D comes from research numbers only. A mention is a user mentioning this finding in that source. Internal is not counted. A source with no count entered does not score D. Both numbers are typed by hand — the mentions for this finding, and the totals for the whole project (changing a total here updates every finding in this project). The system only does the calculation.
                 </p>
 
                 {/* Wawancara */}
@@ -345,8 +401,27 @@ export default function FindingDetailView({
                         className="input w-28"
                       />
                     </label>
+                    <span className="text-sm text-slate-600 pb-2">of</span>
+                    <label className="block">
+                      <span className="field-label">Total interview users</span>
+                      <input
+                        type="number"
+                        min={1}
+                        inputMode="numeric"
+                        value={interviewNInput}
+                        onChange={(e) => setInterviewNInput(e.target.value)}
+                        placeholder="e.g. 3"
+                        disabled={!isAdmin}
+                        title={
+                          isAdmin
+                            ? "Total interview users in this project"
+                            : "Only an admin can change the project totals"
+                        }
+                        className="input w-20"
+                      />
+                    </label>
                     <span className="text-sm text-slate-600 pb-2">
-                      of {interviewN != null ? interviewN : "—"} interview users
+                      interview users
                       {interviewPreview.percent != null && <> ({interviewPreview.percent}%)</>}
                     </span>
                     <span className="ml-auto pb-2 text-sm font-bold text-emerald-700">
@@ -355,7 +430,9 @@ export default function FindingDetailView({
                   </div>
                   {interviewN == null && (
                     <p className="mt-2 text-xs text-amber-700">
-                      Interview basis (N) is not set for this project — an admin sets it in the dashboard (Framework &amp; Weighting &rarr; Research basis).
+                      {isAdmin
+                        ? "Total interview users is not set — type it above (it applies to every finding in this project)."
+                        : "Total interview users is not set for this project — an admin sets it here or in the dashboard (Framework & Weighting → Research basis)."}
                     </p>
                   )}
                 </div>
@@ -379,8 +456,27 @@ export default function FindingDetailView({
                         className="input w-28"
                       />
                     </label>
+                    <span className="text-sm text-slate-600 pb-2">of</span>
+                    <label className="block">
+                      <span className="field-label">Total survey respondents</span>
+                      <input
+                        type="number"
+                        min={1}
+                        inputMode="numeric"
+                        value={surveyNInput}
+                        onChange={(e) => setSurveyNInput(e.target.value)}
+                        placeholder="e.g. 121"
+                        disabled={!isAdmin}
+                        title={
+                          isAdmin
+                            ? "Total survey respondents in this project"
+                            : "Only an admin can change the project totals"
+                        }
+                        className="input w-20"
+                      />
+                    </label>
                     <span className="text-sm text-slate-600 pb-2">
-                      of {surveyN != null ? surveyN : "—"} survey respondents
+                      survey respondents
                       {surveyPreview.percent != null && <> ({surveyPreview.percent}%)</>}
                     </span>
                     <span className="ml-auto pb-2 text-sm font-bold text-emerald-700">
@@ -389,7 +485,9 @@ export default function FindingDetailView({
                   </div>
                   {surveyN == null && (
                     <p className="mt-2 text-xs text-amber-700">
-                      Survey basis (N) is not set for this project — an admin sets it in the dashboard (Framework &amp; Weighting &rarr; Research basis).
+                      {isAdmin
+                        ? "Total survey respondents is not set — type it above (it applies to every finding in this project)."
+                        : "Total survey respondents is not set for this project — an admin sets it here or in the dashboard (Framework & Weighting → Research basis)."}
                     </p>
                   )}
                 </div>
@@ -408,7 +506,7 @@ export default function FindingDetailView({
                     disabled={researchSaving}
                     className="btn-primary"
                   >
-                    {researchSaving ? "Saving\u2026" : "Save research mentions"}
+                    {researchSaving ? "Saving\u2026" : "Save research numbers"}
                   </button>
                 </div>
                 {researchStatus && (
