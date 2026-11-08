@@ -11,8 +11,10 @@ import { revalidateProjectPages } from "@/lib/revalidate";
  * - When `participantId` is omitted the vote is recorded as the session
  *   user (their "me" participant row). A label-role user may only vote
  *   as themselves, and only on aspects whose label equals their role.
- * - ADMIN / FACILITATOR may vote on any aspect (as themselves, or as a
- *   participant they name).
+ * - ADMIN / FACILITATOR may vote as themselves or as a participant
+ *   they name — but the label rule is judged by the VOTER: a
+ *   label-role participant may only be scored on aspects carrying
+ *   their label, whoever submits the vote.
  * `isValidated` stays in sync with the score (true exactly when a score
  * is set), so the current Viability formula keeps working unchanged.
  */
@@ -85,13 +87,28 @@ export async function POST(
       if (voterId !== me.id) {
         return NextResponse.json({ error: "You can only record your own scores" }, { status: 400 });
       }
-      // A label-role user only scores aspects carrying their label.
-      if (aspect.label !== session.role) {
-        return NextResponse.json(
-          { error: `Your role (${session.role}) can only score aspects labelled ${session.role}` },
-          { status: 400 }
-        );
-      }
+    }
+
+    // The label rule is judged by the VOTER (the participant being
+    // scored for), not by who submits the vote: a label-role
+    // participant may only be scored on aspects carrying their label —
+    // whether they vote themselves or an admin/facilitator sets the
+    // score for them. This closes the admin-edit bypass that let e.g.
+    // a Tech participant be scored on Business & Ops / Product
+    // aspects. ADMIN / FACILITATOR participants have no label role, so
+    // scoring them is unrestricted. Clearing a vote (score null) is
+    // always allowed, so a bad vote can be removed.
+    let voterRole: string | null = null;
+    for (const g of project.groups || []) {
+      const p = (g.participants || []).find((x: any) => x.id === voterId);
+      if (p) { voterRole = p.roleTitle ?? null; break; }
+    }
+    if (!voterRole && voterId === me.id) voterRole = session.role;
+    if (score !== null && score !== undefined && voterRole && isLabelRole(voterRole) && aspect.label !== voterRole) {
+      return NextResponse.json(
+        { error: `This participant's role (${voterRole}) can only score aspects labelled ${voterRole}` },
+        { status: 400 }
+      );
     }
 
     // Group-scoped scoring: a finding assigned to one or more groups
