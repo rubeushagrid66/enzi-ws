@@ -303,7 +303,7 @@ export default function FeasibilityMatrix({
                       type="button"
                       onClick={resetToComputed}
                       disabled={isSaving}
-                      className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 transition disabled:opacity-60"
+                      className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition disabled:opacity-60"
                     >
                       Reset to computed
                     </button>

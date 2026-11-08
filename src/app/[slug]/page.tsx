@@ -102,21 +102,21 @@ function FindingCard({
 
       <div className="mt-5 pt-4 border-t border-slate-100 space-y-2">
         <div className="grid grid-cols-3 gap-2 text-center text-xs">
-          <div className="rounded bg-emerald-50/80 p-1.5 border border-emerald-100">
-            <div className="text-emerald-700 font-semibold">Desirability</div>
-            <div className="font-extrabold text-emerald-900 mt-0.5">
+          <div className="rounded-lg bg-slate-50 p-1.5 border border-slate-100">
+            <div className="text-slate-500 font-semibold">Desirability</div>
+            <div className="font-bold text-slate-900 mt-0.5">
               {s.desirability != null ? `${s.desirability} / 3` : "—"}
             </div>
           </div>
-          <div className="rounded bg-blue-50/80 p-1.5 border border-blue-100">
-            <div className="text-blue-700 font-semibold">Viability &amp; Feasibility</div>
-            <div className="font-extrabold text-blue-900 mt-0.5">
+          <div className="rounded-lg bg-slate-50 p-1.5 border border-slate-100">
+            <div className="text-slate-500 font-semibold">Viability &amp; Feasibility</div>
+            <div className="font-bold text-slate-900 mt-0.5">
               {my.viability != null ? `${my.viability} / 3` : "—"}
             </div>
           </div>
-          <div className="rounded bg-amber-50/80 p-1.5 border border-amber-100">
-            <div className="text-amber-700 font-semibold">Matrix</div>
-            <div className="font-extrabold text-amber-900 mt-0.5">
+          <div className="rounded-lg bg-slate-50 p-1.5 border border-slate-100">
+            <div className="text-slate-500 font-semibold">Matrix</div>
+            <div className="font-bold text-slate-900 mt-0.5">
               {my.feasibility != null ? `${my.feasibility} / 3` : "—"}
             </div>
           </div>
@@ -462,23 +462,9 @@ export default function ProjectResultViewer({
     );
   }
 
-  const isAdmin = currentUser?.role === "ADMIN" || currentUser?.role === "FACILITATOR";
-  // "Me" is resolved above (before the early returns) — the cards show
-  // this participant's own V/F (1–3), never a cross-participant average.
   const findings: any[] = project.findings || [];
   const myScores = (f: any) =>
     scoresForParticipant(f.scores?.participantScores, meId);
-  // Scored FOR ME: Desirability scored from research + I scored a Viability aspect +
-  // I scored a Feasibility aspect. Logged-out viewers have no V/F, so
-  // every finding waits in "Awaiting scoring" for them.
-  const myScored = (f: any) => {
-    const my = myScores(f);
-    return (
-      !!f.scoringStatus?.desirabilityScored &&
-      my.viability != null &&
-      my.feasibility != null
-    );
-  };
 
   // The tag filter offers Sumber only — Wawancara and Survey. Internal
   // is not offered as a filter (it does not count toward Desirability).
@@ -503,8 +489,6 @@ export default function ProjectResultViewer({
     return true;
   });
 
-  // (myScored above is still used by the hero "Scored by you" count.)
-
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <Navbar projectSlug={project.slug} projectName={project.name} />
@@ -515,19 +499,11 @@ export default function ProjectResultViewer({
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2 max-w-3xl">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">
+                <span className="eyebrow">
                   Bewize Workshop &middot; Phase DVF
                 </span>
-                <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                  Live Workshop View
-                </span>
-                {isAdmin && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                    Facilitator Mode Active
-                  </span>
-                )}
               </div>
-              <h1 className="text-4xl font-semibold text-slate-900 tracking-tight sm:text-5xl">
+              <h1 className="page-title">
                 {project.name}
               </h1>
               {/* The DVC description is still the literal placeholder "test"
@@ -542,45 +518,18 @@ export default function ProjectResultViewer({
             </div>
           </div>
 
-          {/* Quick Metrics Bar */}
-          <div className="mt-6 pt-6 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-6 text-xs text-slate-600">
-              <div>
-                <span className="text-slate-400">Total Findings:</span>{" "}
-                <span className="font-bold text-slate-900">{findings.length}</span>
-              </div>
-              <div>
-                <span className="text-slate-400">Participant Groups:</span>{" "}
-                <span className="font-bold text-slate-900">
-                  {project.groups?.length || 0}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400">Viability Aspects:</span>{" "}
-                <span className="font-bold text-slate-900">
-                  {project.viabilityAspects?.length || 0}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400">Scored by you:</span>{" "}
-                <span className="font-bold text-slate-900">
-                  {findings.filter((f) => myScored(f)).length} of {findings.length} findings
-                </span>
-              </div>
+          {/* Add Finding */}
+          {currentUser && (
+            <div className="mt-6 pt-6 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setAddFindingOpen(true)}
+                className="btn-primary btn-sm"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add Finding
+              </button>
             </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {currentUser && (
-                <button
-                  type="button"
-                  onClick={() => setAddFindingOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold shadow-xs hover:bg-emerald-700 transition"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Add Finding
-                </button>
-              )}
-            </div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -595,7 +544,7 @@ export default function ProjectResultViewer({
             role="tab"
             aria-selected={view === "findings"}
             onClick={() => { setView("findings"); setSelectedGroupId(null); }}
-            className={`rounded-full px-4 py-2 text-xs font-semibold transition ${view === "findings" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+            className={`tab-pill ${view === "findings" ? "tab-pill-active" : ""}`}
           >
             Findings
           </button>
@@ -604,7 +553,7 @@ export default function ProjectResultViewer({
             role="tab"
             aria-selected={view === "groups"}
             onClick={() => { setView("groups"); setSelectedGroupId(null); }}
-            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition ${view === "groups" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+            className={`tab-pill ${view === "groups" ? "tab-pill-active" : ""}`}
           >
             <Users className="h-3.5 w-3.5" /> Groups
           </button>
@@ -637,7 +586,7 @@ export default function ProjectResultViewer({
                   placeholder="Search user findings, pain points, or keywords..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50"
+                  className="input w-full pl-10 pr-4 py-2"
                 />
               </div>
 
@@ -650,7 +599,7 @@ export default function ProjectResultViewer({
                     id="viewer-tag"
                     value={selectedTag}
                     onChange={(e) => setSelectedTag(e.target.value)}
-                    className="px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="input px-3 py-2 font-medium text-slate-700"
                   >
                     <option value="ALL">All Sumber</option>
                     {allTags.map((t, idx) => (

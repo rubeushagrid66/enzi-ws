@@ -305,7 +305,7 @@ export default function ViabilityVoteMatrix({
     return (
       <>
         {vote.score != null ? (
-          <span className="font-extrabold text-blue-700">Score {vote.score}</span>
+          <span className="font-bold text-emerald-700">Score {vote.score}</span>
         ) : (
           <span className="font-semibold text-emerald-700">✓ validated</span>
         )}
@@ -483,10 +483,10 @@ export default function ViabilityVoteMatrix({
                                         aria-pressed={rowScore === n}
                                         aria-label={`Score ${n} for ${aspect.name}`}
                                         onClick={() => handleScoreClick(aspect.id, p.id, n)}
-                                        className={`h-8 w-8 rounded-lg border text-sm font-extrabold transition disabled:opacity-60 ${
+                                        className={`h-8 w-8 rounded-lg border text-sm font-bold transition disabled:opacity-60 ${
                                           rowScore === n
-                                            ? "border-blue-600 bg-blue-600 text-white"
-                                            : "border-slate-300 bg-white text-slate-700 hover:border-blue-400"
+                                            ? "border-emerald-600 bg-emerald-600 text-white"
+                                            : "border-slate-300 bg-white text-slate-700 hover:border-emerald-400"
                                         }`}
                                       >
                                         {n}

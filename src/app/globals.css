@@ -52,6 +52,36 @@ body {
   .btn-dark {
     @apply inline-flex items-center gap-1.5 rounded-xl bg-slate-800 px-3.5 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2 disabled:opacity-50;
   }
+  .btn-ghost {
+    @apply inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-50;
+  }
+  /* Pill tabs (segmented control) — viewer Findings/Groups, group chips.
+     One style everywhere: inactive is quiet, active is solid emerald. */
+  .tab-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50;
+  }
+  .tab-pill-active {
+    @apply bg-emerald-600 text-white hover:bg-emerald-600 hover:text-white;
+  }
+  /* Underline tabs — finding detail. One accent (emerald) for every tab;
+     the score badge keeps its own tint but the tab itself is uniform. */
+  .tab-underline {
+    @apply flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition -mb-px border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500;
+  }
+  .tab-underline-active {
+    @apply border-emerald-600 text-emerald-700 bg-emerald-50/50;
+  }
+  /* Small badge / chip — one shape, tint set by the caller. */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold;
+  }
+  /* Type scale — page titles and eyebrows are the same everywhere. */
+  .page-title {
+    @apply text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl;
+  }
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400;
+  }
   .btn-sm {
     @apply px-3 py-1.5 text-xs;
   }

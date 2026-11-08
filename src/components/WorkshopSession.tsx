@@ -554,7 +554,7 @@ export default function WorkshopSession({
                     />
                     <p className="text-sm text-slate-600">
                       {mySelected.viability != null ? (
-                        <>Your Viability score: <span className="font-extrabold text-blue-700">{mySelected.viability} / 3</span> (average of your Viability aspect scores)</>
+                        <>Your Viability score: <span className="font-bold text-emerald-700">{mySelected.viability} / 3</span> (average of your Viability aspect scores)</>
                       ) : (
                         "Not scored by you yet — record at least one vote on a Viability aspect to score it."
                       )}

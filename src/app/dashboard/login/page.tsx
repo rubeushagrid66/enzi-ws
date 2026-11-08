@@ -74,7 +74,7 @@ export default function AdminLoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label htmlFor="login-email" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+              <label htmlFor="login-email" className="field-label">
                 Email Address
               </label>
               <div className="relative">
@@ -86,13 +86,13 @@ export default function AdminLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Email"
-                  className="w-full pl-10 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50"
+                  className="input w-full pl-10 pr-3 py-2.5"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="login-password" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+              <label htmlFor="login-password" className="field-label">
                 Password
               </label>
               <div className="relative">
@@ -104,7 +104,7 @@ export default function AdminLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50/50"
+                  className="input w-full pl-10 pr-3 py-2.5"
                 />
               </div>
             </div>
@@ -112,7 +112,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition shadow-sm disabled:opacity-50"
+              className="btn-primary w-full justify-center py-2.5"
             >
               {loading ? (
                 <span>Signing in...</span>

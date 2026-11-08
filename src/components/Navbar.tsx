@@ -103,11 +103,7 @@ export default function Navbar({
             <>
               <Link
                 href="/dashboard"
-                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium shadow-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                  dark
-                    ? "border-white/25 bg-transparent text-white hover:bg-white/10"
-                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300"
-                }`}
+                className="btn-secondary btn-sm"
               >
                 <LayoutDashboard
                   className={`h-4 w-4 ${dark ? "text-teal-300" : "text-emerald-600"}`}
@@ -152,11 +148,7 @@ export default function Navbar({
           ) : (
             <Link
               href="/dashboard/login"
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-semibold shadow-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                dark
-                  ? "bg-white text-black hover:bg-neutral-200"
-                  : "bg-emerald-600 text-white hover:bg-emerald-700"
-              }`}
+              className="btn-primary btn-sm"
             >
               <LogIn className="h-4 w-4" aria-hidden="true" />
               <span>Login</span>

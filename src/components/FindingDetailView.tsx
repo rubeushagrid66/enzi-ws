@@ -143,59 +143,59 @@ export default function FindingDetailView({
   const groupLabel = activeGroup ? activeGroup.name : "—";
   const groupScoresStrip = (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
-        <div className="text-xs font-medium text-emerald-700 uppercase tracking-wider">
+      <div className="p-4 rounded-xl border border-slate-200 bg-white">
+        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
           Desirability Score ({groupLabel})
         </div>
-        <div className="mt-1 text-3xl font-extrabold text-emerald-900">
+        <div className="mt-1 text-3xl font-bold text-slate-900">
           {groupD != null ? (
             <>
               {groupD}
-              <span className="text-sm font-normal text-emerald-600"> / 3</span>
+              <span className="text-sm font-normal text-slate-400"> / 3</span>
             </>
           ) : (
             "N/A"
           )}
         </div>
-        <p className="mt-1 text-xs text-emerald-700">
+        <p className="mt-1 text-xs text-slate-500">
           From research mentions (Wawancara + Survey)
         </p>
       </div>
 
-      <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
-        <div className="text-xs font-medium text-blue-700 uppercase tracking-wider">
+      <div className="p-4 rounded-xl border border-slate-200 bg-white">
+        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
           Viability &amp; Feasibility Score ({groupLabel})
         </div>
-        <div className="mt-1 text-3xl font-extrabold text-blue-900">
+        <div className="mt-1 text-3xl font-bold text-slate-900">
           {groupV != null ? (
             <>
               {groupV}
-              <span className="text-sm font-normal text-blue-600"> / 3</span>
+              <span className="text-sm font-normal text-slate-400"> / 3</span>
             </>
           ) : (
             "N/A"
           )}
         </div>
-        <p className="mt-1 text-xs text-blue-700">
+        <p className="mt-1 text-xs text-slate-500">
           Average of {groupLabel}&apos;s Viability aspect scores
         </p>
       </div>
 
-      <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
-        <div className="text-xs font-medium text-amber-700 uppercase tracking-wider">
+      <div className="p-4 rounded-xl border border-slate-200 bg-white">
+        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
           Matrix Score ({groupLabel})
         </div>
-        <div className="mt-1 text-3xl font-extrabold text-amber-900">
+        <div className="mt-1 text-3xl font-bold text-slate-900">
           {groupF != null ? (
             <>
               {groupF}
-              <span className="text-sm font-normal text-amber-600"> / 3</span>
+              <span className="text-sm font-normal text-slate-400"> / 3</span>
             </>
           ) : (
             "N/A"
           )}
         </div>
-        <p className="mt-1 text-xs text-amber-700">
+        <p className="mt-1 text-xs text-slate-500">
           4 − average of {groupLabel}&apos;s Effort aspect scores
         </p>
       </div>
@@ -360,11 +360,7 @@ export default function FindingDetailView({
                     type="button"
                     aria-pressed={selected}
                     onClick={() => setSelectedGroupId(g.id)}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
-                      selected
-                        ? "border-blue-600 bg-blue-600 text-white shadow-xs"
-                        : "border-slate-300 bg-white text-slate-700 hover:border-blue-400"
-                    }`}
+                    className={`tab-pill ${selected ? "tab-pill-active" : ""}`}
                   >
                     {g.name}
                     {isMe && (
@@ -386,45 +382,33 @@ export default function FindingDetailView({
           <div className="mt-6 flex border-b border-slate-200 overflow-x-auto">
             <button
               onClick={() => setActiveTab("desirability")}
-              className={`flex shrink-0 items-center gap-2 px-3 sm:px-5 py-3 text-xs sm:text-sm font-semibold border-b-2 transition -mb-px ${
-                activeTab === "desirability"
-                  ? "border-emerald-600 text-emerald-700 bg-emerald-50/50"
-                  : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
-              }`}
+              className={`tab-underline ${activeTab === "desirability" ? "tab-underline-active" : ""}`}
             >
               <Target className="hidden sm:block h-4 w-4" />
               <span>Desirability</span>
-              <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-800">
+              <span className="badge bg-emerald-100 text-emerald-800">
                 {groupD != null ? groupD : "N/A"}
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab("viability")}
-              className={`flex shrink-0 items-center gap-2 px-3 sm:px-5 py-3 text-xs sm:text-sm font-semibold border-b-2 transition -mb-px ${
-                activeTab === "viability"
-                  ? "border-blue-600 text-blue-700 bg-blue-50/50"
-                  : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
-              }`}
+              className={`tab-underline ${activeTab === "viability" ? "tab-underline-active" : ""}`}
             >
               <Users2 className="hidden sm:block h-4 w-4" />
               <span>Viability &amp; Feasibility</span>
-              <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-blue-100 text-blue-800">
+              <span className="badge bg-emerald-100 text-emerald-800">
                 {groupV != null ? `${groupV} / 3` : "N/A"}
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab("feasibility")}
-              className={`flex shrink-0 items-center gap-2 px-3 sm:px-5 py-3 text-xs sm:text-sm font-semibold border-b-2 transition -mb-px ${
-                activeTab === "feasibility"
-                  ? "border-amber-600 text-amber-700 bg-amber-50/50"
-                  : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
-              }`}
+              className={`tab-underline ${activeTab === "feasibility" ? "tab-underline-active" : ""}`}
             >
               <Compass className="hidden sm:block h-4 w-4" />
               <span>Impact vs Effort Matrix</span>
-              <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-800">
+              <span className="badge bg-emerald-100 text-emerald-800">
                 {groupF != null ? `${groupF} / 3` : "N/A"}
               </span>
             </button>
