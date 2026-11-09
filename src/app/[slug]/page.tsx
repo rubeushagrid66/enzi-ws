@@ -209,14 +209,6 @@ function GroupsView({
   if (selectedGroup) {
     const findings: any[] = groupFindings[selectedGroup.id];
     const isLoading = findings === undefined && groupFindingsLoading;
-    // Findings grouped by their quadrant FOR this group, so the group
-    // shows which findings already have a quadrant (and which don't
-    // yet). Unplaced = no complete D/V/F for this group.
-    const byQuadrant: Record<string, any[]> = { QUICK_WINS: [], BIG_BETS: [], FILL_INS: [], AVOID: [], UNPLACED: [] };
-    for (const f of findings || []) {
-      const q = quadrantForGroup(f, selectedGroup);
-      (byQuadrant[q ?? "UNPLACED"] ?? byQuadrant.UNPLACED).push(f);
-    }
     return (
       <div className="space-y-6">
         <div>
@@ -241,47 +233,19 @@ function GroupsView({
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
           </div>
         ) : findings && findings.length > 0 ? (
-          <div className="space-y-8">
-            {(["QUICK_WINS", "BIG_BETS", "FILL_INS", "AVOID"] as const).map((q) => {
-              const inQuad = byQuadrant[q];
-              if (inQuad.length === 0) return null;
-              return (
-                <section key={q}>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <h3 className="text-base font-bold text-slate-900">{QUADRANT_META[q].title}</h3>
-                    <span className="text-xs font-semibold text-slate-400">{QUADRANT_META[q].detail}</span>
-                  </div>
-                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {inQuad.map((finding: any) => (
-                      <FindingCard
-                        key={finding.id}
-                        finding={finding}
-                        meId={meId}
-                        group={selectedGroup}
-                        onSelect={onSelectFinding}
-                      />
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
-            {byQuadrant.UNPLACED.length > 0 && (
-              <section>
-                <h3 className="text-base font-bold text-slate-900">Not yet placed</h3>
-                <p className="mt-0.5 text-xs text-slate-500">No quadrant yet — score the idea to place it.</p>
-                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {byQuadrant.UNPLACED.map((finding: any) => (
-                    <FindingCard
-                      key={finding.id}
-                      finding={finding}
-                      meId={meId}
-                      group={selectedGroup}
-                      onSelect={onSelectFinding}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
+          // One flat grid — no separation by quadrant, score, or status.
+          // Four columns on wide screens so the cards fill the row
+          // instead of leaving a big empty area.
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {findings.map((finding: any) => (
+              <FindingCard
+                key={finding.id}
+                finding={finding}
+                meId={meId}
+                group={selectedGroup}
+                onSelect={onSelectFinding}
+              />
+            ))}
           </div>
         ) : (
           <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
