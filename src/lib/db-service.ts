@@ -1806,24 +1806,27 @@ export const dbService = {
       (g.participants || []).map((p: any) => ({ ...p, groupId: g.id, groupName: g.name }))
     );
     const user = await dbService.getUserById(session.id).catch(() => null);
-    // Project assignment (User.projectId, set in the dashboard Users
-    // tab): a label-role user (Tech / Product / Business & Ops) assigned
-    // to a project cannot score in any other project — return null so
-    // the caller answers 403 and no participant row is created or
-    // linked here. ADMIN / FACILITATOR are exempt (they work across
+    // A login assigned to a project (User.projectId, set in the
+    // dashboard Users tab) cannot score in any other project — return
+    // null so the caller answers 403 and no participant row is created
+    // or linked here. ADMIN / FACILITATOR are exempt (they work across
     // projects), and a user with no projectId is unaffected. Viewing
     // stays open: the matrix degrades to read-only when /me fails.
-    if (user?.projectId && user.projectId !== project.id && isLabelRole(session.role)) {
+    // This covers EVERY scorer role (label roles, Group, Participant):
+    // the gate used to be label-role-only, so a Group login assigned
+    // to CMS who opened DVC got a phantom "Me" in DVC Grup 1.
+    const isPrivileged = session.role === "ADMIN" || session.role === "FACILITATOR";
+    if (user?.projectId && user.projectId !== project.id && !isPrivileged) {
       return null;
     }
-    // A group assignment implies a project (a group's project): a
-    // label-role user whose assigned group belongs to ANOTHER project
-    // cannot score here either — otherwise merely opening the wrong
-    // project silently creates them a participant in that project's
-    // first group (seen live with Biz CMS 2: assigned to CMS Grup 2,
+    // A group assignment implies a project (a group's project): a user
+    // whose assigned group belongs to ANOTHER project cannot score
+    // here either — otherwise merely opening the wrong project silently
+    // creates them a participant in that project's first group (seen
+    // live with Biz CMS 2 and with Grup CMS 1: assigned to CMS Grup 1,
     // opened DVC, got a "Me" in DVC Grup 1). Same exemptions as the
     // project gate. A dangling groupId (group deleted) does not block.
-    if (user?.groupId && isLabelRole(session.role)) {
+    if (user?.groupId && !isPrivileged) {
       const assigned = await dbService.getGroupById(user.groupId).catch(() => null);
       if (assigned && assigned.projectId !== project.id) {
         return null;
