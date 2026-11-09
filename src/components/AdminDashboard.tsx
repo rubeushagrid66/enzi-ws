@@ -1840,9 +1840,10 @@ export default function AdminDashboard() {
         </Modal>
       )}
 
-      {/* IDEA MODAL (create + edit) */}
+      {/* IDEA MODAL (create + edit) — wide: the findings checklist
+          needs the room, or the project names wrap into a mess. */}
       {ideaModalOpen && (
-        <Modal title={editingIdeaId ? `Edit Idea — ${ideaForm.title || "Untitled"}` : "Create Idea"} onClose={() => setIdeaModalOpen(false)}>
+        <Modal wide title={editingIdeaId ? `Edit Idea — ${ideaForm.title || "Untitled"}` : "Create Idea"} onClose={() => setIdeaModalOpen(false)}>
           <form onSubmit={handleSaveIdea} className="space-y-3">
             <div>
               <label htmlFor="idea-title" className="field-label">Idea Title</label>
@@ -1850,7 +1851,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <label htmlFor="idea-desc" className="field-label">Description</label>
-              <textarea id="idea-desc" rows={2} placeholder="What is the idea?" value={ideaForm.description} onChange={(e) => setIdeaForm((f) => ({ ...f, description: e.target.value }))} className="input w-full" />
+              <textarea id="idea-desc" rows={3} placeholder="What is the idea?" value={ideaForm.description} onChange={(e) => setIdeaForm((f) => ({ ...f, description: e.target.value }))} className="input w-full" />
             </div>
             <fieldset>
               <legend className="field-label">Linked Findings</legend>
@@ -1858,17 +1859,19 @@ export default function AdminDashboard() {
               {poolFindings.length === 0 ? (
                 <p className="text-sm italic text-slate-500">No findings yet — add a finding first (Findings &amp; Tags tab).</p>
               ) : (
-                <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-xl border border-slate-200 px-3 py-2">
+                <div className="max-h-96 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">
                   {poolFindings.map((f: any) => (
-                    <label key={f.id} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                    <label key={f.id} className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
                       <input
                         type="checkbox"
                         checked={ideaFindingIds.includes(f.id)}
                         onChange={() => toggleIdeaFinding(f.id)}
-                        className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-emerald-600"
                       />
-                      <span className="font-medium">{f.title}</span>
-                      {f.projectName && <span className="text-xs text-slate-400">· {f.projectName}</span>}
+                      <span className="min-w-0">
+                        <span className="block font-medium leading-snug text-slate-900">{f.title}</span>
+                        {f.projectName && <span className="mt-0.5 block text-xs text-slate-400">{f.projectName}</span>}
+                      </span>
                     </label>
                   ))}
                 </div>
