@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { X, Plus, ExternalLink, FolderGit2, Layers, Users2, Sliders, Tag, Shield, ListChecks } from "lucide-react";
+import { X, Plus, ExternalLink, FolderGit2, Users2, Sliders, Tag, Shield, ListChecks } from "lucide-react";
 import { ADMIN_NAV, type AdminTab } from "@/lib/admin-nav";
 
 // Icons live here (client-side); the nav data (id/label/href/badge)
@@ -10,7 +10,6 @@ const NAV_ICONS: Record<AdminTab, React.ComponentType<{ className?: string }>> =
   findings: Tag,
   weights: Sliders,
   groups: Users2,
-  parameters: Layers,
   aspects: ListChecks,
   projects: FolderGit2,
   users: Shield,

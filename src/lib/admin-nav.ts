@@ -8,7 +8,6 @@ export type AdminTab =
   | "findings"
   | "weights"
   | "groups"
-  | "parameters"
   | "aspects"
   | "users";
 
@@ -22,12 +21,12 @@ export interface AdminNavItem {
 
 export const ADMIN_NAV: AdminNavItem[] = [
   // "Global" = shared across all projects (findings pool, one D/V/F
-  // weighting, one L1–L3 tree, one user list). Groups, aspects and the
-  // projects themselves stay per-project.
+  // weighting, one user list). Groups, aspects and the projects
+  // themselves stay per-project. The L1–L3 parameter tree was removed
+  // 2026-11-09: nothing read it — D/V/F use mention counts + basis N.
   { id: "findings", label: "Findings & Tags", href: "/dashboard/findings", badge: "Global" },
   { id: "weights", label: "Framework & Weighting", href: "/dashboard/framework", badge: "Global" },
   { id: "groups", label: "Groups & Participants", href: "/dashboard/groups" },
-  { id: "parameters", label: "L1–L3 Parameters", href: "/dashboard/parameters", badge: "Global" },
   { id: "aspects", label: "Viability Aspects", href: "/dashboard/aspects" },
   { id: "projects", label: "All Projects", href: "/dashboard/projects" },
   { id: "users", label: "Users & Roles", href: "/dashboard/user", badge: "Global" },

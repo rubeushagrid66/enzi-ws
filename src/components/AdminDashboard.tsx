@@ -212,9 +212,8 @@ export default function AdminDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProject?.slug]);
 
-  // Global findings pool + global L1–L3 tree (shared by all projects).
+  // Global findings pool (shared by all projects).
   const [poolFindings, setPoolFindings] = useState<any[]>([]);
-  const [globalParams, setGlobalParams] = useState<any[]>([]);
   const [globalSetupNote, setGlobalSetupNote] = useState<string | null>(null);
 
   // Finding → group assignment (admin + facilitator, dashboard only).
@@ -246,14 +245,6 @@ export default function AdminDashboard() {
   const [newAspectFramework, setNewAspectFramework] = useState<string>("Viability");
   const [newAspectLabel, setNewAspectLabel] = useState<string>("");
   const [editingAspect, setEditingAspect] = useState<{ id: string; name: string; description: string; framework: string; label: string } | null>(null);
-
-  // Parameters L1/L2/L3
-  const [newL1Name, setNewL1Name] = useState("");
-  const [newL2Name, setNewL2Name] = useState("");
-  const [newL2ParentL1Id, setNewL2ParentL1Id] = useState("");
-  const [newL3Name, setNewL3Name] = useState("");
-  const [newL3ParentL2Id, setNewL3ParentL2Id] = useState("");
-  const [editingParam, setEditingParam] = useState<{ level: "L1" | "L2" | "L3"; id: string; name: string } | null>(null);
 
   // Users
   const [usersList, setUsersList] = useState<any[]>([]);
@@ -288,13 +279,12 @@ export default function AdminDashboard() {
     }
   };
 
-  // Global setup: weights, L1–L3 tree, findings pool. These are shared
+  // Global setup: weights, findings pool. These are shared
   // by all projects and do not depend on the selected project.
   const loadGlobalData = async () => {
     try {
-      const [w, p, f, g] = await Promise.all([
+      const [w, f, g] = await Promise.all([
         apiCall("/api/global/weights"),
-        apiCall("/api/global/parameters"),
         apiCall("/api/global/findings"),
         apiCall("/api/global/groups"),
       ]);
@@ -302,12 +292,11 @@ export default function AdminDashboard() {
         setWeightInputs(w.weights.map((x: any) => ({ name: x.name, weight: x.weight })));
         setWeightsSource(w.source || null);
       }
-      setGlobalParams(p.parameters || []);
       setPoolFindings(f.findings || []);
       setAllGroups(g.groups || []);
       // Surface the "run the SQL" note once, from whichever endpoint
-      // reported it (weights and parameters share the same setup).
-      setGlobalSetupNote(w.note || p.note || null);
+      // reported it.
+      setGlobalSetupNote(w.note || null);
     } catch (err: any) {
       setError(err.message || "Failed to load global setup");
     }
@@ -423,7 +412,7 @@ export default function AdminDashboard() {
   const handleDeleteProject = (p: any) => {
     askConfirm(
       "Delete project?",
-      `“${p.name}” and all of its findings, groups, participants, aspects and parameters will be permanently deleted. This cannot be undone.`,
+      `“${p.name}” and all of its findings, groups, participants and aspects will be permanently deleted. This cannot be undone.`,
       "Delete project",
       async () => {
         try {
@@ -878,93 +867,6 @@ export default function AdminDashboard() {
     });
   };
 
-  // ── Parameters L1/L2/L3 — GLOBAL tree (shared by all projects) ────────────
-  const refreshAfterParamChange = async () => {
-    await loadGlobalData();
-    if (selectedProjectSlug) await loadProjectDetails(selectedProjectSlug);
-  };
-
-  const handleCreateL1 = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newL1Name) return;
-    try {
-      setError(null);
-      await apiCall("/api/global/parameters", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ level: "L1", name: newL1Name }),
-      });
-      setNewL1Name("");
-      await refreshAfterParamChange();
-    } catch (err: any) {
-      setError(err.message || "Failed to create parameter");
-    }
-  };
-
-  const handleCreateL2 = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newL2Name || !newL2ParentL1Id) return;
-    try {
-      setError(null);
-      await apiCall("/api/global/parameters", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ level: "L2", name: newL2Name, parentId: newL2ParentL1Id }),
-      });
-      setNewL2Name("");
-      await refreshAfterParamChange();
-    } catch (err: any) {
-      setError(err.message || "Failed to create parameter");
-    }
-  };
-
-  const handleCreateL3 = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newL3Name || !newL3ParentL2Id) return;
-    try {
-      setError(null);
-      await apiCall("/api/global/parameters", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ level: "L3", name: newL3Name, parentId: newL3ParentL2Id }),
-      });
-      setNewL3Name("");
-      await refreshAfterParamChange();
-    } catch (err: any) {
-      setError(err.message || "Failed to create parameter");
-    }
-  };
-
-  const handleSaveParam = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingParam || !editingParam.name.trim()) return;
-    try {
-      setError(null);
-      await apiCall(`/api/global/parameters/${editingParam.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ level: editingParam.level, name: editingParam.name.trim() }),
-      });
-      setEditingParam(null);
-      await refreshAfterParamChange();
-    } catch (err: any) {
-      setError(err.message || "Failed to update parameter");
-    }
-  };
-
-  const handleDeleteParam = (level: "L1" | "L2" | "L3", item: any) => {
-    const childNote = level === "L1" ? " Its subcategories and segments will be deleted too." : level === "L2" ? " Its segments will be deleted too." : "";
-    askConfirm("Delete parameter?", `“${item.name}” (${level}) will be permanently deleted.${childNote}`, "Delete parameter", async () => {
-      try {
-        await apiCall(`/api/global/parameters/${item.id}?level=${level}`, { method: "DELETE" });
-        setConfirm(null);
-        await refreshAfterParamChange();
-      } catch (err: any) {
-        setError(err.message || "Failed to delete parameter");
-      }
-    });
-  };
-
   // ── Users ───────────────────────────────────────────────────────────────────
   // Project + groups backing the user form's dropdowns. The Group
   // options follow the selected project, not the dashboard's active
@@ -1069,11 +971,10 @@ export default function AdminDashboard() {
   };
 
   const sidebarCounts: Record<string, number | undefined> = {
-    // Findings & Parameters are global pools: count the whole pool,
+    // Findings are a global pool: count the whole pool,
     // not just the selected project's slice.
     findings: poolFindings.length,
     groups: activeProject?.groups?.length,
-    parameters: globalParams.length,
     aspects: activeProject?.viabilityAspects?.length,
     projects: projects.length,
     users: usersList.length,
@@ -1135,7 +1036,7 @@ export default function AdminDashboard() {
                     Logged in: {currentUser?.name} ({currentUser?.role})
                   </span>
                 </div>
-                <p className="text-sm text-slate-500">Configure projects, findings, participants, parameters, and scoring logic.</p>
+                <p className="text-sm text-slate-500">Configure projects, findings, participants, and scoring logic.</p>
                 {!isAdmin && currentUser && (
                   <p className="mt-1 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-800">
                     You&apos;re signed in as {currentUser.name} ({currentUser.role}) — you can edit Findings; everything else here is view-only.
@@ -1511,127 +1412,6 @@ export default function AdminDashboard() {
                   ) : (
                     <p className="py-4 text-sm italic text-slate-600">No groups created yet.</p>
                   )}
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* TAB: PARAMETERS */}
-          {activeTab === "parameters" && (
-            <section aria-labelledby="parameters-heading" className="space-y-6">
-              <div>
-                <h2 id="parameters-heading" className="section-title">L1-L3 Parameters &amp; Rules</h2>
-                <p className="section-sub">Global — one hierarchy used by all projects for Desirability scoring.</p>
-                {globalSetupNote && (
-                  <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{globalSetupNote}</p>
-                )}
-              </div>
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {isAdmin && (
-                <div className="card space-y-5 p-5">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Add Level 1 Category</h3>
-                    <p className="mt-0.5 text-sm text-slate-600">Category dimension for Desirability occurrence calculation (e.g. “Sumber Riset”, “Platform”).</p>
-                    <form onSubmit={handleCreateL1} className="mt-3 flex flex-col gap-2 sm:flex-row">
-                      <label htmlFor="new-l1-name" className="sr-only">Level 1 category name</label>
-                      <input id="new-l1-name" type="text" required placeholder="Category Name (e.g. Sumber Riset)" value={newL1Name} onChange={(e) => setNewL1Name(e.target.value)} className="input flex-1" />
-                      <button type="submit" className="btn-primary">Add L1</button>
-                    </form>
-                  </div>
-
-                  <div className="border-t border-slate-100 pt-4">
-                    <h3 className="text-sm font-semibold text-slate-900">Add Level 2 Subcategory</h3>
-                    <form onSubmit={handleCreateL2} className="mt-3 space-y-2">
-                      <div>
-                        <label htmlFor="l2-parent" className="field-label">Parent L1 category</label>
-                        <select id="l2-parent" value={newL2ParentL1Id} onChange={(e) => setNewL2ParentL1Id(e.target.value)} required className="input w-full">
-                          <option value="">Select Parent L1 Category...</option>
-                          {globalParams.map((l1: any) => (<option key={l1.id} value={l1.id}>{l1.name}</option>))}
-                        </select>
-                      </div>
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <label htmlFor="new-l2-name" className="sr-only">Level 2 subcategory name</label>
-                        <input id="new-l2-name" type="text" required placeholder="Subcategory Name (e.g. Wawancara)" value={newL2Name} onChange={(e) => setNewL2Name(e.target.value)} className="input flex-1" />
-                        <button type="submit" className="btn-dark">Add L2</button>
-                      </div>
-                    </form>
-                  </div>
-
-                  <div className="border-t border-slate-100 pt-4">
-                    <h3 className="text-sm font-semibold text-slate-900">Add Level 3 Segment</h3>
-                    <form onSubmit={handleCreateL3} className="mt-3 space-y-2">
-                      <div>
-                        <label htmlFor="l3-parent" className="field-label">Parent L2 subcategory</label>
-                        <select id="l3-parent" value={newL3ParentL2Id} onChange={(e) => setNewL3ParentL2Id(e.target.value)} required className="input w-full">
-                          <option value="">Select Parent L2 Subcategory...</option>
-                          {globalParams.flatMap((l1: any) =>
-                            (l1.subCategories || []).map((l2: any) => (
-                              <option key={l2.id} value={l2.id}>{l1.name} → {l2.name}</option>
-                            ))
-                          )}
-                        </select>
-                      </div>
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <label htmlFor="new-l3-name" className="sr-only">Level 3 segment name</label>
-                        <input id="new-l3-name" type="text" required placeholder="Segment Name (e.g. Cash Management)" value={newL3Name} onChange={(e) => setNewL3Name(e.target.value)} className="input flex-1" />
-                        <button type="submit" className="btn-primary">Add L3</button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-                )}
-
-                <div className="card space-y-4 p-5">
-                  <h3 className="text-sm font-semibold text-slate-900">Configured Hierarchy (L1 → L2 → L3)</h3>
-                  <div className="max-h-[500px] space-y-4 overflow-y-auto pr-1">
-                    {globalParams.length > 0 ? globalParams.map((l1: any) => (
-                      <div key={l1.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700">L1: {l1.name}</span>
-                          <span className="flex items-center gap-1">
-                            <span className="mr-1 hidden font-mono text-xs text-slate-500 sm:inline">Rules: &gt;66%=3, &gt;33%=2, &lt;=33%=1</span>
-                            {isAdmin && (<>
-                            <button type="button" onClick={() => setEditingParam({ level: "L1", id: l1.id, name: l1.name })} aria-label={`Edit L1 ${l1.name}`} className="btn-icon !p-1"><Edit2 className="h-3.5 w-3.5" /></button>
-                            <button type="button" onClick={() => handleDeleteParam("L1", l1)} aria-label={`Delete L1 ${l1.name}`} className="btn-icon-danger !p-1"><Trash2 className="h-3.5 w-3.5" /></button>
-                            </>)}
-                          </span>
-                        </div>
-                        <div className="mt-2.5 space-y-2 border-l-2 border-emerald-300 pl-3">
-                          {l1.subCategories?.map((l2: any) => (
-                            <div key={l2.id} className="text-sm">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="font-medium text-slate-700">↳ L2: {l2.name}</span>
-                                {isAdmin && (
-                                <span className="flex items-center gap-1">
-                                  <button type="button" onClick={() => setEditingParam({ level: "L2", id: l2.id, name: l2.name })} aria-label={`Edit L2 ${l2.name}`} className="btn-icon !p-1"><Edit2 className="h-3.5 w-3.5" /></button>
-                                  <button type="button" onClick={() => handleDeleteParam("L2", l2)} aria-label={`Delete L2 ${l2.name}`} className="btn-icon-danger !p-1"><Trash2 className="h-3.5 w-3.5" /></button>
-                                </span>
-                                )}
-                              </div>
-                              {l2.segments?.length > 0 && (
-                                <div className="mt-1 space-y-1 pl-4 text-xs text-slate-600">
-                                  {l2.segments.map((l3: any) => (
-                                    <div key={l3.id} className="flex items-center justify-between gap-2">
-                                      <span>• L3: {l3.name}</span>
-                                      {isAdmin && (
-                                      <span className="flex items-center gap-1">
-                                        <button type="button" onClick={() => setEditingParam({ level: "L3", id: l3.id, name: l3.name })} aria-label={`Edit L3 ${l3.name}`} className="btn-icon !p-1"><Edit2 className="h-3.5 w-3.5" /></button>
-                                        <button type="button" onClick={() => handleDeleteParam("L3", l3)} aria-label={`Delete L3 ${l3.name}`} className="btn-icon-danger !p-1"><Trash2 className="h-3.5 w-3.5" /></button>
-                                      </span>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                          {(!l1.subCategories || l1.subCategories.length === 0) && <p className="text-xs italic text-slate-500">No subcategories yet.</p>}
-                        </div>
-                      </div>
-                    )) : (
-                      <p className="py-4 text-sm italic text-slate-600">No parameters configured yet.</p>
-                    )}
-                  </div>
                 </div>
               </div>
             </section>
@@ -2078,22 +1858,6 @@ export default function AdminDashboard() {
             </div>
             <div className="flex items-center justify-end gap-2 pt-2">
               <button type="button" onClick={() => setEditingAspect(null)} className="btn-secondary">Cancel</button>
-              <button type="submit" className="btn-primary">Save Changes</button>
-            </div>
-          </form>
-        </Modal>
-      )}
-
-      {/* PARAMETER EDIT MODAL */}
-      {editingParam && (
-        <Modal title={`Edit ${editingParam.level} Parameter`} onClose={() => setEditingParam(null)}>
-          <form onSubmit={handleSaveParam} className="space-y-3">
-            <div>
-              <label htmlFor="edit-param-name" className="field-label">{editingParam.level} name</label>
-              <input id="edit-param-name" type="text" required value={editingParam.name} onChange={(e) => setEditingParam({ ...editingParam, name: e.target.value })} className="input w-full" />
-            </div>
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setEditingParam(null)} className="btn-secondary">Cancel</button>
               <button type="submit" className="btn-primary">Save Changes</button>
             </div>
           </form>
