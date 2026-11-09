@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   Map,
   ChevronDown,
+  ChevronRight,
   Check,
   X,
   ImageOff,
@@ -184,6 +185,14 @@ function FindingCard({
  *  project's groups; opening a group shows its assigned findings as the
  *  same cards with D/V/F. A finding assigned to this group shows here
  *  even when its home project is the other one. */
+// Initials for a participant's avatar circle: first letter of the first
+// two words ("Biz CMS 1" -> "BC", "John Doe" -> "JD", "Naimy" -> "N").
+function initials(name: string): string {
+  const words = (name || "").split(/\s+/).filter(Boolean);
+  const letters = words.slice(0, 2).map((w) => w[0]).join("");
+  return (letters || "?").toUpperCase();
+}
+
 function GroupsView({
   project,
   slug,
@@ -227,7 +236,7 @@ function GroupsView({
           <p className="mt-0.5 text-xs text-slate-500">
             {(selectedGroup.participants || []).filter((p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR").map((p: any) => p.name).join(", ") || "No participants yet"}
             {" · "}
-            {findings ? `${findings.length} finding${findings.length === 1 ? "" : "s"}` : "…"}
+            {findings ? `${findings.length} idea${findings.length === 1 ? "" : "s"}` : "…"}
           </p>
         </div>
         {isLoading ? (
@@ -267,7 +276,7 @@ function GroupsView({
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">Groups</h2>
         <p className="mt-0.5 text-xs text-slate-500">
-          Each group holds the findings assigned to it, with their D, V and F. Open a group to see its findings.
+          Each group holds the ideas assigned to it, with their D, V and F. Open a group to see its ideas.
         </p>
       </div>
       {groups.length > 0 ? (
@@ -280,25 +289,63 @@ function GroupsView({
                 key={g.id}
                 type="button"
                 onClick={() => onOpenGroup(g.id)}
-                className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-xs transition hover:border-emerald-300 hover:shadow-sm"
+                className="group flex flex-col rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-xs transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
               >
-                <div className="flex items-center gap-2">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
-                    <Users className="h-4.5 w-4.5" />
+                {/* Header: icon + name + participant count + chevron (signals it's clickable) */}
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+                    <Users className="h-5 w-5" />
                   </span>
-                  <span className="text-base font-bold text-slate-900">{g.name}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-base font-bold text-slate-900">{g.name}</span>
+                    <span className="mt-0.5 block text-xs text-slate-500">
+                      {participants.length > 0
+                        ? `${participants.length} participant${participants.length === 1 ? "" : "s"}`
+                        : "No participants yet"}
+                    </span>
+                  </span>
+                  <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-emerald-600" />
                 </div>
-                <p className="mt-3 text-xs text-slate-500">
-                  {participants.length > 0
-                    ? participants.map((p: any) => p.name).join(", ")
-                    : "No participants yet"}
-                </p>
-                <p className="mt-2 text-xs font-semibold text-emerald-700">
-                  {count != null ? `${count} idea${count === 1 ? "" : "s"}` : "Loading ideas…"}
-                </p>
-                <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
-                  View findings <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-                </span>
+                {/* Who's in the group: avatar initials + names */}
+                {participants.length > 0 && (
+                  <div className="mt-4 flex items-center gap-2.5">
+                    <span className="flex shrink-0 -space-x-1.5">
+                      {participants.slice(0, 5).map((p: any) => (
+                        <span
+                          key={p.id}
+                          title={p.name}
+                          className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-violet-100 text-[10px] font-bold text-violet-800"
+                        >
+                          {initials(p.name)}
+                        </span>
+                      ))}
+                      {participants.length > 5 && (
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-slate-100 text-[10px] font-bold text-slate-600">
+                          +{participants.length - 5}
+                        </span>
+                      )}
+                    </span>
+                    <span className="min-w-0 truncate text-xs text-slate-500">
+                      {participants.map((p: any) => p.name).join(", ")}
+                    </span>
+                  </div>
+                )}
+                {/* Footer: idea count (stat) + CTA */}
+                <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                  <span className="text-sm">
+                    {count != null ? (
+                      <>
+                        <span className="font-bold text-slate-900">{count}</span>{" "}
+                        <span className="text-slate-500">idea{count === 1 ? "" : "s"}</span>
+                      </>
+                    ) : (
+                      <span className="text-slate-500">Loading ideas…</span>
+                    )}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 transition group-hover:bg-emerald-100">
+                    View Ideas <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </span>
+                </div>
               </button>
             );
           })}
