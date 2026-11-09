@@ -797,15 +797,26 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDeleteIdea = async (idea: any) => {
-    if (!window.confirm(`Delete the idea “${idea.title}”? Its links to findings will be removed too. This cannot be undone.`)) return;
-    try {
-      setError(null);
-      await apiCall(`/api/global/ideas/${idea.id}`, { method: "DELETE" });
-      setIdeas((rows: any[]) => rows.filter((x: any) => x.id !== idea.id));
-    } catch (err: any) {
-      setError(err.message || "Failed to delete idea");
-    }
+  const handleDeleteIdea = (idea: any) => {
+    // Use the app's own confirm dialog, not window.confirm — the
+    // native browser confirm is dismissed by automated browsers
+    // before it can be accepted, so the delete never ran.
+    askConfirm(
+      `Delete idea — ${idea.title}`,
+      `Delete the idea “${idea.title}”? Its links to findings will be removed too. This cannot be undone.`,
+      "Delete",
+      async () => {
+        try {
+          setError(null);
+          await apiCall(`/api/global/ideas/${idea.id}`, { method: "DELETE" });
+          setIdeas((rows: any[]) => rows.filter((x: any) => x.id !== idea.id));
+        } catch (err: any) {
+          setError(err.message || "Failed to delete idea");
+        } finally {
+          setConfirm(null);
+        }
+      }
+    );
   };
 
   /** Copy a pool finding into the selected project. The copy is a new,
