@@ -212,10 +212,37 @@ export const dbService = {
       const l1All = l1Res.data || [];
       const l1Global = l1All.filter((r: any) => !r.project_id);
       const l1Rows = l1Global.length > 0 ? l1Global : l1All.filter((r: any) => r.project_id === project.id);
+      // Ideas tab = everything this project's groups work on: the
+      // project's own findings PLUS any finding assigned to one of its
+      // groups (which may belong to another project, or to no project
+      // at all). Without this, a group can hold ideas that never appear
+      // in the project's Ideas listing.
+      const ownFindings = findingsRes.data || [];
+      const ownIds = new Set(ownFindings.map((f: any) => f.id));
+      const projectGroupIds = (groupsRes.data || []).map((g: any) => g.id).filter(Boolean);
+      let assignedFindings: any[] = [];
+      if (projectGroupIds.length > 0) {
+        const { data: links } = await supabase
+          .from("finding_groups")
+          .select("finding_id")
+          .in("group_id", projectGroupIds);
+        const assignedIds = Array.from(
+          new Set(((links as any[]) || []).map((r: any) => r.finding_id).filter(Boolean))
+        ).filter((id: string) => !ownIds.has(id));
+        if (assignedIds.length > 0) {
+          const { data: assigned } = await supabase
+            .from("findings")
+            .select("*, parameterValues:finding_parameter_values(*, segment:parameters_l3(*, subCategory:parameters_l2(*))), viabilityVotes:viability_votes(*)")
+            .in("id", assignedIds)
+            .order("created_at", { ascending: true });
+          assignedFindings = assigned || [];
+        }
+      }
+      const allFindingsData = [...ownFindings, ...assignedFindings];
       // Group assignment (Step 10): which groups each finding is
       // assigned to. A missing table reads as no assignment.
       const groupMap = await dbService.getFindingsGroupMap(
-        (findingsRes.data || []).map((f: any) => f.id)
+        allFindingsData.map((f: any) => f.id)
       );
 
       return {
@@ -260,7 +287,7 @@ export const dbService = {
           })),
         })),
         parametersL1: mapL1Rows(l1Rows || []),
-        findings: (findingsRes.data || []).map((f: any) => ({
+        findings: allFindingsData.map((f: any) => ({
           id: f.id,
           title: f.title,
           description: f.description,
@@ -355,11 +382,22 @@ export const dbService = {
     ]);
     if (globalWeights) (project as any).frameworkWeights = globalWeights;
     if (globalL1.length > 0) (project as any).parametersL1 = globalL1;
+    // Ideas tab = the project's own findings PLUS any finding assigned
+    // to one of its groups (same rule as the Supabase branch above).
+    const prismaOwnIds = new Set((project.findings || []).map((f: any) => f.id));
+    const prismaGroupIds = (project.groups || []).map((g: any) => g.id).filter(Boolean);
+    let prismaAssigned: any[] = [];
+    if (prismaGroupIds.length > 0) {
+      const idLists = await Promise.all(prismaGroupIds.map((gid: string) => dbService.getGroupFindingIds(gid)));
+      const assignedIds = Array.from(new Set(idLists.flat())).filter((id: string) => !prismaOwnIds.has(id));
+      if (assignedIds.length > 0) prismaAssigned = await dbService.getFindingsByIds(assignedIds);
+    }
+    const prismaAllFindings = [...(project.findings || []), ...prismaAssigned];
     // Group assignment (Step 10) on each finding; [] when unassigned.
     const prismaGroupMap = await dbService.getFindingsGroupMap(
-      (project.findings || []).map((f: any) => f.id)
+      prismaAllFindings.map((f: any) => f.id)
     );
-    (project as any).findings = (project.findings || []).map((f: any) => ({
+    (project as any).findings = prismaAllFindings.map((f: any) => ({
       ...f,
       groupIds: prismaGroupMap[f.id] || [],
     }));
