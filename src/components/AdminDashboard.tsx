@@ -233,9 +233,6 @@ export default function AdminDashboard() {
 
   // Groups and Participants
   const [newGroupName, setNewGroupName] = useState("");
-  const [newParticipantName, setNewParticipantName] = useState("");
-  const [newParticipantRole, setNewParticipantRole] = useState("");
-  const [selectedGroupId, setSelectedGroupId] = useState("");
   const [editingGroup, setEditingGroup] = useState<{ id: string; name: string } | null>(null);
   const [editingParticipant, setEditingParticipant] = useState<{ id: string; name: string; roleTitle: string; groupId: string } | null>(null);
 
@@ -768,24 +765,6 @@ export default function AdminDashboard() {
         }
       }
     );
-  };
-
-  const handleCreateParticipant = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newParticipantName || !selectedGroupId) return;
-    try {
-      setError(null);
-      await apiCall(`/api/projects/${selectedProjectSlug}/groups`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "PARTICIPANT", name: newParticipantName, roleTitle: newParticipantRole, groupId: selectedGroupId }),
-      });
-      setNewParticipantName("");
-      setNewParticipantRole("");
-      await loadProjectDetails(selectedProjectSlug);
-    } catch (err: any) {
-      setError(err.message || "Failed to create participant");
-    }
   };
 
   const handleSaveParticipant = async (e: React.FormEvent) => {
@@ -1332,7 +1311,7 @@ export default function AdminDashboard() {
             <section aria-labelledby="groups-heading" className="space-y-6">
               <div>
                 <h2 id="groups-heading" className="section-title">Groups &amp; Participants</h2>
-                <p className="section-sub">Create groups, add participants, and edit or remove them.</p>
+                <p className="section-sub">Create groups, and edit or remove participants. Participants are added by creating a user in Users &amp; Roles and assigning them a group.</p>
               </div>
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {isAdmin && (
@@ -1343,28 +1322,6 @@ export default function AdminDashboard() {
                     <input id="new-group-name" type="text" required placeholder="e.g. Core Product & Strategy" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} className="input flex-1" />
                     <button type="submit" className="btn-primary">Add Group</button>
                   </form>
-
-                  <div className="border-t border-slate-100 pt-4">
-                    <h3 className="mb-3 text-sm font-semibold text-slate-900">Add Participant to Group</h3>
-                    <form onSubmit={handleCreateParticipant} className="space-y-3">
-                      <div>
-                        <label htmlFor="participant-group" className="field-label">Target group</label>
-                        <select id="participant-group" value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)} required className="input w-full">
-                          <option value="">Select Target Group...</option>
-                          {activeProject?.groups?.map((g: any) => (<option key={g.id} value={g.id}>{g.name}</option>))}
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="participant-name" className="field-label">Participant name</label>
-                        <input id="participant-name" type="text" required placeholder="Participant Name (e.g. Budi Hartono)" value={newParticipantName} onChange={(e) => setNewParticipantName(e.target.value)} className="input w-full" />
-                      </div>
-                      <div>
-                        <label htmlFor="participant-role" className="field-label">Role / Title</label>
-                        <input id="participant-role" type="text" placeholder="Role / Title (e.g. Head of Product)" value={newParticipantRole} onChange={(e) => setNewParticipantRole(e.target.value)} className="input w-full" />
-                      </div>
-                      <button type="submit" className="btn-dark w-full justify-center">Add Participant</button>
-                    </form>
-                  </div>
                 </div>
                 )}
 
