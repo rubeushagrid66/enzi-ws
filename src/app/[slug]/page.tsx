@@ -9,10 +9,37 @@ import {
   ArrowRight,
   Users,
   ArrowLeft,
+  Map,
 } from "lucide-react";
 
-import { scoresForParticipant, findingBoardPosition } from "@/lib/scoring";
+import { scoresForParticipant, findingBoardPosition, groupAverageScores, findingBoardPositionForScores, type FeasibilityQuadrant } from "@/lib/scoring";
 import { useMeParticipantId } from "@/lib/useMeParticipant";
+
+// Quadrant display names, shared by the per-group quadrant sections
+// and the Roadmap.
+const QUADRANT_META: Record<FeasibilityQuadrant, { title: string; detail: string }> = {
+  QUICK_WINS: { title: "Quick Wins", detail: "High Impact, Low Effort" },
+  BIG_BETS: { title: "Big Bets", detail: "High Impact, High Effort" },
+  FILL_INS: { title: "Fill-ins", detail: "Low Impact, Low Effort" },
+  AVOID: { title: "Avoid", detail: "Low Impact, High Effort" },
+};
+
+/** A finding's quadrant FOR one group (null when it has none there).
+ *  D is the finding's research score (same for every group in the
+ *  project); V/F are this group's participant averages. A finding
+ *  assigned to specific groups only has a quadrant for those groups
+ *  (an unassigned finding is open to every group). A manual pin wins
+ *  over the computed position, same as the board. */
+function quadrantForGroup(finding: any, group: any): FeasibilityQuadrant | null {
+  const assigned: string[] = finding.groupIds || [];
+  if (assigned.length > 0 && !assigned.includes(group.id)) return null;
+  const participantIds: string[] = (group.participants || [])
+    .filter((p: any) => p.isActive !== false && p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR")
+    .map((p: any) => p.id);
+  const vf = groupAverageScores(finding.scores?.participantScores, participantIds);
+  const d = finding.scores?.desirability ?? null;
+  return findingBoardPositionForScores(finding, d, vf.viability, vf.feasibility).quadrant;
+}
 
 function FindingCard({
   finding,
@@ -156,6 +183,14 @@ function GroupsView({
   if (selectedGroup) {
     const findings: any[] = groupFindings[selectedGroup.id];
     const isLoading = findings === undefined && groupFindingsLoading;
+    // Findings grouped by their quadrant FOR this group, so the group
+    // shows which findings already have a quadrant (and which don't
+    // yet). Unplaced = no complete D/V/F for this group.
+    const byQuadrant: Record<string, any[]> = { QUICK_WINS: [], BIG_BETS: [], FILL_INS: [], AVOID: [], UNPLACED: [] };
+    for (const f of findings || []) {
+      const q = quadrantForGroup(f, selectedGroup);
+      (byQuadrant[q ?? "UNPLACED"] ?? byQuadrant.UNPLACED).push(f);
+    }
     return (
       <div className="space-y-6">
         <div>
@@ -180,15 +215,45 @@ function GroupsView({
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
           </div>
         ) : findings && findings.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {findings.map((finding: any) => (
-              <FindingCard
-                key={finding.id}
-                finding={finding}
-                meId={meId}
-                onSelect={onSelectFinding}
-              />
-            ))}
+          <div className="space-y-8">
+            {(["QUICK_WINS", "BIG_BETS", "FILL_INS", "AVOID"] as const).map((q) => {
+              const inQuad = byQuadrant[q];
+              if (inQuad.length === 0) return null;
+              return (
+                <section key={q}>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <h3 className="text-base font-bold text-slate-900">{QUADRANT_META[q].title}</h3>
+                    <span className="text-xs font-semibold text-slate-400">{QUADRANT_META[q].detail}</span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {inQuad.map((finding: any) => (
+                      <FindingCard
+                        key={finding.id}
+                        finding={finding}
+                        meId={meId}
+                        onSelect={onSelectFinding}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+            {byQuadrant.UNPLACED.length > 0 && (
+              <section>
+                <h3 className="text-base font-bold text-slate-900">Not yet placed</h3>
+                <p className="mt-0.5 text-xs text-slate-500">No quadrant yet — score the finding to place it.</p>
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {byQuadrant.UNPLACED.map((finding: any) => (
+                    <FindingCard
+                      key={finding.id}
+                      finding={finding}
+                      meId={meId}
+                      onSelect={onSelectFinding}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
         ) : (
           <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -255,6 +320,95 @@ function GroupsView({
   );
 }
 
+/** Roadmap — all scored findings, globally across every group in this
+ *  project, organised by time horizon from their quadrant:
+ *  Jangka Pendek = Quick Wins only, Jangka Menengah = Fill-ins only,
+ *  Jangka Panjang = Big Bets only. Avoid is deliberately not on the
+ *  roadmap. A finding appears under each group that places it in that
+ *  quadrant (with the group named), so a finding in different
+ *  quadrants for different groups shows in each matching horizon. */
+function RoadmapView({
+  project,
+  onSelectFinding,
+}: {
+  project: any;
+  onSelectFinding: (f: any) => void;
+}) {
+  const groups: any[] = (project.groups || []).filter((g: any) => g.isActive !== false);
+  const findings: any[] = project.findings || [];
+
+  const HORIZONS: {
+    key: "QUICK_WINS" | "FILL_INS" | "BIG_BETS";
+    horizon: string;
+    subtitle: string;
+  }[] = [
+    { key: "QUICK_WINS", horizon: "Jangka Pendek", subtitle: "Quick Wins — high impact, low effort. Do these first." },
+    { key: "FILL_INS", horizon: "Jangka Menengah", subtitle: "Fill-ins — low impact, low effort. Fit them in next." },
+    { key: "BIG_BETS", horizon: "Jangka Panjang", subtitle: "Big Bets — high impact, high effort. Plan these for later." },
+  ];
+
+  // For each horizon quadrant, the findings placed there, with the
+  // groups that place them there.
+  const itemsByHorizon = HORIZONS.map((h) => {
+    const items: { finding: any; groups: any[] }[] = [];
+    for (const finding of findings) {
+      const placing = groups.filter((g) => quadrantForGroup(finding, g) === h.key);
+      if (placing.length > 0) items.push({ finding, groups: placing });
+    }
+    return { ...h, items };
+  });
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">Roadmap</h2>
+        <p className="mt-0.5 text-xs text-slate-500">
+          All scored findings, across every group, placed on the timeline by their quadrant.
+        </p>
+      </div>
+      {itemsByHorizon.map((section) => (
+        <section key={section.key}>
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 className="text-base font-bold text-slate-900">{section.horizon}</h3>
+            <span className="text-xs font-semibold text-slate-400">{QUADRANT_META[section.key].title}</span>
+          </div>
+          <p className="mt-0.5 text-xs text-slate-500">{section.subtitle}</p>
+          {section.items.length > 0 ? (
+            <div className="mt-3 space-y-2.5">
+              {section.items.map(({ finding, groups: placing }) => (
+                <button
+                  key={finding.id + section.key}
+                  type="button"
+                  onClick={() => onSelectFinding(finding)}
+                  className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-xs transition hover:border-emerald-300 hover:shadow-sm"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-slate-900 group-hover:text-emerald-700">
+                      {finding.title}
+                    </span>
+                    <span className="mt-1.5 flex flex-wrap gap-1.5">
+                      {placing.map((g: any) => (
+                        <span key={g.id} className="rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                          {g.name}
+                        </span>
+                      ))}
+                    </span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-xs text-slate-400">
+              No findings in this quadrant yet.
+            </p>
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
+
 export default function ProjectResultViewer({
   params,
 }: {
@@ -276,7 +430,7 @@ export default function ProjectResultViewer({
   // dashboard), as the same cards with D/V/F. `groupFindings` is loaded
   // per group from the group-findings endpoint, so a finding from the
   // other project assigned to this group shows here too.
-  const [view, setView] = useState<"findings" | "groups">("findings");
+  const [view, setView] = useState<"findings" | "groups" | "roadmap">("findings");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [groupFindings, setGroupFindings] = useState<Record<string, any[]>>({});
   const [groupFindingsLoading, setGroupFindingsLoading] = useState(false);
@@ -475,7 +629,7 @@ export default function ProjectResultViewer({
         {/* Findings / Groups — the group view is separate from the
             global findings list. Inside a group are the findings
             assigned to it, as the same cards with D/V/F. */}
-        <div className="mb-6 flex items-center gap-2" role="tablist" aria-label="Findings or groups">
+        <div className="mb-6 flex items-center gap-2" role="tablist" aria-label="Findings, groups or roadmap">
           <button
             type="button"
             role="tab"
@@ -494,9 +648,23 @@ export default function ProjectResultViewer({
           >
             <Users className="h-3.5 w-3.5" /> Groups
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === "roadmap"}
+            onClick={() => { setView("roadmap"); setSelectedGroupId(null); }}
+            className={`tab-pill ${view === "roadmap" ? "tab-pill-active" : ""}`}
+          >
+            <Map className="h-3.5 w-3.5" /> Roadmap
+          </button>
         </div>
 
-        {view === "groups" ? (
+        {view === "roadmap" ? (
+          <RoadmapView
+            project={project}
+            onSelectFinding={(f: any) => router.push(`/${slug}/findings/${f.id}`)}
+          />
+        ) : view === "groups" ? (
           <GroupsView
             project={project}
             slug={slug}
