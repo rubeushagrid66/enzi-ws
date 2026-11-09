@@ -166,31 +166,38 @@ export default function ViabilityVoteMatrix({
     (p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR"
   );
 
-  // Participants assigned to a given aspect. A regular user only sees
-  // their OWN row — the rest of the team is not listed, since every user
-  // inputs data for their own group. ADMIN / FACILITATOR see every
-  // participant's row (they may vote for a named participant).
+  // Participants assigned to a given aspect. No names in this tab, for
+  // ANY role, in any project: every viewer — regular user, ADMIN,
+  // FACILITATOR — sees ONE row per aspect, their own score. ADMIN /
+  // FACILITATOR score as themselves (their own participant row) in any
+  // group they open, so the row must not depend on their participant
+  // row being in the selected group — it is synthesized when needed.
   // (The aspect param is kept so call sites don't change.)
   const isFacilitator = currentUser?.role === "FACILITATOR";
-  // A regular user (anyone who is not ADMIN / FACILITATOR) NEVER sees
-  // participant names in this tab, in any project — the name-hiding
-  // is a property of the role, not of having a "me" row here. A
-  // regular user opening another project (no "me" there) used to fall
-  // back to the admin-style view with every name listed; that is the
-  // bug.
-  const isRegularUser = !isAdmin && !isFacilitator;
+  const meParticipant =
+    meId != null
+      ? (orderedParticipants.find((p: any) => p.id === meId) || {
+          id: meId,
+          name: currentUser?.name || "Me",
+          roleTitle: currentUser?.role || "",
+          userId: currentUser?.id ?? null,
+          isActive: true,
+        })
+      : null;
   const participantsForAspect = (_aspect: any) =>
-    isRegularUser
-      ? (meId != null ? displayParticipants.filter((p: any) => p.id === meId) : [])
-      : displayParticipants;
+    meParticipant ? [meParticipant] : [];
 
   // Group average score for one aspect across the selected group's
-  // participants — the read-only, name-free summary a regular user
-  // sees for an aspect in a project/group where they have no "me"
-  // (e.g. a CMS login viewing Value Chain). Null when nobody scored.
+  // participants — the read-only, name-free summary a viewer sees for
+  // an aspect in a project/group where they have no "me" (e.g. a CMS
+  // login viewing Value Chain). Includes the viewer's own vote when
+  // they have one (ADMIN/FACILITATOR score as themselves). Null when
+  // nobody scored.
   const groupAspectAverage = (aspectId: string): number | null => {
-    const vs = (displayParticipants || [])
-      .map((p: any) => (votesByAspect[aspectId] || {})[p.id])
+    const ids = new Set((displayParticipants || []).map((p: any) => p.id));
+    if (meId) ids.add(meId);
+    const vs = Array.from(ids)
+      .map((id) => (votesByAspect[aspectId] || {})[id])
       .filter((v: any) => v && v.score != null);
     if (vs.length === 0) return null;
     return Number((vs.reduce((s: number, v: any) => s + Number(v.score), 0) / vs.length).toFixed(1));
@@ -200,8 +207,10 @@ export default function ViabilityVoteMatrix({
   // aspect — the name-free Alasan shown alongside the group average
   // above. Empty when nobody left a reason.
   const groupAspectReasons = (aspectId: string): string[] => {
-    return (displayParticipants || [])
-      .map((p: any) => (votesByAspect[aspectId] || {})[p.id])
+    const ids = new Set((displayParticipants || []).map((p: any) => p.id));
+    if (meId) ids.add(meId);
+    return Array.from(ids)
+      .map((id) => (votesByAspect[aspectId] || {})[id])
       .filter((v: any) => v && v.reason && String(v.reason).trim() !== "")
       .map((v: any) => String(v.reason).trim());
   };
@@ -377,7 +386,7 @@ export default function ViabilityVoteMatrix({
             aspects are skipped. Scores and reasons are visible to
             everyone.
             {isAdmin
-              ? " You are signed in as Admin — you can edit any participant's score and reason in any group."
+              ? " You are signed in as Admin — you score each aspect as yourself, in any group."
               : ""}
             {!currentUser ? " Sign in to score." : ""}
             {meFailed ? " Your voter profile could not be resolved — read-only for now." : ""}
@@ -407,7 +416,7 @@ export default function ViabilityVoteMatrix({
           <table className="w-full min-w-[680px] text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70">
-                <th scope="col" className="py-2.5 px-3 font-bold text-slate-700">{isRegularUser ? "Aspect" : "Participant"}</th>
+                <th scope="col" className="py-2.5 px-3 font-bold text-slate-700">Aspect</th>
                 <th scope="col" className="py-2.5 px-3 font-bold text-slate-700 text-center">Score (1–3)</th>
                 <th scope="col" className="py-2.5 px-3 font-bold text-slate-700">Alasan</th>
               </tr>
@@ -428,23 +437,11 @@ export default function ViabilityVoteMatrix({
                     const groupReasons = groupAspectReasons(aspect.id);
                     return (
                       <React.Fragment key={aspect.id}>
-                        {/* Regular user: the aspect name lives in the
-                            score row itself, so no separate header row.
-                            Admin / facilitator keep the header row above
-                            their per-participant rows. */}
-                        {!isRegularUser && (
-                          <tr className="bg-slate-50/70">
-                            <td colSpan={3} className="py-2.5 px-3">
-                              {renderAspectTitle(aspect, fw)}
-                            </td>
-                          </tr>
-                        )}
                         {rows.length === 0 ? (
-                          isRegularUser ? (
-                            // Regular user with no "me" in this
-                            // project/group (e.g. a CMS login viewing
-                            // Value Chain): one read-only row with the
-                            // group's average score for the aspect.
+                            // Viewer with no "me" in this project/group
+                            // (e.g. a CMS login viewing Value Chain, or a
+                            // failed "me" lookup): one read-only row with
+                            // the group's average score for the aspect.
                             // No names, no editable controls.
                             <tr key={aspect.id} className="hover:bg-slate-50/80 transition align-top">
                               <td className="py-2.5 px-3">{renderAspectTitle(aspect, fw)}</td>
@@ -463,13 +460,6 @@ export default function ViabilityVoteMatrix({
                                 )}
                               </td>
                             </tr>
-                          ) : (
-                            <tr className="align-top">
-                              <td colSpan={3} className="py-2.5 px-3 text-slate-400 italic">
-                                No participants in this group.
-                              </td>
-                            </tr>
-                          )
                         ) : (
                           rows.map((p: any) => {
                           const isMe = p.id === meId;
@@ -485,21 +475,7 @@ export default function ViabilityVoteMatrix({
                           return (
                             <tr key={`${aspect.id}:${p.id}`} className="hover:bg-slate-50/80 transition align-top">
                               <td className="py-2.5 px-3">
-                                {isRegularUser ? (
-                                  renderAspectTitle(aspect, fw)
-                                ) : (
-                                  <>
-                                    <span className="font-bold text-slate-800 text-[13px]">{p.name}</span>
-                                    {p.roleTitle && (
-                                      <span className="text-slate-500"> ({p.roleTitle})</span>
-                                    )}
-                                    {isMe && (
-                                      <span className="ml-1.5 inline-flex rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-extrabold text-emerald-800">
-                                        You
-                                      </span>
-                                    )}
-                                  </>
-                                )}
+                                {renderAspectTitle(aspect, fw)}
                               </td>
                               <td className="py-2.5 px-3 text-center whitespace-nowrap">
                                 {rowEditable ? (

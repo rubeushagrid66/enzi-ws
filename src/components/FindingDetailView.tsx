@@ -76,10 +76,19 @@ export default function FindingDetailView({
       : myGroupId ?? groups[0]?.id ?? null;
   const activeGroup = groups.find((g: any) => g.id === activeGroupId) || null;
   // Participants of the selected group who can score (the admin /
-  // facilitator account is not a scorer and is never listed).
-  const groupParticipantIds: string[] = (activeGroup?.participants || [])
-    .filter((p: any) => p.isActive !== false && p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR")
-    .map((p: any) => p.id);
+  // facilitator account is not a scorer and is never listed). The
+  // viewer's own participant id is always included: ADMIN/FACILITATOR
+  // score as themselves in any group, so their vote counts in the
+  // group's V/F even though their row lives in only one group.
+  // (For a regular user the id is already in the group, so the extra
+  // entry is a harmless duplicate — the average counts each
+  // participant once.)
+  const groupParticipantIds: string[] = [
+    ...(activeGroup?.participants || [])
+      .filter((p: any) => p.isActive !== false && p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR")
+      .map((p: any) => p.id),
+    ...(meId ? [meId] : []),
+  ];
   // Is this finding assigned to the selected group? A finding assigned
   // to no group is open to every group; a finding assigned to ≥1 group
   // only counts for those groups.

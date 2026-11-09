@@ -41,12 +41,18 @@ const QUADRANT_META: Record<FeasibilityQuadrant, { title: string; detail: string
  *  (same for every group in the project); V/F are this group's
  *  participant averages. All null when the finding isn't assigned to
  *  (or open to) this group, or the group has no complete score. */
-function groupScoresFor(finding: any, group: any): { d: number | null; v: number | null; f: number | null } {
+function groupScoresFor(finding: any, group: any, extraParticipantIds: string[] = []): { d: number | null; v: number | null; f: number | null } {
   const assigned: string[] = finding.groupIds || [];
   if (assigned.length > 0 && !assigned.includes(group.id)) return { d: null, v: null, f: null };
-  const participantIds: string[] = (group.participants || [])
-    .filter((p: any) => p.isActive !== false && p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR")
-    .map((p: any) => p.id);
+  const participantIds: string[] = [
+    ...(group.participants || [])
+      .filter((p: any) => p.isActive !== false && p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR")
+      .map((p: any) => p.id),
+    // The viewer's own id: ADMIN/FACILITATOR score as themselves in
+    // any group, so their vote counts here even though their row lives
+    // in only one group.
+    ...extraParticipantIds,
+  ];
   const vf = groupAverageScores(finding.scores?.participantScores, participantIds);
   return { d: finding.scores?.desirability ?? null, v: vf.viability, f: vf.feasibility };
 }
@@ -58,10 +64,10 @@ function groupScoresFor(finding: any, group: any): { d: number | null; v: number
  *  finding a quadrant for every group, even ones it isn't assigned
  *  to. A manual pin wins over the computed position, same as the
  *  board. */
-function quadrantForGroup(finding: any, group: any): FeasibilityQuadrant | null {
+function quadrantForGroup(finding: any, group: any, extraParticipantIds: string[] = []): FeasibilityQuadrant | null {
   const assigned: string[] = finding.groupIds || [];
   if (assigned.length > 0 && !assigned.includes(group.id)) return null;
-  const { d, v, f } = groupScoresFor(finding, group);
+  const { d, v, f } = groupScoresFor(finding, group, extraParticipantIds);
   return findingBoardPositionForScores(finding, d, v, f).quadrant;
 }
 
@@ -84,7 +90,7 @@ function FindingCard({
   // (group averages, same as the detail page and the section the card
   // sits under). Without a group they fall back to the logged-in
   // viewer's own scores.
-  const groupVF = group ? groupScoresFor(finding, group) : null;
+  const groupVF = group ? groupScoresFor(finding, group, meId ? [meId] : []) : null;
   const my = scoresForParticipant(s.participantScores, meId);
   const shownV = groupVF ? groupVF.v : my.viability;
   const shownF = groupVF ? groupVF.f : my.feasibility;
@@ -364,10 +370,12 @@ function RoadmapView({
   project,
   weights,
   onSelectFinding,
+  meId,
 }: {
   project: any;
   weights: WeightInput[] | null;
   onSelectFinding: (f: any) => void;
+  meId: string | null;
 }) {
   const groups: any[] = (project.groups || []).filter((g: any) => g.isActive !== false);
   const findings: any[] = project.findings || [];
@@ -390,11 +398,11 @@ function RoadmapView({
   const itemsByHorizon = HORIZONS.map((h) => {
     const items: { finding: any; groups: any[]; dvf: number | null }[] = [];
     for (const finding of findings) {
-      const placing = groups.filter((g) => quadrantForGroup(finding, g) === h.key);
+      const placing = groups.filter((g) => quadrantForGroup(finding, g, meId ? [meId] : []) === h.key);
       if (placing.length === 0) continue;
       const dvfs = placing
         .map((g) => {
-          const { d, v, f } = groupScoresFor(finding, g);
+          const { d, v, f } = groupScoresFor(finding, g, meId ? [meId] : []);
           return calculateDVFScore(d, v, f, weights ?? EQUAL_THIRDS);
         })
         .filter((x): x is number => x != null);
@@ -832,6 +840,7 @@ export default function ProjectResultViewer({
           <RoadmapView
             project={project}
             weights={weights}
+            meId={meId}
             onSelectFinding={(f: any) => router.push(`/${slug}/ideas/${f.id}`)}
           />
         ) : view === "groups" ? (
