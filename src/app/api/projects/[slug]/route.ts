@@ -129,7 +129,24 @@ export async function GET(
     // The finding shows the logged-in participant's own values, selected
     // client-side from participantScores. Desirability is 1–3 from
     // research mentions (Wawancara + Survey), not L3 mappings.
-    const findingsWithScores = (project.findings || []).map((f: any) => {
+    // Ideas tab = this project's platform only. The Platform tag is
+    // the idea's home: a "CMS" idea never belongs on the Value Chain
+    // page (and vice versa), even when it was created in — or assigned
+    // to a group of — the other project. Ideas with no Platform tag
+    // are kept (nothing to contradict), so they never vanish.
+    const projectPlatform = (project.name || "")
+      .split(/\s+/)
+      .map((w: string) => (w[0] || "").toUpperCase())
+      .join("");
+    const platformMatches = (platforms: string[]) => {
+      const normalized = (platforms || []).map((p) =>
+        (p === "CMS Portal" ? "CMS" : p).toUpperCase()
+      );
+      if (normalized.length === 0) return true;
+      return normalized.includes(projectPlatform);
+    };
+    const findingsWithScores = (project.findings || [])
+      .map((f: any) => {
       const { sumber, fitur, platform, tagsList } = parseFindingMeta(f.tags);
       const scoringStatus = getFindingScoringStatus(
         f,
@@ -168,7 +185,8 @@ export async function GET(
           participantScores,
         },
       };
-    });
+    })
+      .filter((f: any) => platformMatches(f.platform || []));
 
     // Linked findings for the Ideas listing: each idea (pool item)
     // carries the findings linked to it, so the card shows them
