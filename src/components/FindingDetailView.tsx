@@ -88,11 +88,6 @@ export default function FindingDetailView({
   // score box shows: the quadrant name, not the F number.
   const groupBoardPos = findingBoardPositionForScores(localFinding, groupD, groupV, groupF);
   const groupQuadrant = groupBoardPos.quadrant;
-  // "N/A" when the selected group has no value for this finding,
-  // "—" only when a value exists but is genuinely unscored at the
-  // finding level (kept distinct so N/A always means "not this group").
-  const showGroupNum = (v: number | null | undefined) =>
-    v == null ? "N/A" : v;
 
   // Research basis N for this project: the total users per source.
   // It is per project, not per finding — editing it here updates every
@@ -324,9 +319,6 @@ export default function FindingDetailView({
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
                   Finding Detail
-                </span>
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                  {groupLabel} — D {showGroupNum(groupD)}{groupD != null ? " / 3" : ""} · V {showGroupNum(groupV)}{groupV != null ? " / 3" : ""} · F {showGroupNum(groupF)}{groupF != null ? " / 3" : ""}
                 </span>
               </div>
               <h2 id="finding-detail-title" className="text-2xl font-semibold text-slate-900 leading-tight sm:text-3xl">
