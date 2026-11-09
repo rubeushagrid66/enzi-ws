@@ -371,10 +371,11 @@ function RoadmapView({
     key: "QUICK_WINS" | "FILL_INS" | "BIG_BETS";
     horizon: string;
     subtitle: string;
+    banner: string;
   }[] = [
-    { key: "QUICK_WINS", horizon: "Jangka Pendek", subtitle: "High impact, low effort. Do these first." },
-    { key: "FILL_INS", horizon: "Jangka Menengah", subtitle: "Low impact, low effort. Fit them in next." },
-    { key: "BIG_BETS", horizon: "Jangka Panjang", subtitle: "High impact, high effort. Plan these for later." },
+    { key: "QUICK_WINS", horizon: "Jangka Pendek", subtitle: "High impact, low effort. Do these first.", banner: "bg-teal-700" },
+    { key: "FILL_INS", horizon: "Jangka Menengah", subtitle: "Low impact, low effort. Fit them in next.", banner: "bg-amber-600" },
+    { key: "BIG_BETS", horizon: "Jangka Panjang", subtitle: "High impact, high effort. Plan these for later.", banner: "bg-teal-900" },
   ];
 
   // For each horizon quadrant, the findings placed there, with the
@@ -408,13 +409,19 @@ function RoadmapView({
         </p>
       </div>
       {/* Three horizon columns side by side on tablet/desktop, stacked
-          on mobile. Each column is headed by the horizon name only —
-          no quadrant label. */}
+          on mobile. Each column is headed by a colored banner (teal /
+          amber / dark teal, white text) with a timeline arrow into the
+          next column on desktop. */}
       <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-      {itemsByHorizon.map((section) => (
+      {itemsByHorizon.map((section, idx) => (
         <section key={section.key}>
-          <h3 className="text-base font-bold text-slate-900">{section.horizon}</h3>
-          <p className="mt-0.5 text-xs text-slate-500">{section.subtitle}</p>
+          <div className={`relative rounded-xl px-4 py-3 ${section.banner}`}>
+            <h3 className="text-base font-bold text-white">{section.horizon}</h3>
+            <p className="mt-0.5 text-xs text-white/90">{section.subtitle}</p>
+            {idx < itemsByHorizon.length - 1 && (
+              <ArrowRight className="absolute -right-5 top-1/2 hidden h-5 w-5 -translate-y-1/2 text-amber-500 md:block" />
+            )}
+          </div>
           {section.items.length > 0 ? (
             <div className="mt-3 space-y-2.5">
               {section.items.map(({ finding, groups: placing, dvf }) => (
@@ -447,7 +454,7 @@ function RoadmapView({
             </div>
           ) : (
             <p className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-xs text-slate-400">
-              No findings here yet.
+              N/A
             </p>
           )}
         </section>
