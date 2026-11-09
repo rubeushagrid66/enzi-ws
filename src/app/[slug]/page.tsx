@@ -33,96 +33,81 @@ function FindingCard({
   // same three-box layout in the global Findings list and inside a
   // group — a group card is the same card, just group-filtered.
   const my = scoresForParticipant(s.participantScores, meId);
-  const myPending: string[] = [];
-  if (!finding.scoringStatus?.desirabilityScored) myPending.push("Desirability");
-  if (my.viability == null) myPending.push("Viability");
-  if (my.feasibility == null) myPending.push("Feasibility");
-  const myScored = myPending.length === 0;
+  // Score boxes: label row is a fixed height so a two-line label
+  // ("Viability & Feasibility") never pushes its value out of line
+  // with the other two boxes.
+  const scoreBox = (label: string, value: string | null) => (
+    <div className="rounded-xl border border-slate-100 bg-slate-50 px-2 py-2.5">
+      <div className="flex min-h-8 items-center justify-center text-[11px] font-semibold leading-tight text-slate-400">
+        {label}
+      </div>
+      <div className="mt-0.5 text-base font-bold tabular-nums text-slate-900">
+        {value ?? "—"}
+      </div>
+    </div>
+  );
   return (
     <div
       onClick={() => onSelect(finding)}
-      className="group cursor-pointer rounded-2xl border border-slate-200 bg-white p-5 shadow-xs hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between"
+      className="group flex cursor-pointer flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition-all hover:border-emerald-300 hover:shadow-md"
     >
-      <div className="space-y-3">
+      <div className="flex-1 space-y-3">
         <div className="flex items-center justify-between gap-2">
           {quad ? (
             <span
-              className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+              className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${
                 quad === "QUICK_WINS"
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                   : quad === "BIG_BETS"
-                  ? "bg-amber-50 border-amber-200 text-amber-800"
+                  ? "border-amber-200 bg-amber-50 text-amber-800"
                   : quad === "AVOID"
-                  ? "bg-rose-50 border-rose-200 text-rose-800"
-                  : "bg-blue-50 border-blue-200 text-blue-800"
+                  ? "border-rose-200 bg-rose-50 text-rose-800"
+                  : "border-blue-200 bg-blue-50 text-blue-800"
               }`}
             >
               {quad.replace("_", " ")}
               {boardPos.pinned && " · manual"}
             </span>
           ) : (
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800">
+            <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">
               Awaiting scoring
             </span>
           )}
         </div>
 
-        <div>
-          <h3 className="text-base font-semibold text-slate-900 group-hover:text-emerald-700 transition leading-snug line-clamp-2 sm:text-lg">
-            {finding.title}
-          </h3>
-          {finding.description && (
-            <p className="mt-1.5 text-xs text-slate-500 line-clamp-2">
-              {finding.description}
-            </p>
-          )}
-        </div>
+        {/* Fixed two-line height so the tags below always start at the
+            same place, whether the title wraps or not. The description
+            lives on the detail page — the card is for scanning. */}
+        <h3 className="min-h-[2.75rem] text-base font-semibold leading-snug text-slate-900 transition group-hover:text-emerald-700 line-clamp-2 sm:min-h-[3.125rem] sm:text-lg">
+          {finding.title}
+        </h3>
 
         {finding.tagsList && finding.tagsList.length > 0 && (
-          <div className="flex flex-wrap gap-1 pt-1">
+          <div className="flex flex-wrap gap-1.5">
             {finding.tagsList.map((tag: any, i: number) => (
               <span
                 key={i}
-                className="text-xs font-medium px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200"
+                className="rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600"
               >
-                {tag.category}: {tag.value}
+                {tag.value}
               </span>
             ))}
           </div>
         )}
-
-        {!myScored && myPending.length > 0 && (
-          <p className="text-xs text-amber-700">
-            Needs scoring: {myPending.join(", ")}
-          </p>
-        )}
       </div>
 
-      <div className="mt-5 pt-4 border-t border-slate-100 space-y-2">
-        <div className="grid grid-cols-3 gap-2 text-center text-xs">
-          <div className="rounded-lg bg-slate-50 p-1.5 border border-slate-100">
-            <div className="text-slate-500 font-semibold">Desirability</div>
-            <div className="font-bold text-slate-900 mt-0.5">
-              {s.desirability != null ? `${s.desirability} / 3` : "—"}
-            </div>
-          </div>
-          <div className="rounded-lg bg-slate-50 p-1.5 border border-slate-100">
-            <div className="text-slate-500 font-semibold">Viability &amp; Feasibility</div>
-            <div className="font-bold text-slate-900 mt-0.5">
-              {my.viability != null ? `${my.viability} / 3` : "—"}
-            </div>
-          </div>
-          <div className="rounded-lg bg-slate-50 p-1.5 border border-slate-100">
-            <div className="text-slate-500 font-semibold">Matrix</div>
-            <div className="font-bold text-slate-900 mt-0.5">
-              {my.feasibility != null ? `${my.feasibility} / 3` : "—"}
-            </div>
-          </div>
+      {/* Pinned to the card bottom so the score strip and link align
+          across every card in the row, whatever the title/tags above. */}
+      <div className="mt-5 space-y-2.5 border-t border-slate-100 pt-4">
+        <div className="grid grid-cols-3 gap-2 text-center">
+          {scoreBox("Desirability", s.desirability != null ? `${s.desirability} / 3` : null)}
+          {scoreBox("Viability & Feasibility", my.viability != null ? `${my.viability} / 3` : null)}
+          {scoreBox("Matrix", my.feasibility != null ? `${my.feasibility} / 3` : null)}
         </div>
 
-        <div className="flex items-center justify-between text-xs text-emerald-600 font-semibold pt-1">
-          <span>View 3-Tab breakdown</span>
-          <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+        <div className="flex items-center justify-between pt-1 text-xs font-semibold text-emerald-600">
+          <span>View details</span>
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
         </div>
       </div>
     </div>
@@ -445,38 +430,37 @@ export default function ProjectResultViewer({
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <Navbar projectSlug={project.slug} projectName={project.name} />
+      <Navbar />
 
       {/* Hero Banner */}
       <section className="bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2 max-w-3xl">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="eyebrow">
-                  Bewize Workshop &middot; Phase DVF
-                </span>
-              </div>
-              <h1 className="page-title">
-                {project.name}
-              </h1>
-              {/* The DVC description is still the literal placeholder "test"
-                  in the database (restoring it to blank awaits the user's
-                  call); never render that placeholder as if it were copy. */}
-              {project.description &&
-                project.description.trim().toLowerCase() !== "test" && (
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    {project.description}
-                  </p>
-                )}
-            </div>
+        <div className="mx-auto max-w-7xl px-4 pb-6 pt-8 sm:px-6 lg:px-10">
+          <div className="max-w-3xl space-y-2">
+            <span className="eyebrow">
+              Bewize Workshop &middot; Phase DVF
+            </span>
+            <h1 className="page-title">
+              {project.name}
+            </h1>
+            {/* The DVC description is still the literal placeholder "test"
+                in the database (restoring it to blank awaits the user's
+                call); never render that placeholder as if it were copy.
+                "Workshop tim X" is the same kind of placeholder — it just
+                restates the project name, so it adds nothing here. A real
+                description still shows. */}
+            {project.description &&
+              project.description.trim().toLowerCase() !== "test" &&
+              project.description.trim().toLowerCase() !== `workshop tim ${project.name.toLowerCase()}` && (
+                <p className="text-sm leading-relaxed text-slate-600">
+                  {project.description}
+                </p>
+              )}
           </div>
-
         </div>
       </section>
 
       {/* Main Content Area */}
-      <main id="main-content" className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-10 flex-1 w-full">
+      <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 pb-10 pt-2 sm:px-6 lg:px-10">
         {/* Findings / Groups — the group view is separate from the
             global findings list. Inside a group are the findings
             assigned to it, as the same cards with D/V/F. */}

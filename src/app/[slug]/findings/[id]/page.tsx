@@ -80,7 +80,7 @@ export default function FindingDetailPage({
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <Navbar projectSlug={project?.slug} projectName={project?.name} />
+      <Navbar />
 
       <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-10 flex-1">
         {loading ? (

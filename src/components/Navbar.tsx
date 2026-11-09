@@ -13,12 +13,8 @@ interface User {
 }
 
 export default function Navbar({
-  projectSlug,
-  projectName,
   dark = false,
 }: {
-  projectSlug?: string;
-  projectName?: string;
   dark?: boolean;
 }) {
   const router = useRouter();
@@ -66,36 +62,6 @@ export default function Navbar({
               </span>
             </div>
           </Link>
-
-          {projectName && projectSlug && (
-            <div
-              className={`hidden md:flex items-center gap-2 pl-4 border-l ${
-                dark ? "border-white/10" : "border-slate-200"
-              }`}
-            >
-              <span
-                className={`text-xs font-medium ${
-                  dark ? "text-white/50" : "text-slate-500"
-                }`}
-              >
-                Project:
-              </span>
-              <span
-                className={`text-sm font-semibold ${
-                  dark ? "text-white" : "text-slate-800"
-                }`}
-              >
-                {projectName}
-              </span>
-              <span
-                className={`text-xs font-mono ${
-                  dark ? "text-white/40" : "text-slate-500"
-                }`}
-              >
-                /{projectSlug}
-              </span>
-            </div>
-          )}
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
