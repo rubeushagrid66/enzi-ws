@@ -380,15 +380,16 @@ export default function FindingDetailView({
             </div>
           )}
 
-          {/* Tab Navigation */}
-          <div className="mt-6 flex border-b border-slate-200 overflow-x-auto">
+          {/* Tab Navigation — no horizontal scrolling: the tabs shrink
+              and wrap (see .tab-underline) so all three always fit. */}
+          <div className="mt-6 flex border-b border-slate-200">
             <button
               onClick={() => setActiveTab("desirability")}
               className={`tab-underline ${activeTab === "desirability" ? "tab-underline-active" : ""}`}
             >
-              <Target className="hidden sm:block h-4 w-4" />
-              <span>Desirability</span>
-              <span className="badge bg-emerald-100 text-emerald-800">
+              <Target className="hidden sm:block h-4 w-4 shrink-0" />
+              <span className="min-w-0">Desirability</span>
+              <span className="badge shrink-0 bg-emerald-100 text-emerald-800">
                 {groupD != null ? groupD : "N/A"}
               </span>
             </button>
@@ -397,9 +398,9 @@ export default function FindingDetailView({
               onClick={() => setActiveTab("viability")}
               className={`tab-underline ${activeTab === "viability" ? "tab-underline-active" : ""}`}
             >
-              <Users2 className="hidden sm:block h-4 w-4" />
-              <span>Viability &amp; Feasibility</span>
-              <span className="badge bg-emerald-100 text-emerald-800">
+              <Users2 className="hidden sm:block h-4 w-4 shrink-0" />
+              <span className="min-w-0">Viability &amp; Feasibility</span>
+              <span className="badge shrink-0 bg-emerald-100 text-emerald-800">
                 {groupV != null ? `${groupV} / 3` : "N/A"}
               </span>
             </button>
@@ -408,9 +409,9 @@ export default function FindingDetailView({
               onClick={() => setActiveTab("feasibility")}
               className={`tab-underline ${activeTab === "feasibility" ? "tab-underline-active" : ""}`}
             >
-              <Compass className="hidden sm:block h-4 w-4" />
-              <span>Impact vs Effort Matrix</span>
-              <span className="badge bg-emerald-100 text-emerald-800">
+              <Compass className="hidden sm:block h-4 w-4 shrink-0" />
+              <span className="min-w-0">Impact vs Effort Matrix</span>
+              <span className="badge shrink-0 bg-emerald-100 text-emerald-800">
                 {groupQuadrant ? QUADRANT_LABEL[groupQuadrant].title : "N/A"}
               </span>
             </button>

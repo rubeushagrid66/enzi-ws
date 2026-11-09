@@ -64,9 +64,12 @@ body {
     @apply bg-emerald-600 text-white hover:bg-emerald-600 hover:text-white;
   }
   /* Underline tabs — finding detail. One accent (emerald) for every tab;
-     the score badge keeps its own tint but the tab itself is uniform. */
+     the score badge keeps its own tint but the tab itself is uniform.
+     Tabs shrink and wrap instead of scrolling: min-w-0 lets each tab
+     narrow below its natural width, flex-wrap drops the badge under
+     the label when narrow, so the bar always fits without overflow-x. */
   .tab-underline {
-    @apply flex shrink-0 items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition -mb-px border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500;
+    @apply flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 px-2 py-2.5 text-center text-sm font-semibold border-b-2 transition -mb-px border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 sm:px-4 sm:py-3;
   }
   .tab-underline-active {
     @apply border-emerald-600 text-emerald-700 bg-emerald-50/50;
