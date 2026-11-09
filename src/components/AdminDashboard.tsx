@@ -2,13 +2,11 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import Navbar from "@/components/Navbar";
 import AdminSidebar from "@/components/AdminSidebar";
-import { type AdminTab, TAB_BY_SLUG } from "@/lib/admin-nav";
+import { ADMIN_NAV, type AdminTab, TAB_BY_SLUG } from "@/lib/admin-nav";
 import { Modal, ConfirmDialog } from "@/components/Modal";
 import { slugify } from "@/lib/slugify";
 import {
-  Shield,
   AlertCircle,
   Plus,
   Trash2,
@@ -18,6 +16,7 @@ import {
   Menu,
   Copy,
   Users,
+  ChevronRight,
 } from "lucide-react";
 
 async function apiCall(url: string, options?: RequestInit) {
@@ -349,6 +348,24 @@ export default function AdminDashboard() {
     setSelectedProjectSlug(slug);
     setError(null);
     loadProjectDetails(slug);
+  };
+
+  // Sign out from the sidebar user card (same flow as the site navbar).
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/");
+    router.refresh();
+  };
+
+  // Master button (top bar, black) — the single creation entry point for
+  // the current page. Groups/Aspects scroll to and focus their inline
+  // create form; the masterAction itself is computed just before the
+  // return, after the modal openers it calls are defined.
+  const groupNameInputRef = useRef<HTMLInputElement>(null);
+  const aspectNameInputRef = useRef<HTMLInputElement>(null);
+  const focusInlineForm = (ref: React.RefObject<HTMLInputElement>) => {
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    ref.current?.focus({ preventScroll: true });
   };
 
   const openCreateProject = () => {
@@ -959,15 +976,30 @@ export default function AdminDashboard() {
     users: usersList.length,
   };
 
+  // Master button — computed here, after every opener it calls is defined.
+  // Findings/Projects/Users open their create modal; Groups/Aspects scroll
+  // to and focus their inline create form. Framework has no creation
+  // action, so the button is hidden there.
+  const masterAction: { label: string; onClick: () => void } | null =
+    activeTab === "findings"
+      ? { label: "Add Finding", onClick: openCreateFinding }
+      : activeTab === "groups" && isAdmin
+        ? { label: "Add Group", onClick: () => focusInlineForm(groupNameInputRef) }
+        : activeTab === "aspects" && isAdmin
+          ? { label: "Add Aspect", onClick: () => focusInlineForm(aspectNameInputRef) }
+          : activeTab === "projects" && isAdmin
+            ? { label: "New Project", onClick: openCreateProject }
+            : activeTab === "users" && isAdmin
+              ? { label: "Add User", onClick: openCreateUser }
+              : null;
+  const activeNavItem = ADMIN_NAV.find((i) => i.id === activeTab);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
-            <p className="text-sm font-semibold text-slate-600">Loading Admin Dashboard...</p>
-          </div>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+          <p className="text-sm font-semibold text-slate-600">Loading Admin Dashboard...</p>
         </div>
       </div>
     );
@@ -980,20 +1012,19 @@ export default function AdminDashboard() {
         projects={projects}
         selectedProjectSlug={selectedProjectSlug}
         onSelectProject={handleProjectSelect}
-        onNewProject={openCreateProject}
         activeProject={activeProject}
         counts={sidebarCounts}
         isAdmin={isAdmin}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <Navbar projectSlug={selectedProjectSlug} projectName={activeProject?.name} />
-
-        {/* Admin header */}
-        <header className="border-b border-slate-200 bg-white">
-          <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-4 sm:px-6 lg:px-10">
+        {/* Top bar: breadcrumb + master button */}
+        <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+          <div className="flex items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
             <button
               ref={menuButtonRef}
               type="button"
@@ -1004,29 +1035,31 @@ export default function AdminDashboard() {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="hidden rounded-xl border border-emerald-200 bg-emerald-50 p-2 text-emerald-700 sm:block">
-                <Shield className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="truncate text-xl font-bold text-slate-900">Admin Configuration Center</h1>
-                  <span className="text-xs font-medium text-slate-500">
-                    Logged in: {currentUser?.name} ({currentUser?.role})
-                  </span>
-                </div>
-                <p className="text-sm text-slate-500">Configure projects, findings, participants, and scoring logic.</p>
-                {!isAdmin && currentUser && (
-                  <p className="mt-1 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-800">
-                    You&apos;re signed in as {currentUser.name} ({currentUser.role}) — you can edit Findings; everything else here is view-only.
-                  </p>
-                )}
-              </div>
-            </div>
+            <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm">
+              <a href="/" className="hidden shrink-0 font-medium text-slate-500 transition hover:text-slate-900 sm:inline">
+                Bewize Workshop
+              </a>
+              <ChevronRight className="hidden h-4 w-4 shrink-0 text-slate-300 sm:block" />
+              <span aria-current="page" className="truncate font-semibold text-slate-900">
+                {activeNavItem?.label ?? "Dashboard"}
+              </span>
+            </nav>
+            <div className="flex-1" />
+            {masterAction && (
+              <button type="button" onClick={masterAction.onClick} className="btn-dark shrink-0">
+                <Plus className="h-4 w-4" /> {masterAction.label}
+              </button>
+            )}
           </div>
         </header>
 
-        <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-10">
+        {!isAdmin && currentUser && (
+          <p className="border-b border-sky-200 bg-sky-50 px-4 py-2 text-xs font-medium text-sky-800 sm:px-6 lg:px-8">
+            You&apos;re signed in as {currentUser.name} ({currentUser.role}) — you can edit Findings; everything else here is view-only.
+          </p>
+        )}
+
+        <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
           {error && (
             <div role="alert" className="mb-6 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -1040,17 +1073,12 @@ export default function AdminDashboard() {
           {/* TAB: FINDINGS — GLOBAL pool */}
           {activeTab === "findings" && (
             <section aria-labelledby="findings-heading" className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 id="findings-heading" className="section-title">Findings Pool (User Needs &amp; Pain Points)</h2>
-                  <p className="section-sub">Shared library for all projects. A finding is copied into a project before scoring — the copy is scored independently, so moving it in one workshop never moves it in another.</p>
-                  {globalSetupNote && (
-                    <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{globalSetupNote}</p>
-                  )}
-                </div>
-                <button type="button" onClick={openCreateFinding} className="btn-primary">
-                  <Plus className="h-4 w-4" /> Add Finding
-                </button>
+              <div>
+                <h2 id="findings-heading" className="section-title">Findings Pool (User Needs &amp; Pain Points)</h2>
+                <p className="section-sub">Shared library for all projects. A finding is copied into a project before scoring — the copy is scored independently, so moving it in one workshop never moves it in another.</p>
+                {globalSetupNote && (
+                  <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{globalSetupNote}</p>
+                )}
               </div>
 
               <div className="card overflow-hidden">
@@ -1319,7 +1347,7 @@ export default function AdminDashboard() {
                   <h3 className="text-sm font-semibold text-slate-900">Create New Group</h3>
                   <form onSubmit={handleCreateGroup} className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <label htmlFor="new-group-name" className="sr-only">Group name</label>
-                    <input id="new-group-name" type="text" required placeholder="e.g. Core Product & Strategy" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} className="input flex-1" />
+                    <input ref={groupNameInputRef} id="new-group-name" type="text" required placeholder="e.g. Core Product & Strategy" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} className="input flex-1" />
                     <button type="submit" className="btn-primary">Add Group</button>
                   </form>
                 </div>
@@ -1377,7 +1405,7 @@ export default function AdminDashboard() {
                 <form onSubmit={handleCreateAspect} className="space-y-3">
                   <div>
                     <label htmlFor="new-aspect-name" className="field-label">Aspect name</label>
-                    <input id="new-aspect-name" type="text" required placeholder="Aspect Name (e.g. Market Demand)" value={newAspectName} onChange={(e) => setNewAspectName(e.target.value)} className="input w-full" />
+                    <input ref={aspectNameInputRef} id="new-aspect-name" type="text" required placeholder="Aspect Name (e.g. Market Demand)" value={newAspectName} onChange={(e) => setNewAspectName(e.target.value)} className="input w-full" />
                   </div>
                   <div>
                     <label htmlFor="new-aspect-desc" className="field-label">Description / Guidance</label>
@@ -1431,19 +1459,15 @@ export default function AdminDashboard() {
           {/* TAB: PROJECTS */}
           {activeTab === "projects" && (
             <section aria-labelledby="projects-heading" className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 id="projects-heading" className="section-title">All Workshop Projects</h2>
-                  <p className="section-sub">Switch between workshops or create new project workspaces.</p>
-                </div>
-                {isAdmin && (<button type="button" onClick={openCreateProject} className="btn-primary"><Plus className="h-4 w-4" /> Create Project</button>)}
+              <div>
+                <h2 id="projects-heading" className="section-title">All Workshop Projects</h2>
+                <p className="section-sub">Switch between workshops or create new project workspaces.</p>
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {projects.map((p) => (
                   <div key={p.id} className={`card flex flex-col justify-between p-5 transition ${p.slug === selectedProjectSlug ? "border-emerald-500 ring-2 ring-emerald-500/20" : "hover:border-slate-300"}`}>
                     <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600">/{p.slug}</span>
+                      <div className="flex items-center justify-end gap-2">
                         <span className="text-xs font-medium text-emerald-600">{p.isActive ? "Active" : "Archived"}</span>
                       </div>
                       <h3 className="mt-3 text-base font-semibold text-slate-900">{p.name}</h3>
@@ -1470,12 +1494,9 @@ export default function AdminDashboard() {
           {activeTab === "users" && isAdmin && (
             <section aria-labelledby="users-heading" className="max-w-3xl space-y-6">
               <div className="card space-y-6 p-6">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h2 id="users-heading" className="text-base font-semibold text-slate-900">User Management</h2>
-                    <p className="mt-0.5 text-sm text-slate-600">Create and manage facilitator and admin credentials. Assign each user to a project (and a group within it) so their scores land in the right workshop — label-role users (Tech, Product, Business &amp; Ops) can only score in their assigned project, while admins and facilitators work across projects. A user with no project assigned can score anywhere.</p>
-                  </div>
-                  <button type="button" onClick={openCreateUser} className="btn-primary"><Plus className="h-4 w-4" /> Create User</button>
+                <div>
+                  <h2 id="users-heading" className="text-base font-semibold text-slate-900">User Management</h2>
+                  <p className="mt-0.5 text-sm text-slate-600">Create and manage facilitator and admin credentials. Assign each user to a project (and a group within it) so their scores land in the right workshop — label-role users (Tech, Product, Business &amp; Ops) can only score in their assigned project, while admins and facilitators work across projects. A user with no project assigned can score anywhere.</p>
                 </div>
                 <div className="space-y-2 border-t border-slate-100 pt-4">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Existing Credentials ({usersList.length})</h3>

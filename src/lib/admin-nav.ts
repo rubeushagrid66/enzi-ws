@@ -17,6 +17,8 @@ export interface AdminNavItem {
   /** The dashboard URL for this menu, e.g. /dashboard/findings. */
   href: string;
   badge?: string;
+  /** Sidebar section: "Workshop" (scoring work) or "Manage" (workspaces & access). */
+  group: "Workshop" | "Manage";
 }
 
 export const ADMIN_NAV: AdminNavItem[] = [
@@ -24,12 +26,12 @@ export const ADMIN_NAV: AdminNavItem[] = [
   // weighting, one user list). Groups, aspects and the projects
   // themselves stay per-project. The L1–L3 parameter tree was removed
   // 2026-11-09: nothing read it — D/V/F use mention counts + basis N.
-  { id: "findings", label: "Findings & Tags", href: "/dashboard/findings", badge: "Global" },
-  { id: "weights", label: "Framework & Weighting", href: "/dashboard/framework", badge: "Global" },
-  { id: "groups", label: "Groups & Participants", href: "/dashboard/groups" },
-  { id: "aspects", label: "Viability Aspects", href: "/dashboard/aspects" },
-  { id: "projects", label: "All Projects", href: "/dashboard/projects" },
-  { id: "users", label: "Users & Roles", href: "/dashboard/user", badge: "Global" },
+  { id: "findings", label: "Findings & Tags", href: "/dashboard/findings", badge: "Global", group: "Workshop" },
+  { id: "weights", label: "Framework & Weighting", href: "/dashboard/framework", badge: "Global", group: "Workshop" },
+  { id: "groups", label: "Groups & Participants", href: "/dashboard/groups", group: "Workshop" },
+  { id: "aspects", label: "Viability Aspects", href: "/dashboard/aspects", group: "Workshop" },
+  { id: "projects", label: "All Projects", href: "/dashboard/projects", group: "Manage" },
+  { id: "users", label: "Users & Roles", href: "/dashboard/user", badge: "Global", group: "Manage" },
 ];
 
 /** URL slug (the part after /dashboard/) → the tab it opens. */

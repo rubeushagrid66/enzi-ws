@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { X, Plus, ExternalLink, FolderGit2, Users2, Sliders, Tag, Shield, ListChecks } from "lucide-react";
+import { X, ExternalLink, FolderGit2, Users2, Sliders, Tag, Shield, ListChecks, LogOut } from "lucide-react";
 import { ADMIN_NAV, type AdminTab } from "@/lib/admin-nav";
 
-// Icons live here (client-side); the nav data (id/label/href/badge)
+// Icons live here (client-side); the nav data (id/label/href/badge/group)
 // lives in @/lib/admin-nav so the server-side [tab] page can use it too.
 const NAV_ICONS: Record<AdminTab, React.ComponentType<{ className?: string }>> = {
   findings: Tag,
@@ -15,48 +15,72 @@ const NAV_ICONS: Record<AdminTab, React.ComponentType<{ className?: string }>> =
   users: Shield,
 };
 
+// Initials for the user-card avatar, e.g. "Tech DVC 1" -> "TD".
+function initials(name?: string) {
+  const parts = (name || "?").trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] || "?";
+  const second = parts[1]?.[0] || "";
+  return (first + second).toUpperCase();
+}
+
 export default function AdminSidebar({
   activeTab,
   projects,
   selectedProjectSlug,
   onSelectProject,
-  onNewProject,
   activeProject,
   counts,
   isAdmin,
   open,
   onClose,
+  currentUser,
+  onLogout,
 }: {
   activeTab: AdminTab;
   projects: any[];
   selectedProjectSlug: string;
   onSelectProject: (slug: string) => void;
-  onNewProject: () => void;
   activeProject: any;
   counts: Record<string, number | undefined>;
   isAdmin: boolean;
   open: boolean;
   onClose: () => void;
+  currentUser: any;
+  onLogout: () => void;
 }) {
   const items = ADMIN_NAV.filter((i) => i.id !== "users" || isAdmin);
+  const groups: Array<{ label: string; items: typeof ADMIN_NAV }> = [
+    { label: "Workshop", items: items.filter((i) => i.group === "Workshop") },
+    { label: "Manage", items: items.filter((i) => i.group === "Manage") },
+  ];
 
   const content = (
     <div className="flex h-full flex-col">
+      {/* Brand */}
+      <div className="flex items-center justify-between px-4 pb-3 pt-4">
+        <Link href="/" onClick={onClose} className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-aleph-gradient text-base font-bold text-white shadow-sm">
+            B
+          </span>
+          <span className="truncate text-[15px] font-bold tracking-tight text-slate-900">
+            Bewize Workshop
+          </span>
+        </Link>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close navigation menu"
+          className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 lg:hidden"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
       {/* Project switcher */}
-      <div className="border-b border-slate-200 p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <label htmlFor="admin-project-switcher" className="field-label mb-0">
-            Active project
-          </label>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close navigation menu"
-            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 lg:hidden"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+      <div className="px-4 pb-4">
+        <label htmlFor="admin-project-switcher" className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          Active project
+        </label>
         <select
           id="admin-project-switcher"
           value={selectedProjectSlug}
@@ -69,82 +93,96 @@ export default function AdminSidebar({
             </option>
           ))}
         </select>
-        {activeProject && (
-          <p className="mt-2 truncate text-xs text-slate-500" title={activeProject.description || ""}>
-            {activeProject.description || "No description"}
-          </p>
+        {selectedProjectSlug && (
+          <a
+            href={`/${selectedProjectSlug}`}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 transition hover:text-slate-900"
+          >
+            <ExternalLink className="h-3.5 w-3.5" /> View workshop
+          </a>
         )}
-        <div className="mt-3 flex flex-col gap-2">
-          {isAdmin && (
-            <button type="button" onClick={onNewProject} className="btn-secondary btn-sm w-full">
-              <Plus className="h-4 w-4" /> New Project
-            </button>
-          )}
-          {selectedProjectSlug && (
-            <a
-              href={`/${selectedProjectSlug}`}
-              target="_blank"
-              rel="noreferrer"
-              className="btn-secondary btn-sm w-full justify-center"
-            >
-              <ExternalLink className="h-4 w-4" /> Open Landing Page
-            </a>
-          )}
-        </div>
       </div>
 
       {/* Nav */}
-      <nav aria-label="Admin" className="flex-1 overflow-y-auto p-3">
-        <p className="px-2 pb-2 text-xs font-bold uppercase tracking-wider text-slate-500">
-          Configuration
-        </p>
-        <ul className="space-y-1">
-          {items.map((item) => {
-            const Icon = NAV_ICONS[item.id];
-            const active = activeTab === item.id;
-            const count = counts[item.id];
-            return (
-              <li key={item.id}>
-                <Link
-                  href={item.href}
-                  onClick={onClose}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                    active
-                      ? "bg-emerald-50 font-semibold text-emerald-800"
-                      : "text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  <Icon className={`h-4 w-4 shrink-0 ${active ? "text-emerald-700" : "text-slate-400"}`} />
-                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                  {item.badge && (
-                    <span className={`rounded px-1.5 py-0.5 text-xs font-bold ${active ? "bg-emerald-100 text-emerald-800" : "bg-emerald-50 text-emerald-700"}`}>
-                      {item.badge}
-                    </span>
-                  )}
-                  {count !== undefined && (
-                    <span className={`text-xs font-mono font-medium ${active ? "text-emerald-700" : "text-slate-400"}`}>
-                      {count}
-                    </span>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+      <nav aria-label="Admin" className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
+        {groups.map(
+          (g) =>
+            g.items.length > 0 && (
+              <div key={g.label}>
+                <p className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  {g.label}
+                </p>
+                <ul className="space-y-0.5">
+                  {g.items.map((item) => {
+                    const Icon = NAV_ICONS[item.id];
+                    const active = activeTab === item.id;
+                    const count = counts[item.id];
+                    return (
+                      <li key={item.id}>
+                        <Link
+                          href={item.href}
+                          onClick={onClose}
+                          aria-current={active ? "page" : undefined}
+                          className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                            active
+                              ? "bg-emerald-50 font-semibold text-emerald-800"
+                              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          }`}
+                        >
+                          <Icon className={`h-4 w-4 shrink-0 ${active ? "text-emerald-700" : "text-slate-400"}`} />
+                          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                          {item.badge && (
+                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"}`}>
+                              {item.badge}
+                            </span>
+                          )}
+                          {count !== undefined && (
+                            <span className={`text-xs font-medium tabular-nums ${active ? "text-emerald-700" : "text-slate-400"}`}>
+                              {count}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )
+        )}
       </nav>
 
-      <div className="border-t border-slate-200 p-4 text-xs text-slate-500">
-        <span className="block truncate">Project: {activeProject?.name || "—"}</span>
-        <span className="block truncate font-mono">/{selectedProjectSlug || "—"}</span>
-      </div>
+      {/* Logged-in user */}
+      {currentUser && (
+        <div className="border-t border-slate-200 p-3">
+          <div className="flex items-center gap-2.5 rounded-xl px-1.5 py-1">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-white">
+              {initials(currentUser.name)}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold text-slate-900">{currentUser.name}</span>
+              <span className="block truncate text-xs text-slate-500">{currentUser.role}</span>
+            </span>
+            <button
+              type="button"
+              onClick={onLogout}
+              aria-label="Sign out"
+              title="Sign out"
+              className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 
   return (
     <>
       {/* Desktop: fixed sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-[328px] shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-[272px] shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
         {content}
       </aside>
 
@@ -156,7 +194,7 @@ export default function AdminSidebar({
             onClick={onClose}
             aria-hidden="true"
           />
-          <aside className="absolute inset-y-0 left-0 w-[336px] max-w-[85vw] bg-white shadow-xl">
+          <aside className="absolute inset-y-0 left-0 w-[320px] max-w-[85vw] bg-white shadow-xl">
             {content}
           </aside>
         </div>
