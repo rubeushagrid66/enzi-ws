@@ -1079,18 +1079,16 @@ export default function AdminDashboard() {
                   <table className="w-full min-w-[760px] border-collapse text-left text-sm">
                     <caption className="sr-only">All findings: the shared pool and every project's findings</caption>
                     <colgroup>
-                      <col className="w-[30%]" />
-                      <col className="w-[26%]" />
+                      <col className="w-[32%]" />
+                      <col className="w-[28%]" />
+                      <col className="w-[22%]" />
                       <col className="w-[18%]" />
-                      <col className="w-[12%]" />
-                      <col className="w-[14%]" />
                     </colgroup>
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
                         <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Finding Title</th>
                         <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tags</th>
                         <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Groups</th>
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Origin</th>
                         <th scope="col" className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Actions</th>
                       </tr>
                     </thead>
@@ -1136,13 +1134,6 @@ export default function AdminDashboard() {
                                     <span className="text-xs font-medium text-slate-400">—</span>
                                   )}
                                 </div>
-                              </td>
-                              <td className="whitespace-nowrap px-4 py-3">
-                                {isPool ? (
-                                  <span className="whitespace-nowrap rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">Pool</span>
-                                ) : (
-                                  <span className="whitespace-nowrap text-xs font-medium text-slate-400">{f.projectName || f.projectSlug || "Project"}</span>
-                                )}
                               </td>
                               <td className="whitespace-nowrap px-4 py-3 text-right">
                                 <div className="flex items-center justify-end gap-1">
@@ -1191,7 +1182,7 @@ export default function AdminDashboard() {
                         })
                       ) : (
                         <tr>
-                          <td colSpan={5} className="py-8 text-center italic text-slate-600">No findings yet. Click “Add Finding” above.</td>
+                          <td colSpan={4} className="py-8 text-center italic text-slate-600">No findings yet. Click “Add Finding” above.</td>
                         </tr>
                       )}
                     </tbody>
