@@ -692,7 +692,7 @@ export default function ProjectResultViewer({
         {/* Findings / Groups — the group view is separate from the
             global findings list. Inside a group are the findings
             assigned to it, as the same cards with D/V/F. */}
-        <div className="mb-6 flex items-center gap-2" role="tablist" aria-label="Findings, groups or roadmap">
+        <div className="mb-6 flex items-center gap-2" role="tablist" aria-label="Ideas, groups or roadmap">
           <button
             type="button"
             role="tab"
@@ -700,7 +700,7 @@ export default function ProjectResultViewer({
             onClick={() => { setView("findings"); setSelectedGroupId(null); }}
             className={`tab-pill ${view === "findings" ? "tab-pill-active" : ""}`}
           >
-            Findings
+            Ideas
           </button>
           <button
             type="button"

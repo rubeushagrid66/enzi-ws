@@ -172,7 +172,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<AdminTab>(urlTab);
   useEffect(() => {
     // Users & Roles is admin-only: a non-admin landing on /dashboard/user
-    // (e.g. via a pasted URL) falls back to Findings & Tags.
+    // (e.g. via a pasted URL) falls back to Ideas & Tags.
     if (!loading && urlTab === "users" && !isAdmin) {
       setActiveTab("findings");
     } else {
@@ -244,7 +244,7 @@ export default function AdminDashboard() {
   const [ideaForm, setIdeaForm] = useState({ title: "", description: "" });
   // Finding ids ticked for the idea in the modal.
   const [ideaFindingIds, setIdeaFindingIds] = useState<string[]>([]);
-  // Search text filtering the Linked Findings checklist (title + project).
+  // Search text filtering the Linked Ideas checklist (title + project).
   const [ideaFindingSearch, setIdeaFindingSearch] = useState("");
   const [savingIdea, setSavingIdea] = useState(false);
 
@@ -675,7 +675,7 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteFinding = (f: any) => {
-    askConfirm("Delete finding?", `“${f.title}” will be permanently deleted.`, "Delete finding", async () => {
+    askConfirm("Delete idea?", `“${f.title}” will be permanently deleted.`, "Delete idea", async () => {
       try {
         if (!f.projectId) {
           await apiCall(`/api/global/findings/${f.id}`, { method: "DELETE" });
@@ -806,8 +806,8 @@ export default function AdminDashboard() {
     // native browser confirm is dismissed by automated browsers
     // before it can be accepted, so the delete never ran.
     askConfirm(
-      `Delete idea — ${idea.title}`,
-      `Delete the idea “${idea.title}”? Its links to findings will be removed too. This cannot be undone.`,
+      `Delete finding — ${idea.title}`,
+      `Delete the finding “${idea.title}”? Its links to findings will be removed too. This cannot be undone.`,
       "Delete",
       async () => {
         try {
@@ -1115,9 +1115,9 @@ export default function AdminDashboard() {
   // action, so the button is hidden there.
   const masterAction: { label: string; onClick: () => void } | null =
     activeTab === "findings"
-      ? { label: "Add Finding", onClick: openCreateFinding }
+      ? { label: "Add Idea", onClick: openCreateFinding }
       : activeTab === "ideas"
-        ? { label: "Add Idea", onClick: openCreateIdea }
+        ? { label: "Add Finding", onClick: openCreateIdea }
         : activeTab === "groups" && isAdmin
         ? { label: "Add Group", onClick: () => focusInlineForm(groupNameInputRef) }
         : activeTab === "aspects" && isAdmin
@@ -1209,7 +1209,7 @@ export default function AdminDashboard() {
           {activeTab === "findings" && (
             <section aria-labelledby="findings-heading" className="space-y-6">
               <div>
-                <h2 id="findings-heading" className="section-title">Findings Pool (User Needs &amp; Pain Points)</h2>
+                <h2 id="findings-heading" className="section-title">Ideas Pool (User Needs &amp; Pain Points)</h2>
                 <p className="section-sub">Shared library for all projects. A finding is copied into a project before scoring — the copy is scored independently, so moving it in one workshop never moves it in another.</p>
                 {globalSetupNote && (
                   <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{globalSetupNote}</p>
@@ -1228,7 +1228,7 @@ export default function AdminDashboard() {
                     </colgroup>
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Finding Title</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Idea Title</th>
                         <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tags</th>
                         <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Groups</th>
                         <th scope="col" className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Actions</th>
@@ -1311,10 +1311,10 @@ export default function AdminDashboard() {
                                       <Copy className="h-4 w-4" />
                                     </button>
                                   )}
-                                  <button type="button" onClick={() => openEditFinding(f)} aria-label={`Edit finding ${f.title}`} className="btn-icon">
+                                  <button type="button" onClick={() => openEditFinding(f)} aria-label={`Edit idea ${f.title}`} className="btn-icon">
                                     <Edit2 className="h-4 w-4" />
                                   </button>
-                                  <button type="button" onClick={() => handleDeleteFinding(f)} aria-label={`Delete finding ${f.title}`} className="btn-icon-danger">
+                                  <button type="button" onClick={() => handleDeleteFinding(f)} aria-label={`Delete idea ${f.title}`} className="btn-icon-danger">
                                     <Trash2 className="h-4 w-4" />
                                   </button>
                                 </div>
@@ -1324,7 +1324,7 @@ export default function AdminDashboard() {
                         })
                       ) : (
                         <tr>
-                          <td colSpan={4} className="py-8 text-center italic text-slate-600">No findings yet. Click “Add Finding” above.</td>
+                          <td colSpan={4} className="py-8 text-center italic text-slate-600">No ideas yet. Click “Add Idea” above.</td>
                         </tr>
                       )}
                     </tbody>
@@ -1338,8 +1338,8 @@ export default function AdminDashboard() {
           {activeTab === "ideas" && (
             <section aria-labelledby="ideas-heading" className="space-y-6">
               <div>
-                <h2 id="ideas-heading" className="section-title">Ideas</h2>
-                <p className="section-sub">Ideas are linked to one or many findings. Open a finding to see the ideas related to it.</p>
+                <h2 id="ideas-heading" className="section-title">Findings</h2>
+                <p className="section-sub">Findings are linked to one or many ideas. Open an idea to see the findings related to it.</p>
                 {globalSetupNote && (
                   <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{globalSetupNote}</p>
                 )}
@@ -1357,9 +1357,9 @@ export default function AdminDashboard() {
                     </colgroup>
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Idea</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Finding</th>
                         <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Description</th>
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Linked Findings</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Linked Ideas</th>
                         <th scope="col" className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Actions</th>
                       </tr>
                     </thead>
@@ -1392,10 +1392,10 @@ export default function AdminDashboard() {
                               </td>
                               <td className="whitespace-nowrap px-4 py-3 text-right">
                                 <div className="flex items-center justify-end gap-1">
-                                  <button type="button" onClick={() => openEditIdea(idea)} aria-label={`Edit idea ${idea.title}`} className="btn-icon">
+                                  <button type="button" onClick={() => openEditIdea(idea)} aria-label={`Edit finding ${idea.title}`} className="btn-icon">
                                     <Edit2 className="h-4 w-4" />
                                   </button>
-                                  <button type="button" onClick={() => handleDeleteIdea(idea)} aria-label={`Delete idea ${idea.title}`} className="btn-icon-danger">
+                                  <button type="button" onClick={() => handleDeleteIdea(idea)} aria-label={`Delete finding ${idea.title}`} className="btn-icon-danger">
                                     <Trash2 className="h-4 w-4" />
                                   </button>
                                 </div>
@@ -1405,7 +1405,7 @@ export default function AdminDashboard() {
                         })
                       ) : (
                         <tr>
-                          <td colSpan={4} className="py-8 text-center italic text-slate-600">No ideas yet. Click “Add Idea” above.</td>
+                          <td colSpan={4} className="py-8 text-center italic text-slate-600">No findings yet. Click “Add Finding” above.</td>
                         </tr>
                       )}
                     </tbody>
@@ -1796,7 +1796,7 @@ export default function AdminDashboard() {
 
       {/* FINDING MODAL (create + edit) */}
       {findingModalOpen && (
-        <Modal title={editingFindingId ? "Edit Finding" : "Create New Finding"} onClose={() => setFindingModalOpen(false)} wide>
+        <Modal title={editingFindingId ? "Edit Idea" : "Create New Idea"} onClose={() => setFindingModalOpen(false)} wide>
           <form onSubmit={handleSaveFinding} className="space-y-3">
             {!editingFindingId && (
               <fieldset>
@@ -1814,7 +1814,7 @@ export default function AdminDashboard() {
               </fieldset>
             )}
             <div>
-              <label htmlFor="finding-title" className="field-label">Finding Title (User Need / Pain Point)</label>
+              <label htmlFor="finding-title" className="field-label">Idea Title (User Need / Pain Point)</label>
               <input id="finding-title" type="text" required placeholder="e.g. Tampilan Membingungkan" value={findingForm.title} onChange={(e) => setFindingForm((f) => ({ ...f, title: e.target.value }))} className="input w-full" />
             </div>
             <div>
@@ -1849,7 +1849,7 @@ export default function AdminDashboard() {
             </fieldset>
             <div className="flex items-center justify-end gap-2 pt-3">
               <button type="button" onClick={() => setFindingModalOpen(false)} className="btn-secondary">Cancel</button>
-              <button type="submit" disabled={savingFinding} className="btn-primary disabled:opacity-60">{savingFinding ? "Saving…" : editingFindingId ? "Save Changes" : "Create Finding"}</button>
+              <button type="submit" disabled={savingFinding} className="btn-primary disabled:opacity-60">{savingFinding ? "Saving…" : editingFindingId ? "Save Changes" : "Create Idea"}</button>
             </div>
           </form>
         </Modal>
@@ -1858,10 +1858,10 @@ export default function AdminDashboard() {
       {/* IDEA MODAL (create + edit) — wide: the findings checklist
           needs the room, or the project names wrap into a mess. */}
       {ideaModalOpen && (
-        <Modal wide title={editingIdeaId ? `Edit Idea — ${ideaForm.title || "Untitled"}` : "Create Idea"} onClose={() => setIdeaModalOpen(false)}>
+        <Modal wide title={editingIdeaId ? `Edit Finding — ${ideaForm.title || "Untitled"}` : "Create Finding"} onClose={() => setIdeaModalOpen(false)}>
           <form onSubmit={handleSaveIdea} className="space-y-3">
             <div>
-              <label htmlFor="idea-title" className="field-label">Idea Title</label>
+              <label htmlFor="idea-title" className="field-label">Finding Title</label>
               <input id="idea-title" type="text" required placeholder="e.g. One-tap bill payment" value={ideaForm.title} onChange={(e) => setIdeaForm((f) => ({ ...f, title: e.target.value }))} className="input w-full" />
             </div>
             <div>
@@ -1869,16 +1869,16 @@ export default function AdminDashboard() {
               <textarea id="idea-desc" rows={3} placeholder="What is the idea?" value={ideaForm.description} onChange={(e) => setIdeaForm((f) => ({ ...f, description: e.target.value }))} className="input w-full" />
             </div>
             <fieldset>
-              <legend className="field-label">Linked Findings</legend>
+              <legend className="field-label">Linked Ideas</legend>
               <p className="mb-2 text-xs text-slate-500">Tick the findings this idea relates to. An idea can be linked to one or many findings.</p>
               {poolFindings.length === 0 ? (
-                <p className="text-sm italic text-slate-500">No findings yet — add a finding first (Findings &amp; Tags tab).</p>
+                <p className="text-sm italic text-slate-500">No ideas yet — add an idea first (Ideas &amp; Tags tab).</p>
               ) : (
                 <>
                   <input
                     type="search"
-                    placeholder="Search findings…"
-                    aria-label="Search findings"
+                    placeholder="Search ideas…"
+                    aria-label="Search ideas"
                     value={ideaFindingSearch}
                     onChange={(e) => setIdeaFindingSearch(e.target.value)}
                     className="input mb-2 w-full"
@@ -1891,7 +1891,7 @@ export default function AdminDashboard() {
                         )
                       : poolFindings;
                     if (shown.length === 0) {
-                      return <p className="rounded-xl border border-slate-200 px-3 py-3 text-sm italic text-slate-500">No findings match “{ideaFindingSearch.trim()}”.</p>;
+                      return <p className="rounded-xl border border-slate-200 px-3 py-3 text-sm italic text-slate-500">No ideas match “{ideaFindingSearch.trim()}”.</p>;
                     }
                     return (
                       <div className="max-h-96 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">
@@ -1917,7 +1917,7 @@ export default function AdminDashboard() {
             </fieldset>
             <div className="flex items-center justify-end gap-2 pt-3">
               <button type="button" onClick={() => setIdeaModalOpen(false)} className="btn-secondary">Cancel</button>
-              <button type="submit" disabled={savingIdea} className="btn-primary disabled:opacity-60">{savingIdea ? "Saving…" : editingIdeaId ? "Save Changes" : "Create Idea"}</button>
+              <button type="submit" disabled={savingIdea} className="btn-primary disabled:opacity-60">{savingIdea ? "Saving…" : editingIdeaId ? "Save Changes" : "Create Finding"}</button>
             </div>
           </form>
         </Modal>

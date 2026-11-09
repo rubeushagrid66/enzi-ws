@@ -360,7 +360,7 @@ export default function FindingDetailView({
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  Finding Detail
+                  Idea Detail
                 </span>
               </div>
               <h2 id="finding-detail-title" className="text-2xl font-semibold text-slate-900 leading-tight sm:text-3xl">
@@ -393,7 +393,7 @@ export default function FindingDetailView({
               (assigned in the admin Ideas tab). */}
           {relatedIdeas.length > 0 && (
             <div className="mt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Related Ideas</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Related Findings</h3>
               <div className="mt-2 flex flex-col gap-2">
                 {relatedIdeas.map((idea: any) => (
                   <div key={idea.id} className="rounded-xl border border-violet-200 bg-violet-50 px-3.5 py-2.5">
