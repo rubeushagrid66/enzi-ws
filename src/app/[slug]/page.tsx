@@ -10,7 +10,6 @@ import {
   Users,
   ArrowLeft,
   Map,
-  Lightbulb,
 } from "lucide-react";
 
 import { scoresForParticipant, findingBoardPosition, groupAverageScores, findingBoardPositionForScores, calculateDVFScore, type FeasibilityQuadrant, type WeightInput } from "@/lib/scoring";
@@ -65,16 +64,11 @@ function FindingCard({
   finding,
   meId,
   onSelect,
-  plain,
   group,
 }: {
   finding: any;
   meId: string | null;
   onSelect: (f: any) => void;
-  /** Plain listing card (Findings tab): title + tags only — no scores,
-      no quadrant badge, not clickable. Scoring lives in the Groups
-      tab, whose cards keep the full layout. */
-  plain?: boolean;
   /** When given (inside a group), the card shows THIS group's V/F and
       quadrant, matching its section and the detail page — not the
       logged-in viewer's own scores. */
@@ -121,16 +115,6 @@ function FindingCard({
       className="group flex cursor-pointer flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
     >
       <div className="flex-1 space-y-3">
-        {plain ? (
-          /* Ideas listing: just a lightbulb mark — no score badge here
-             (Desirability/Unscored belongs on the detail page, not the
-             listing). */
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-              <Lightbulb className="h-4 w-4" />
-            </span>
-          </div>
-        ) : (
         <div className="flex items-center justify-between gap-2">
           {quad ? (
             <span
@@ -153,21 +137,12 @@ function FindingCard({
             </span>
           )}
         </div>
-        )}
 
         {/* Fixed two-line height so the tags below always start at the
             same place, whether the title wraps or not. */}
         <h3 className="min-h-[2.75rem] text-base font-semibold leading-snug text-slate-900 transition group-hover:text-emerald-700 line-clamp-2 sm:min-h-[3.125rem] sm:text-lg">
           {finding.title}
         </h3>
-
-        {/* The description is what makes a card scannable — without it
-            every card is just a title and a row of tags. Two lines max. */}
-        {plain && finding.description && (
-          <p className="line-clamp-2 text-sm leading-relaxed text-slate-500">
-            {finding.description}
-          </p>
-        )}
 
         {finding.tagsList && finding.tagsList.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
@@ -181,42 +156,10 @@ function FindingCard({
             ))}
           </div>
         )}
-
-        {/* Linked findings — shown right on the card, so the Ideas
-            listing tells you what each idea relates to without opening
-            the detail page. Compact violet pills, same as the detail
-            page's Related Findings. */}
-        {plain && finding.relatedIdeas && finding.relatedIdeas.length > 0 && (
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-              Findings ({finding.relatedIdeas.length})
-            </div>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {finding.relatedIdeas.map((idea: any) => (
-                <span
-                  key={idea.id}
-                  title={idea.description ? `${idea.title} — ${idea.description}` : idea.title}
-                  className="inline-flex max-w-full items-baseline gap-1 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-900"
-                >
-                  <span className="truncate">{idea.title}</span>
-                  {idea.description && (
-                    <span className="max-w-32 truncate text-[11px] font-normal text-violet-700">· {idea.description}</span>
-                  )}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Pinned to the card bottom so the footer aligns across every
-          card in the row, whatever the title/tags above. */}
-      {plain ? (
-        <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 text-xs font-semibold text-emerald-600">
-          <span>View details</span>
-          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-        </div>
-      ) : (
+      {/* Pinned to the card bottom so the score strip and link align
+          across every card in the row, whatever the title/tags above. */}
       <div className="mt-5 space-y-2.5 border-t border-slate-100 pt-4">
         <div className="grid grid-cols-3 gap-2 text-center">
           {scoreBox("Desirability", s.desirability != null ? `${s.desirability} / 3` : null)}
@@ -229,7 +172,6 @@ function FindingCard({
           <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
         </div>
       </div>
-      )}
     </div>
   );
 }
@@ -691,13 +633,21 @@ export default function ProjectResultViewer({
   // is not offered as a filter (it does not count toward Desirability).
   const allTags = ["Sumber: Wawancara", "Sumber: Survey"];
 
-  // Filter findings
+  // Filter findings — the search matches the title, description,
+  // linked finding titles, and platform names, so the table narrows
+  // to what the user is looking for from one box.
   const filteredFindings = findings.filter((f) => {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const matchTitle = f.title.toLowerCase().includes(q);
       const matchDesc = (f.description || "").toLowerCase().includes(q);
-      if (!matchTitle && !matchDesc) return false;
+      const matchRelated = (f.relatedIdeas || []).some((r: any) =>
+        (r.title || "").toLowerCase().includes(q)
+      );
+      const matchPlatform = (f.platform || []).some((p: string) =>
+        p.toLowerCase().includes(q)
+      );
+      if (!matchTitle && !matchDesc && !matchRelated && !matchPlatform) return false;
     }
 
     if (selectedTag !== "ALL") {
@@ -841,20 +791,56 @@ export default function ProjectResultViewer({
 
 
 
-            {/* Findings List — one flat list of all global findings,
-                scored or not, assigned to a group or not. No "Scored by
-                you" / "Awaiting scoring" split. */}
+            {/* Ideas table — a plain listing: title, linked findings,
+                platform. No chips or labels; the row itself opens the
+                detail page. */}
             {filteredFindings.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {filteredFindings.map((finding) => (
-                  <FindingCard key={finding.id} finding={finding} meId={meId} plain onSelect={(f) => router.push(`/${slug}/ideas/${f.id}`)} />
-                ))}
+              <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                      <th scope="col" className="px-4 py-3">Ideas</th>
+                      <th scope="col" className="px-4 py-3">Related Findings</th>
+                      <th scope="col" className="px-4 py-3">Platform</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredFindings.map((finding) => (
+                      <tr
+                        key={finding.id}
+                        onClick={() => router.push(`/${slug}/ideas/${finding.id}`)}
+                        className="cursor-pointer border-b border-slate-100 transition hover:bg-emerald-50/50 last:border-b-0"
+                      >
+                        <td className="px-4 py-3.5 align-top">
+                          <div className="font-semibold leading-snug text-slate-900">{finding.title}</div>
+                          {finding.description && (
+                            <div className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{finding.description}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 align-top">
+                          {finding.relatedIdeas && finding.relatedIdeas.length > 0 ? (
+                            <div className="space-y-1">
+                              {finding.relatedIdeas.map((r: any) => (
+                                <div key={r.id} className="leading-snug text-slate-700">{r.title}</div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 align-top whitespace-nowrap text-slate-700">
+                          {(finding.platform || []).length > 0 ? finding.platform.join(", ") : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
               <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
                 <Target className="h-10 w-10 text-slate-300 mx-auto" />
                 <h3 className="mt-3 text-base font-bold text-slate-800">
-                  No Findings Match Your Filters
+                  No Ideas Match Your Filters
                 </h3>
                 <p className="mt-1 text-xs text-slate-500">
                   Try clearing the search text or resetting the filters.
