@@ -530,7 +530,7 @@ export default function ProjectResultViewer({
                     <option value="ALL">All Sumber</option>
                     {allTags.map((t, idx) => (
                       <option key={idx} value={t}>
-                        {t}
+                        {t.replace("Sumber: ", "")}
                       </option>
                     ))}
                   </select>
