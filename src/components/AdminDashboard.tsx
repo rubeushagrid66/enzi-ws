@@ -158,6 +158,12 @@ export default function AdminDashboard() {
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProjectSlug, setSelectedProjectSlug] = useState<string>("");
   const [activeProject, setActiveProject] = useState<any>(null);
+  // The slug whose details were most recently requested. loadProjectDetails
+  // is async and several requests can be in flight (switching projects,
+  // then saving); only the latest one's response may update activeProject,
+  // otherwise a slow earlier response overwrites the newer project's data
+  // and new items "don't show" / appear under the previous project.
+  const latestProjectSlugRef = useRef<string>("");
   // The active tab follows the URL (/dashboard/<slug>). It is set from
   // the pathname on mount and re-synced whenever the URL changes
   // (sidebar link, back/forward, or a pasted URL). Because this shell
@@ -265,13 +271,21 @@ export default function AdminDashboard() {
   }, [sidebarOpen]);
 
   const loadProjectDetails = async (slug: string) => {
+    latestProjectSlugRef.current = slug;
     try {
       const res = await fetch(`/api/projects/${slug}`);
       if (!res.ok) throw new Error("Failed to load project details");
       const data = await res.json();
-      setActiveProject(data.project);
+      // Ignore a stale response: the user may have switched projects (or
+      // reloaded after a save) while this fetch was in flight, and the
+      // newer request's data must win.
+      if (latestProjectSlugRef.current === slug) {
+        setActiveProject(data.project);
+      }
     } catch (err: any) {
-      setError(err.message || "Failed to load project details");
+      if (latestProjectSlugRef.current === slug) {
+        setError(err.message || "Failed to load project details");
+      }
     }
   };
 
@@ -347,6 +361,11 @@ export default function AdminDashboard() {
   const handleProjectSelect = (slug: string) => {
     setSelectedProjectSlug(slug);
     setError(null);
+    // Clear the previous project's data immediately: the lists (groups,
+    // aspects, counts) render from activeProject, and it only updates
+    // when the details fetch finishes ~2s later. Until then the UI
+    // would show — and let the user act on — the previous project.
+    setActiveProject(null);
     loadProjectDetails(slug);
   };
 
@@ -908,8 +927,12 @@ export default function AdminDashboard() {
 
   const openCreateUser = () => {
     setEditingUser(null);
-    // New users default to the active project.
-    setUserForm({ name: "", email: "", password: "", role: "FACILITATOR", groupId: "", groupName: "", projectId: activeProject?.id ?? "", projectName: activeProject?.name ?? "" });
+    // New users default to the project selected in the sidebar — resolved
+    // from the projects list, not from activeProject, whose details lag
+    // the switch by the fetch (~2s) and would default to the previous
+    // project if the modal is opened right after switching.
+    const proj = projects.find((p: any) => p.slug === selectedProjectSlug) || activeProject;
+    setUserForm({ name: "", email: "", password: "", role: "FACILITATOR", groupId: "", groupName: "", projectId: proj?.id ?? "", projectName: proj?.name ?? "" });
     setUserModalOpen(true);
   };
 
