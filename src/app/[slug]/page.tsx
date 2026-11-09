@@ -18,10 +18,15 @@ function FindingCard({
   finding,
   meId,
   onSelect,
+  plain,
 }: {
   finding: any;
   meId: string | null;
   onSelect: (f: any) => void;
+  /** Plain listing card (Findings tab): title + tags only — no scores,
+      no quadrant badge, not clickable. Scoring lives in the Groups
+      tab, whose cards keep the full layout. */
+  plain?: boolean;
 }) {
   const s = finding.scores || {};
   // The quadrant this finding shows for the viewer: its board position
@@ -48,10 +53,11 @@ function FindingCard({
   );
   return (
     <div
-      onClick={() => onSelect(finding)}
-      className="group flex cursor-pointer flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition-all hover:border-emerald-300 hover:shadow-md"
+      {...(!plain ? { onClick: () => onSelect(finding) } : {})}
+      className={`flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-xs ${plain ? "" : "group cursor-pointer transition-all hover:border-emerald-300 hover:shadow-md"}`}
     >
       <div className="flex-1 space-y-3">
+        {!plain && (
         <div className="flex items-center justify-between gap-2">
           {quad ? (
             <span
@@ -74,6 +80,7 @@ function FindingCard({
             </span>
           )}
         </div>
+        )}
 
         {/* Fixed two-line height so the tags below always start at the
             same place, whether the title wraps or not. The description
@@ -97,7 +104,10 @@ function FindingCard({
       </div>
 
       {/* Pinned to the card bottom so the score strip and link align
-          across every card in the row, whatever the title/tags above. */}
+          across every card in the row, whatever the title/tags above.
+          Only on scoring cards (Groups tab) — the plain Findings
+          listing has no scores and no link. */}
+      {!plain && (
       <div className="mt-5 space-y-2.5 border-t border-slate-100 pt-4">
         <div className="grid grid-cols-3 gap-2 text-center">
           {scoreBox("Desirability", s.desirability != null ? `${s.desirability} / 3` : null)}
@@ -110,6 +120,7 @@ function FindingCard({
           <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
         </div>
       </div>
+      )}
     </div>
   );
 }
@@ -547,7 +558,7 @@ export default function ProjectResultViewer({
             {filteredFindings.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filteredFindings.map((finding) => (
-                  <FindingCard key={finding.id} finding={finding} meId={meId} onSelect={(f) => router.push(`/${slug}/findings/${f.id}`)} />
+                  <FindingCard key={finding.id} finding={finding} meId={meId} plain onSelect={(f) => router.push(`/${slug}/findings/${f.id}`)} />
                 ))}
               </div>
             ) : (
