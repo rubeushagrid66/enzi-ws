@@ -244,6 +244,8 @@ export default function AdminDashboard() {
   const [ideaForm, setIdeaForm] = useState({ title: "", description: "" });
   // Finding ids ticked for the idea in the modal.
   const [ideaFindingIds, setIdeaFindingIds] = useState<string[]>([]);
+  // Search text filtering the Linked Findings checklist (title + project).
+  const [ideaFindingSearch, setIdeaFindingSearch] = useState("");
   const [savingIdea, setSavingIdea] = useState(false);
 
   // Groups and Participants
@@ -734,6 +736,7 @@ export default function AdminDashboard() {
     setEditingIdeaId(null);
     setIdeaForm({ title: "", description: "" });
     setIdeaFindingIds([]);
+    setIdeaFindingSearch("");
     setIdeaModalOpen(true);
   };
 
@@ -741,6 +744,7 @@ export default function AdminDashboard() {
     setEditingIdeaId(idea.id);
     setIdeaForm({ title: idea.title || "", description: idea.description || "" });
     setIdeaFindingIds(Array.isArray(idea.findingIds) ? [...idea.findingIds] : []);
+    setIdeaFindingSearch("");
     setIdeaModalOpen(true);
   };
 
@@ -1870,22 +1874,45 @@ export default function AdminDashboard() {
               {poolFindings.length === 0 ? (
                 <p className="text-sm italic text-slate-500">No findings yet — add a finding first (Findings &amp; Tags tab).</p>
               ) : (
-                <div className="max-h-96 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">
-                  {poolFindings.map((f: any) => (
-                    <label key={f.id} className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
-                      <input
-                        type="checkbox"
-                        checked={ideaFindingIds.includes(f.id)}
-                        onChange={() => toggleIdeaFinding(f.id)}
-                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-emerald-600"
-                      />
-                      <span className="min-w-0">
-                        <span className="block font-medium leading-snug text-slate-900">{f.title}</span>
-                        {f.projectName && <span className="mt-0.5 block text-xs text-slate-400">{f.projectName}</span>}
-                      </span>
-                    </label>
-                  ))}
-                </div>
+                <>
+                  <input
+                    type="search"
+                    placeholder="Search findings…"
+                    aria-label="Search findings"
+                    value={ideaFindingSearch}
+                    onChange={(e) => setIdeaFindingSearch(e.target.value)}
+                    className="input mb-2 w-full"
+                  />
+                  {(() => {
+                    const q = ideaFindingSearch.trim().toLowerCase();
+                    const shown = q
+                      ? poolFindings.filter((f: any) =>
+                          `${f.title || ""} ${f.projectName || ""}`.toLowerCase().includes(q)
+                        )
+                      : poolFindings;
+                    if (shown.length === 0) {
+                      return <p className="rounded-xl border border-slate-200 px-3 py-3 text-sm italic text-slate-500">No findings match “{ideaFindingSearch.trim()}”.</p>;
+                    }
+                    return (
+                      <div className="max-h-96 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">
+                        {shown.map((f: any) => (
+                          <label key={f.id} className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+                            <input
+                              type="checkbox"
+                              checked={ideaFindingIds.includes(f.id)}
+                              onChange={() => toggleIdeaFinding(f.id)}
+                              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-emerald-600"
+                            />
+                            <span className="min-w-0">
+                              <span className="block font-medium leading-snug text-slate-900">{f.title}</span>
+                              {f.projectName && <span className="mt-0.5 block text-xs text-slate-400">{f.projectName}</span>}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
               )}
             </fieldset>
             <div className="flex items-center justify-end gap-2 pt-3">
