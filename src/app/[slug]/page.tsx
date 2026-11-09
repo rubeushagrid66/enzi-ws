@@ -370,9 +370,9 @@ function RoadmapView({
     horizon: string;
     subtitle: string;
   }[] = [
-    { key: "QUICK_WINS", horizon: "Jangka Pendek", subtitle: "Quick Wins — high impact, low effort. Do these first." },
-    { key: "FILL_INS", horizon: "Jangka Menengah", subtitle: "Fill-ins — low impact, low effort. Fit them in next." },
-    { key: "BIG_BETS", horizon: "Jangka Panjang", subtitle: "Big Bets — high impact, high effort. Plan these for later." },
+    { key: "QUICK_WINS", horizon: "Jangka Pendek", subtitle: "High impact, low effort. Do these first." },
+    { key: "FILL_INS", horizon: "Jangka Menengah", subtitle: "Low impact, low effort. Fit them in next." },
+    { key: "BIG_BETS", horizon: "Jangka Panjang", subtitle: "High impact, high effort. Plan these for later." },
   ];
 
   // For each horizon quadrant, the findings placed there, with the
@@ -398,19 +398,20 @@ function RoadmapView({
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">Roadmap</h2>
         <p className="mt-0.5 text-xs text-slate-500">
           All scored findings, across every group, placed on the timeline by their quadrant.
         </p>
       </div>
+      {/* Three horizon columns side by side on tablet/desktop, stacked
+          on mobile. Each column is headed by the horizon name only —
+          no quadrant label. */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
       {itemsByHorizon.map((section) => (
         <section key={section.key}>
-          <div className="flex items-baseline justify-between gap-3">
-            <h3 className="text-base font-bold text-slate-900">{section.horizon}</h3>
-            <span className="text-xs font-semibold text-slate-400">{QUADRANT_META[section.key].title}</span>
-          </div>
+          <h3 className="text-base font-bold text-slate-900">{section.horizon}</h3>
           <p className="mt-0.5 text-xs text-slate-500">{section.subtitle}</p>
           {section.items.length > 0 ? (
             <div className="mt-3 space-y-2.5">
@@ -444,11 +445,12 @@ function RoadmapView({
             </div>
           ) : (
             <p className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-xs text-slate-400">
-              No findings in this quadrant yet.
+              No findings here yet.
             </p>
           )}
         </section>
       ))}
+      </div>
     </div>
   );
 }
