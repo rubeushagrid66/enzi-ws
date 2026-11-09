@@ -181,6 +181,38 @@ export default function ViabilityVoteMatrix({
   // edits any participant's row in any group.
   const canEditAspect = (_aspect: any) => canVote && isMyGroup;
 
+  // Aspect title block (name + framework/label badges + description),
+  // shared by the admin/facilitator header row and the regular user's
+  // combined score row, where the aspect name sits on the same row as
+  // the 1/2/3 buttons and the reason (no separate "Your score" row).
+  const renderAspectTitle = (aspect: any, fw: string) => (
+    <>
+      <div className="font-bold text-slate-900 text-[13px]">{aspect.name}</div>
+      <div className="mt-1 flex flex-wrap gap-1">
+        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold ${FRAMEWORK_BADGE_CLASS[fw]}`}>
+          {fw === "Feasibility" ? "F" : "V"} · {fw}
+        </span>
+        {aspect.label ? (
+          <span className="inline-flex rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+            {aspect.label}
+          </span>
+        ) : (
+          <span className="inline-flex rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+            No label
+          </span>
+        )}
+        {!isMyGroup && currentUser && !isAdmin && (
+          <span className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-400">
+            View only
+          </span>
+        )}
+      </div>
+      {aspect.description && (
+        <div className="mt-1 text-[11px] text-slate-500">{aspect.description}</div>
+      )}
+    </>
+  );
+
   // Scores / reasons, keyed by `${aspectId}:${participantId}` — one
   // entry per row in the table. The "me" row uses the viewer's own
   // participant id; an admin editing someone else's row uses that
@@ -345,7 +377,7 @@ export default function ViabilityVoteMatrix({
           <table className="w-full min-w-[680px] text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70">
-                <th scope="col" className="py-2.5 px-3 font-bold text-slate-700">{showOnlyMe ? "Your score" : "Participant"}</th>
+                <th scope="col" className="py-2.5 px-3 font-bold text-slate-700">{showOnlyMe ? "Aspect" : "Participant"}</th>
                 <th scope="col" className="py-2.5 px-3 font-bold text-slate-700 text-center">Score (1–3)</th>
                 <th scope="col" className="py-2.5 px-3 font-bold text-slate-700">Alasan</th>
               </tr>
@@ -363,37 +395,22 @@ export default function ViabilityVoteMatrix({
                     const fw = normalizeFramework(aspect.framework);
                     return (
                       <React.Fragment key={aspect.id}>
-                        <tr className="bg-slate-50/70">
-                          <td colSpan={3} className="py-2.5 px-3">
-                            <div className="font-bold text-slate-900 text-[13px]">{aspect.name}</div>
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold ${FRAMEWORK_BADGE_CLASS[fw]}`}>
-                                {fw === "Feasibility" ? "F" : "V"} · {fw}
-                              </span>
-                              {aspect.label ? (
-                                <span className="inline-flex rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
-                                  {aspect.label}
-                                </span>
-                              ) : (
-                                <span className="inline-flex rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-[10px] font-medium text-slate-400">
-                                  No label
-                                </span>
-                              )}
-                              {!isMyGroup && currentUser && !isAdmin && (
-                                <span className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-400">
-                                  View only
-                                </span>
-                              )}
-                            </div>
-                            {aspect.description && (
-                              <div className="mt-1 text-[11px] text-slate-500">{aspect.description}</div>
-                            )}
-                          </td>
-                        </tr>
+                        {/* Regular user: the aspect name lives in the
+                            score row itself, so no separate header row.
+                            Admin / facilitator keep the header row above
+                            their per-participant rows. */}
+                        {!showOnlyMe && (
+                          <tr className="bg-slate-50/70">
+                            <td colSpan={3} className="py-2.5 px-3">
+                              {renderAspectTitle(aspect, fw)}
+                            </td>
+                          </tr>
+                        )}
                         {participantsForAspect(aspect).length === 0 ? (
                           <tr className="align-top">
-                            <td colSpan={3} className="py-2.5 px-3 text-slate-400 italic">
-                              No participants in this group.
+                            <td colSpan={3} className="py-2.5 px-3">
+                              {showOnlyMe && renderAspectTitle(aspect, fw)}
+                              <div className="text-slate-400 italic mt-1">No participants in this group.</div>
                             </td>
                           </tr>
                         ) : (
@@ -412,7 +429,7 @@ export default function ViabilityVoteMatrix({
                             <tr key={`${aspect.id}:${p.id}`} className="hover:bg-slate-50/80 transition align-top">
                               <td className="py-2.5 px-3">
                                 {showOnlyMe ? (
-                                  <span className="font-bold text-slate-800 text-[13px]">Your score</span>
+                                  renderAspectTitle(aspect, fw)
                                 ) : (
                                   <>
                                     <span className="font-bold text-slate-800 text-[13px]">{p.name}</span>
