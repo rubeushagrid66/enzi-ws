@@ -43,6 +43,22 @@ export default function FindingDetailView({
   );
   const [localFinding, setLocalFinding] = useState(finding);
 
+  // ── Related ideas ────────────────────────────────────────────────
+  // Ideas linked to this finding (assigned in the admin Ideas tab).
+  // Shown under the header so the finding's ideas are visible at a
+  // glance, whatever tab is open.
+  const [relatedIdeas, setRelatedIdeas] = useState<any[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/projects/${project.slug}/findings/${finding.id}/ideas`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled) setRelatedIdeas(data?.ideas || []);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [finding.id, project.slug]);
+
   // ── Group scope ──────────────────────────────────────────────────
   // The group chips sit above the three tabs and scope the whole page:
   // the score strip, the tab badges, the matrix and the board all show
@@ -370,6 +386,22 @@ export default function FindingDetailView({
                   <span className="font-semibold">{tag.value}</span>
                 </span>
               ))}
+            </div>
+          )}
+
+          {/* Related ideas — the ideas this finding is linked to
+              (assigned in the admin Ideas tab). */}
+          {relatedIdeas.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Related Ideas</h3>
+              <div className="mt-2 flex flex-col gap-2">
+                {relatedIdeas.map((idea: any) => (
+                  <div key={idea.id} className="rounded-xl border border-violet-200 bg-violet-50 px-3.5 py-2.5">
+                    <div className="text-sm font-semibold text-violet-900">{idea.title}</div>
+                    {idea.description && <div className="mt-0.5 text-xs text-violet-700">{idea.description}</div>}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

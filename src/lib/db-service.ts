@@ -637,6 +637,182 @@ export const dbService = {
     return this.getFindingGroupIds(findingId);
   },
 
+  // ── Ideas ───────────────────────────────────────────────────────────────────
+  // Ideas are global (like the findings pool): an idea is created in
+  // the admin and linked to 1 or many findings. A finding shows its
+  // linked ideas on its detail page. The link is the idea_findings
+  // join table (idea_id, finding_id), mirroring finding_groups.
+
+  /** All ideas, each with the ids of the findings it is linked to. */
+  async getIdeas(): Promise<any[]> {
+    if (isSupabaseConfigured && supabase) {
+      const [ideasRes, linksRes] = await Promise.all([
+        supabase.from("ideas").select("*").order("created_at", { ascending: true }),
+        supabase.from("idea_findings").select("idea_id, finding_id"),
+      ]);
+      const linkMap: Record<string, string[]> = {};
+      for (const r of (linksRes.data as any[]) || []) {
+        if (!r.idea_id || !r.finding_id) continue;
+        (linkMap[r.idea_id] ||= []).push(r.finding_id);
+      }
+      return (ideasRes.data || []).map((i: any) => ({
+        id: i.id,
+        title: i.title,
+        description: i.description || "",
+        findingIds: linkMap[i.id] || [],
+        createdAt: i.created_at,
+      }));
+    }
+    try {
+      const rows = await prisma.$queryRaw<Array<{ id: string; title: string; description: string; created_at: string }>>`
+        SELECT id, title, description, created_at FROM ideas ORDER BY created_at ASC
+      `;
+      const links = await prisma.$queryRaw<Array<{ idea_id: string; finding_id: string }>>`
+        SELECT idea_id, finding_id FROM idea_findings
+      `;
+      const linkMap: Record<string, string[]> = {};
+      for (const r of links) (linkMap[r.idea_id] ||= []).push(r.finding_id);
+      return rows.map((i: any) => ({
+        id: i.id,
+        title: i.title,
+        description: i.description || "",
+        findingIds: linkMap[i.id] || [],
+        createdAt: i.created_at,
+      }));
+    } catch {
+      return [];
+    }
+  },
+
+  async createIdea(data: { title: string; description?: string }) {
+    if (isSupabaseConfigured && supabase) {
+      const { data: idea, error } = await supabase
+        .from("ideas")
+        .insert({ title: data.title, description: data.description || "" })
+        .select()
+        .single();
+      if (error) throw error;
+      return idea;
+    }
+    const id = `idea_${Date.now()}`;
+    await prisma.$executeRaw`
+      INSERT INTO ideas (id, title, description) VALUES (${id}, ${data.title}, ${data.description || ""})
+    `;
+    return { id, title: data.title, description: data.description || "" };
+  },
+
+  async updateIdea(id: string, data: { title?: string; description?: string }) {
+    if (isSupabaseConfigured && supabase) {
+      const patch: any = {};
+      if (data.title !== undefined) patch.title = data.title;
+      if (data.description !== undefined) patch.description = data.description;
+      patch.updated_at = new Date().toISOString();
+      const { data: idea, error } = await supabase.from("ideas").update(patch).eq("id", id).select().single();
+      if (error) throw error;
+      return idea;
+    }
+    if (data.title !== undefined) {
+      await prisma.$executeRaw`UPDATE ideas SET title = ${data.title}, updated_at = ${new Date().toISOString()} WHERE id = ${id}`;
+    }
+    if (data.description !== undefined) {
+      await prisma.$executeRaw`UPDATE ideas SET description = ${data.description}, updated_at = ${new Date().toISOString()} WHERE id = ${id}`;
+    }
+    return { id, ...data };
+  },
+
+  async deleteIdea(id: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("ideas").delete().eq("id", id);
+      if (error) throw error;
+      return;
+    }
+    await prisma.$executeRaw`DELETE FROM idea_findings WHERE idea_id = ${id}`;
+    await prisma.$executeRaw`DELETE FROM ideas WHERE id = ${id}`;
+  },
+
+  /** Finding ids an idea is linked to (empty when unlinked). */
+  async getIdeaFindingIds(ideaId: string): Promise<string[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("idea_findings")
+        .select("finding_id")
+        .eq("idea_id", ideaId);
+      if (error || !data) return [];
+      return (data as any[]).map((r: any) => r.finding_id).filter(Boolean);
+    }
+    try {
+      const rows = await prisma.$queryRaw<Array<{ finding_id: string }>>`
+        SELECT finding_id FROM idea_findings WHERE idea_id = ${ideaId}
+      `;
+      return rows.map((r: any) => r.finding_id).filter(Boolean);
+    } catch {
+      return [];
+    }
+  },
+
+  /** Ideas linked to one finding — shown on that finding's detail
+   *  page. Returns the idea rows (id, title, description). */
+  async getIdeasForFinding(findingId: string): Promise<any[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("idea_findings")
+        .select("idea:ideas(id, title, description)")
+        .eq("finding_id", findingId);
+      if (error || !data) return [];
+      return (data as any[])
+        .map((r: any) => r.idea)
+        .filter((i: any) => i && i.id)
+        .map((i: any) => ({ id: i.id, title: i.title, description: i.description || "" }));
+    }
+    try {
+      const rows = await prisma.$queryRaw<Array<{ id: string; title: string; description: string }>>`
+        SELECT i.id, i.title, i.description FROM ideas i
+        JOIN idea_findings f ON f.idea_id = i.id
+        WHERE f.finding_id = ${findingId}
+        ORDER BY i.created_at ASC
+      `;
+      return rows.map((i: any) => ({ id: i.id, title: i.title, description: i.description || "" }));
+    } catch {
+      return [];
+    }
+  },
+
+  /** Replace an idea's finding links (admin only at the route).
+   *  Unknown finding ids are dropped, so a deleted finding never
+   *  leaves a dangling link behind. */
+  async setIdeaFindings(ideaId: string, findingIds: string[]): Promise<string[]> {
+    const clean = Array.from(new Set((findingIds || []).filter((f) => typeof f === "string" && f.trim() !== "")));
+    if (isSupabaseConfigured && supabase) {
+      let valid = clean;
+      if (clean.length > 0) {
+        const { data } = await supabase.from("findings").select("id").in("id", clean);
+        const existing = new Set(((data as any[]) || []).map((f: any) => f.id));
+        valid = clean.filter((f) => existing.has(f));
+      }
+      const del = await supabase.from("idea_findings").delete().eq("idea_id", ideaId);
+      if (del.error) throw del.error;
+      if (valid.length > 0) {
+        const ins = await supabase
+          .from("idea_findings")
+          .insert(valid.map((finding_id) => ({ idea_id: ideaId, finding_id })));
+        if (ins.error) throw ins.error;
+      }
+      return valid;
+    }
+    await prisma.$executeRaw`DELETE FROM idea_findings WHERE idea_id = ${ideaId}`;
+    for (const fid of clean) {
+      const exists = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM findings WHERE id = ${fid}
+      `;
+      if (exists.length === 0) continue;
+      await prisma.$executeRaw`
+        INSERT INTO idea_findings (idea_id, finding_id) VALUES (${ideaId}, ${fid})
+        ON CONFLICT (idea_id, finding_id) DO NOTHING
+      `;
+    }
+    return this.getIdeaFindingIds(ideaId);
+  },
+
   /** Every group in every project, with its project — for the
    *  dashboard's finding → group assignment picker (assignment is
    *  cross-project). */

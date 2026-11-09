@@ -6,6 +6,7 @@
 export type AdminTab =
   | "projects"
   | "findings"
+  | "ideas"
   | "weights"
   | "groups"
   | "aspects"
@@ -27,6 +28,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
   // themselves stay per-project. The L1–L3 parameter tree was removed
   // 2026-11-09: nothing read it — D/V/F use mention counts + basis N.
   { id: "findings", label: "Findings & Tags", href: "/dashboard/findings", badge: "Global", group: "Workshop" },
+  { id: "ideas", label: "Ideas", href: "/dashboard/ideas", badge: "Global", group: "Workshop" },
   { id: "weights", label: "Framework & Weighting", href: "/dashboard/framework", badge: "Global", group: "Workshop" },
   { id: "groups", label: "Groups & Participants", href: "/dashboard/groups", group: "Workshop" },
   { id: "aspects", label: "Viability Aspects", href: "/dashboard/aspects", group: "Workshop" },

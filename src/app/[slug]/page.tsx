@@ -47,8 +47,15 @@ function groupScoresFor(finding: any, group: any): { d: number | null; v: number
 }
 
 /** A finding's quadrant FOR one group (null when it has none there).
- *  A manual pin wins over the computed position, same as the board. */
+ *  Assignment gates the quadrant: a finding only has a quadrant for
+ *  the groups it is assigned to (or every group when unassigned).
+ *  This check must come first — a manual pin would otherwise give the
+ *  finding a quadrant for every group, even ones it isn't assigned
+ *  to. A manual pin wins over the computed position, same as the
+ *  board. */
 function quadrantForGroup(finding: any, group: any): FeasibilityQuadrant | null {
+  const assigned: string[] = finding.groupIds || [];
+  if (assigned.length > 0 && !assigned.includes(group.id)) return null;
   const { d, v, f } = groupScoresFor(finding, group);
   return findingBoardPositionForScores(finding, d, v, f).quadrant;
 }
@@ -81,12 +88,11 @@ function FindingCard({
   const my = scoresForParticipant(s.participantScores, meId);
   const shownV = groupVF ? groupVF.v : my.viability;
   const shownF = groupVF ? groupVF.f : my.feasibility;
-  // The quadrant: the group's (pinned, or computed from the group's
-  // D/V/F), or the viewer's board position without a group.
-  const boardPos = groupVF
-    ? findingBoardPositionForScores(finding, groupVF.d, groupVF.v, groupVF.f)
-    : findingBoardPosition(finding, meId);
-  const quad = boardPos.quadrant;
+  // The quadrant: the group's (assignment-gated, pinned or computed
+  // from the group's D/V/F), or the viewer's board position without
+  // a group.
+  const quad = group ? quadrantForGroup(finding, group) : findingBoardPosition(finding, meId).quadrant;
+  const pinned = finding?.feasibilityManual === true && finding?.feasibilityX != null && finding?.feasibilityY != null;
   // Score boxes: label row is a fixed height so a two-line label
   // ("Viability & Feasibility") never pushes its value out of line
   // with the other two boxes.
@@ -121,7 +127,7 @@ function FindingCard({
               }`}
             >
               {quad.replace("_", " ")}
-              {boardPos.pinned && " · manual"}
+              {pinned && " · manual"}
             </span>
           ) : (
             <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">

@@ -143,6 +143,27 @@ ALTER TABLE findings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE finding_parameter_values DISABLE ROW LEVEL SECURITY;
 ALTER TABLE viability_votes DISABLE ROW LEVEL SECURITY;
 
+-- Ideas: global (like the findings pool). An idea is linked to 1 or
+-- many findings via idea_findings; a finding shows its linked ideas
+-- on its detail page.
+CREATE TABLE IF NOT EXISTS ideas (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  title TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS idea_findings (
+  idea_id TEXT NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
+  finding_id TEXT NOT NULL REFERENCES findings(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY (idea_id, finding_id)
+);
+
+ALTER TABLE ideas DISABLE ROW LEVEL SECURITY;
+ALTER TABLE idea_findings DISABLE ROW LEVEL SECURITY;
+
 -- 3. Seed Initial Demo Users (admin123 and facilitator123)
 INSERT INTO users (name, email, password_hash, role)
 VALUES 

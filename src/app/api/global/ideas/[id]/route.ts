@@ -1,0 +1,56 @@
+import { NextResponse } from "next/server";
+import { dbService } from "@/lib/db-service";
+import { getSession } from "@/lib/auth";
+import { revalidateProjectPages } from "@/lib/revalidate";
+
+/** Update or delete one idea. */
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { title, description, findingIds } = body;
+
+    const idea = await dbService.updateIdea(params.id, { title, description });
+    if (Array.isArray(findingIds)) {
+      await dbService.setIdeaFindings(params.id, findingIds);
+    }
+
+    revalidateProjectPages();
+    return NextResponse.json({ success: true, idea });
+  } catch (error: any) {
+    console.error("Error updating idea:", error);
+    return NextResponse.json(
+      { error: error?.message || "Error updating idea" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await dbService.deleteIdea(params.id);
+    revalidateProjectPages();
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Error deleting idea:", error);
+    return NextResponse.json(
+      { error: error?.message || "Error deleting idea" },
+      { status: 500 }
+    );
+  }
+}

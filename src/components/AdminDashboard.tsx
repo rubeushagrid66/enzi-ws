@@ -236,6 +236,16 @@ export default function AdminDashboard() {
   const [findingTarget, setFindingTarget] = useState<"pool" | "project">("pool");
   const [findingForm, setFindingForm] = useState({ title: "", description: "", sumber: [] as string[], fitur: "", platform: [] as string[] });
 
+  // Ideas (global): an idea is linked to 1 or many findings, and a
+  // finding shows its linked ideas on its detail page.
+  const [ideas, setIdeas] = useState<any[]>([]);
+  const [ideaModalOpen, setIdeaModalOpen] = useState(false);
+  const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
+  const [ideaForm, setIdeaForm] = useState({ title: "", description: "" });
+  // Finding ids ticked for the idea in the modal.
+  const [ideaFindingIds, setIdeaFindingIds] = useState<string[]>([]);
+  const [savingIdea, setSavingIdea] = useState(false);
+
   // Groups and Participants
   const [newGroupName, setNewGroupName] = useState("");
   const [editingGroup, setEditingGroup] = useState<{ id: string; name: string } | null>(null);
@@ -289,14 +299,15 @@ export default function AdminDashboard() {
     }
   };
 
-  // Global setup: weights, findings pool. These are shared
+  // Global setup: weights, findings pool, ideas. These are shared
   // by all projects and do not depend on the selected project.
   const loadGlobalData = async () => {
     try {
-      const [w, f, g] = await Promise.all([
+      const [w, f, g, ideasRes] = await Promise.all([
         apiCall("/api/global/weights"),
         apiCall("/api/global/findings"),
         apiCall("/api/global/groups"),
+        apiCall("/api/global/ideas"),
       ]);
       if (w.weights) {
         setWeightInputs(w.weights.map((x: any) => ({ name: x.name, weight: x.weight })));
@@ -304,6 +315,7 @@ export default function AdminDashboard() {
       }
       setPoolFindings(f.findings || []);
       setAllGroups(g.groups || []);
+      setIdeas(ideasRes.ideas || []);
       // Surface the "run the SQL" note once, from whichever endpoint
       // reported it.
       setGlobalSetupNote(w.note || null);
@@ -714,6 +726,88 @@ export default function AdminDashboard() {
     }
   };
 
+  // ── Ideas ───────────────────────────────────────────────────────────────────
+  // An idea is created here and linked to 1 or many findings (the
+  // checklist lives in the idea modal). A finding shows its linked
+  // ideas on its detail page.
+  const openCreateIdea = () => {
+    setEditingIdeaId(null);
+    setIdeaForm({ title: "", description: "" });
+    setIdeaFindingIds([]);
+    setIdeaModalOpen(true);
+  };
+
+  const openEditIdea = (idea: any) => {
+    setEditingIdeaId(idea.id);
+    setIdeaForm({ title: idea.title || "", description: idea.description || "" });
+    setIdeaFindingIds(Array.isArray(idea.findingIds) ? [...idea.findingIds] : []);
+    setIdeaModalOpen(true);
+  };
+
+  const toggleIdeaFinding = (findingId: string) => {
+    setIdeaFindingIds((prev) =>
+      prev.includes(findingId) ? prev.filter((f) => f !== findingId) : [...prev, findingId]
+    );
+  };
+
+  const handleSaveIdea = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ideaForm.title || savingIdea) return;
+    setSavingIdea(true);
+    try {
+      setError(null);
+      const body = JSON.stringify({ ...ideaForm, findingIds: ideaFindingIds });
+      let saved: any = null;
+      if (editingIdeaId) {
+        saved = await apiCall(`/api/global/ideas/${editingIdeaId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body,
+        });
+        const idea = saved?.idea;
+        if (idea) {
+          setIdeas((rows: any[]) =>
+            rows.map((x: any) =>
+              x.id === editingIdeaId
+                ? { ...x, title: idea.title ?? x.title, description: idea.description ?? x.description, findingIds: ideaFindingIds }
+                : x
+            )
+          );
+        }
+      } else {
+        saved = await apiCall("/api/global/ideas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+        });
+        const idea = saved?.idea;
+        if (idea) {
+          setIdeas((rows: any[]) => [
+            ...rows,
+            { id: idea.id, title: idea.title, description: idea.description || "", findingIds: ideaFindingIds },
+          ]);
+        }
+      }
+      setIdeaModalOpen(false);
+      await loadGlobalData();
+    } catch (err: any) {
+      setError(err.message || "Failed to save idea");
+    } finally {
+      setSavingIdea(false);
+    }
+  };
+
+  const handleDeleteIdea = async (idea: any) => {
+    if (!window.confirm(`Delete the idea “${idea.title}”? Its links to findings will be removed too. This cannot be undone.`)) return;
+    try {
+      setError(null);
+      await apiCall(`/api/global/ideas/${idea.id}`, { method: "DELETE" });
+      setIdeas((rows: any[]) => rows.filter((x: any) => x.id !== idea.id));
+    } catch (err: any) {
+      setError(err.message || "Failed to delete idea");
+    }
+  };
+
   /** Copy a pool finding into the selected project. The copy is a new,
    *  independent row (no votes, mappings or position) that starts
    *  Unscored; the pool original is untouched. */
@@ -993,6 +1087,7 @@ export default function AdminDashboard() {
     // Findings are a global pool: count the whole pool,
     // not just the selected project's slice.
     findings: poolFindings.length,
+    ideas: ideas.length,
     groups: activeProject?.groups?.length,
     aspects: activeProject?.viabilityAspects?.length,
     projects: projects.length,
@@ -1006,7 +1101,9 @@ export default function AdminDashboard() {
   const masterAction: { label: string; onClick: () => void } | null =
     activeTab === "findings"
       ? { label: "Add Finding", onClick: openCreateFinding }
-      : activeTab === "groups" && isAdmin
+      : activeTab === "ideas"
+        ? { label: "Add Idea", onClick: openCreateIdea }
+        : activeTab === "groups" && isAdmin
         ? { label: "Add Group", onClick: () => focusInlineForm(groupNameInputRef) }
         : activeTab === "aspects" && isAdmin
           ? { label: "Add Aspect", onClick: () => focusInlineForm(aspectNameInputRef) }
@@ -1213,6 +1310,87 @@ export default function AdminDashboard() {
                       ) : (
                         <tr>
                           <td colSpan={4} className="py-8 text-center italic text-slate-600">No findings yet. Click “Add Finding” above.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* TAB: IDEAS */}
+          {activeTab === "ideas" && (
+            <section aria-labelledby="ideas-heading" className="space-y-6">
+              <div>
+                <h2 id="ideas-heading" className="section-title">Ideas</h2>
+                <p className="section-sub">Ideas are linked to one or many findings. Open a finding to see the ideas related to it.</p>
+                {globalSetupNote && (
+                  <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{globalSetupNote}</p>
+                )}
+              </div>
+
+              <div className="card overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+                    <caption className="sr-only">All ideas and the findings they are linked to</caption>
+                    <colgroup>
+                      <col className="w-[30%]" />
+                      <col className="w-[30%]" />
+                      <col className="w-[24%]" />
+                      <col className="w-[16%]" />
+                    </colgroup>
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50">
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Idea</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Description</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Linked Findings</th>
+                        <th scope="col" className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {ideas.length > 0 ? (
+                        ideas.map((idea: any) => {
+                          const linked = (idea.findingIds || [])
+                            .map((fid: string) => poolFindings.find((f: any) => f.id === fid))
+                            .filter(Boolean);
+                          return (
+                            <tr key={idea.id} className="transition hover:bg-slate-50">
+                              <td className="px-4 py-3">
+                                <div className="font-semibold text-slate-900">{idea.title}</div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="line-clamp-2 text-xs text-slate-500">{idea.description || "—"}</div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-wrap gap-1">
+                                  {linked.length > 0 ? (
+                                    linked.map((f: any) => (
+                                      <span key={f.id} className="rounded-md bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-700">
+                                        {f.title}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-xs font-medium text-slate-400">No findings linked yet</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <button type="button" onClick={() => openEditIdea(idea)} aria-label={`Edit idea ${idea.title}`} className="btn-icon">
+                                    <Edit2 className="h-4 w-4" />
+                                  </button>
+                                  <button type="button" onClick={() => handleDeleteIdea(idea)} aria-label={`Delete idea ${idea.title}`} className="btn-icon-danger">
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="py-8 text-center italic text-slate-600">No ideas yet. Click “Add Idea” above.</td>
                         </tr>
                       )}
                     </tbody>
@@ -1657,6 +1835,48 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-end gap-2 pt-3">
               <button type="button" onClick={() => setFindingModalOpen(false)} className="btn-secondary">Cancel</button>
               <button type="submit" disabled={savingFinding} className="btn-primary disabled:opacity-60">{savingFinding ? "Saving…" : editingFindingId ? "Save Changes" : "Create Finding"}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* IDEA MODAL (create + edit) */}
+      {ideaModalOpen && (
+        <Modal title={editingIdeaId ? `Edit Idea — ${ideaForm.title || "Untitled"}` : "Create Idea"} onClose={() => setIdeaModalOpen(false)}>
+          <form onSubmit={handleSaveIdea} className="space-y-3">
+            <div>
+              <label htmlFor="idea-title" className="field-label">Idea Title</label>
+              <input id="idea-title" type="text" required placeholder="e.g. One-tap bill payment" value={ideaForm.title} onChange={(e) => setIdeaForm((f) => ({ ...f, title: e.target.value }))} className="input w-full" />
+            </div>
+            <div>
+              <label htmlFor="idea-desc" className="field-label">Description</label>
+              <textarea id="idea-desc" rows={2} placeholder="What is the idea?" value={ideaForm.description} onChange={(e) => setIdeaForm((f) => ({ ...f, description: e.target.value }))} className="input w-full" />
+            </div>
+            <fieldset>
+              <legend className="field-label">Linked Findings</legend>
+              <p className="mb-2 text-xs text-slate-500">Tick the findings this idea relates to. An idea can be linked to one or many findings.</p>
+              {poolFindings.length === 0 ? (
+                <p className="text-sm italic text-slate-500">No findings yet — add a finding first (Findings &amp; Tags tab).</p>
+              ) : (
+                <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-xl border border-slate-200 px-3 py-2">
+                  {poolFindings.map((f: any) => (
+                    <label key={f.id} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={ideaFindingIds.includes(f.id)}
+                        onChange={() => toggleIdeaFinding(f.id)}
+                        className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
+                      />
+                      <span className="font-medium">{f.title}</span>
+                      {f.projectName && <span className="text-xs text-slate-400">· {f.projectName}</span>}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </fieldset>
+            <div className="flex items-center justify-end gap-2 pt-3">
+              <button type="button" onClick={() => setIdeaModalOpen(false)} className="btn-secondary">Cancel</button>
+              <button type="submit" disabled={savingIdea} className="btn-primary disabled:opacity-60">{savingIdea ? "Saving…" : editingIdeaId ? "Save Changes" : "Create Idea"}</button>
             </div>
           </form>
         </Modal>

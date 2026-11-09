@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { X, ExternalLink, FolderGit2, Users2, Sliders, Tag, Shield, ListChecks, LogOut } from "lucide-react";
+import { X, ExternalLink, FolderGit2, Users2, Sliders, Tag, Shield, ListChecks, LogOut, Lightbulb } from "lucide-react";
 import { ADMIN_NAV, type AdminTab } from "@/lib/admin-nav";
 
 // Icons live here (client-side); the nav data (id/label/href/badge/group)
 // lives in @/lib/admin-nav so the server-side [tab] page can use it too.
 const NAV_ICONS: Record<AdminTab, React.ComponentType<{ className?: string }>> = {
   findings: Tag,
+  ideas: Lightbulb,
   weights: Sliders,
   groups: Users2,
   aspects: ListChecks,
