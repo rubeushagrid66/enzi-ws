@@ -319,6 +319,41 @@ export function groupAverageScores(
   };
 }
 
+/**
+ * DVF Score — the weighted composite of a group's D, V and F for one
+ * finding, on the same 1–3 scale as the dimensions (NOT a 0–100
+ * composite).
+ *
+ *   DVF = (wD × D + wV × V + wF × F) / (wD + wV + wF)
+ *
+ * D, V, F are the group's 1–3 scores (Desirability from research
+ * mentions; Viability / Feasibility the group averages). wD, wV, wF
+ * are the framework weights from Framework & Weighting (today 33/33/33).
+ * Dividing by the sum of the weights (not by 100) makes the result a
+ * true weighted average even when the stored weights sum to 99.
+ * Returns null when any dimension is unscored — a composite from
+ * partial data would be misleading — or when the weights sum to 0.
+ * Result is rounded to 2 decimals.
+ */
+export function calculateDVFScore(
+  d: number | null | undefined,
+  v: number | null | undefined,
+  f: number | null | undefined,
+  weights: WeightInput[] | null | undefined
+): number | null {
+  if (d == null || v == null || f == null) return null;
+  const byName = new Map(
+    (weights || []).map((w) => [String(w.name).toLowerCase(), Number(w.weight) || 0])
+  );
+  const wD = byName.get("desirability") ?? 0;
+  const wV = byName.get("viability") ?? 0;
+  const wF = byName.get("feasibility") ?? 0;
+  const total = wD + wV + wF;
+  if (total <= 0) return null;
+  const dvf = (wD * d + wV * v + wF * f) / total;
+  return Math.round(dvf * 100) / 100;
+}
+
 export type FeasibilityQuadrant =
   | "BIG_BETS"
   | "QUICK_WINS"

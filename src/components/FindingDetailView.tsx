@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Target,
   Users2,
@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import FeasibilityMatrix from "./FeasibilityMatrix";
 import ViabilityVoteMatrix from "./ViabilityVoteMatrix";
-import { groupAverageScores, normalizeFramework, findingBoardPositionForScores, type FeasibilityQuadrant } from "@/lib/scoring";
+import { groupAverageScores, normalizeFramework, findingBoardPositionForScores, calculateDVFScore, type FeasibilityQuadrant, type WeightInput } from "@/lib/scoring";
 
 // Quadrant display names + what they mean, shared by the Matrix score
 // box and the board. The Matrix box shows the quadrant the finding
@@ -88,6 +88,29 @@ export default function FindingDetailView({
   // score box shows: the quadrant name, not the F number.
   const groupBoardPos = findingBoardPositionForScores(localFinding, groupD, groupV, groupF);
   const groupQuadrant = groupBoardPos.quadrant;
+
+  // Framework weights for the DVF Score (global, from Framework &
+  // Weighting — today 33/33/33). Fetched once; the equal-thirds
+  // fallback keeps the score right before the fetch lands.
+  const [weights, setWeights] = useState<WeightInput[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/global/weights", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.weights?.length) setWeights(data.weights);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+  // DVF Score for the SELECTED group: the weighted composite of this
+  // group's D, V and F. Null (shown as N/A) while any dimension is
+  // unscored or the group is not assigned to this finding.
+  const groupDVF = calculateDVFScore(groupD, groupV, groupF, weights ?? [
+    { name: "Desirability", weight: 33 },
+    { name: "Viability", weight: 33 },
+    { name: "Feasibility", weight: 33 },
+  ]);
 
   // Research basis N for this project: the total users per source.
   // It is per project, not per finding — editing it here updates every
@@ -350,9 +373,12 @@ export default function FindingDetailView({
           {/* Group selector — sits above the three tabs and scopes the
               whole page (score strip, tab badges, matrix, board) to the
               selected group. A group that did not select this finding
-              shows N/A on every value. */}
+              shows N/A on every value. The DVF Score sits on this row
+              (not in the finding header) because it belongs to the
+              selected group: switching groups changes it. */}
           {groups.length > 0 && (
-            <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Choose a group to view">
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Choose a group to view">
               {groups.map((g: any) => {
                 const isMe = Boolean(meId && myGroupId && g.id === myGroupId);
                 const selected = g.id === activeGroupId;
@@ -377,6 +403,13 @@ export default function FindingDetailView({
                   </button>
                 );
               })}
+              </div>
+              <div
+                className="shrink-0 rounded-lg border-2 border-amber-500 bg-amber-50 px-3.5 py-2 text-sm font-bold text-amber-700"
+                title="DVF Score = (wD × D + wV × V + wF × F) / (wD + wV + wF) — the weighted composite of this group's Desirability, Viability and Feasibility. N/A while any of D, V or F is unscored."
+              >
+                DVF Score: {groupDVF != null ? groupDVF.toFixed(2) : "N/A"}
+              </div>
             </div>
           )}
 
