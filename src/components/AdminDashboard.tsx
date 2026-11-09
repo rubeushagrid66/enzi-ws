@@ -1313,11 +1313,11 @@ export default function AdminDashboard() {
                 <h2 id="groups-heading" className="section-title">Groups &amp; Participants</h2>
                 <p className="section-sub">Create groups, and edit or remove participants. Participants are added by creating a user in Users &amp; Roles and assigning them a group.</p>
               </div>
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <div className="card space-y-5 p-5">
                 {isAdmin && (
-                <div className="card space-y-4 p-5">
+                <div>
                   <h3 className="text-sm font-semibold text-slate-900">Create New Group</h3>
-                  <form onSubmit={handleCreateGroup} className="flex flex-col gap-2 sm:flex-row">
+                  <form onSubmit={handleCreateGroup} className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <label htmlFor="new-group-name" className="sr-only">Group name</label>
                     <input id="new-group-name" type="text" required placeholder="e.g. Core Product & Strategy" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} className="input flex-1" />
                     <button type="submit" className="btn-primary">Add Group</button>
@@ -1325,7 +1325,7 @@ export default function AdminDashboard() {
                 </div>
                 )}
 
-                <div className="card space-y-4 p-5">
+                <div className={`space-y-4 ${isAdmin ? "border-t border-slate-100 pt-5" : ""}`}>
                   <h3 className="text-sm font-semibold text-slate-900">Active Groups &amp; Participants</h3>
                   {activeProject?.groups?.length > 0 ? (
                     <div className="max-h-[500px] space-y-4 overflow-y-auto pr-1">
