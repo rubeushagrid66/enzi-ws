@@ -58,6 +58,7 @@ function FindingCard({
   meId,
   onSelect,
   plain,
+  group,
 }: {
   finding: any;
   meId: string | null;
@@ -66,17 +67,26 @@ function FindingCard({
       no quadrant badge, not clickable. Scoring lives in the Groups
       tab, whose cards keep the full layout. */
   plain?: boolean;
+  /** When given (inside a group), the card shows THIS group's V/F and
+      quadrant, matching its section and the detail page — not the
+      logged-in viewer's own scores. */
+  group?: any;
 }) {
   const s = finding.scores || {};
-  // The quadrant this finding shows for the viewer: its board position
-  // (pinned, or computed from the viewer's D/V/F).
-  const boardPos = findingBoardPosition(finding, meId);
-  const quad = boardPos.quadrant;
-  // V/F are per participant: the card shows the logged-in participant's
-  // own values (no composite, no cross-participant average), in the
-  // same three-box layout in the global Findings list and inside a
-  // group — a group card is the same card, just group-filtered.
+  // V/F and quadrant: inside a group these are the GROUP's values
+  // (group averages, same as the detail page and the section the card
+  // sits under). Without a group they fall back to the logged-in
+  // viewer's own scores.
+  const groupVF = group ? groupScoresFor(finding, group) : null;
   const my = scoresForParticipant(s.participantScores, meId);
+  const shownV = groupVF ? groupVF.v : my.viability;
+  const shownF = groupVF ? groupVF.f : my.feasibility;
+  // The quadrant: the group's (pinned, or computed from the group's
+  // D/V/F), or the viewer's board position without a group.
+  const boardPos = groupVF
+    ? findingBoardPositionForScores(finding, groupVF.d, groupVF.v, groupVF.f)
+    : findingBoardPosition(finding, meId);
+  const quad = boardPos.quadrant;
   // Score boxes: label row is a fixed height so a two-line label
   // ("Viability & Feasibility") never pushes its value out of line
   // with the other two boxes.
@@ -150,8 +160,8 @@ function FindingCard({
       <div className="mt-5 space-y-2.5 border-t border-slate-100 pt-4">
         <div className="grid grid-cols-3 gap-2 text-center">
           {scoreBox("Desirability", s.desirability != null ? `${s.desirability} / 3` : null)}
-          {scoreBox("Viability & Feasibility", my.viability != null ? `${my.viability} / 3` : null)}
-          {scoreBox("Matrix", my.feasibility != null ? `${my.feasibility} / 3` : null)}
+          {scoreBox("Viability & Feasibility", shownV != null ? `${shownV} / 3` : null)}
+          {scoreBox("Matrix", shownF != null ? `${shownF} / 3` : null)}
         </div>
 
         <div className="flex items-center justify-between pt-1 text-xs font-semibold text-emerald-600">
@@ -243,6 +253,7 @@ function GroupsView({
                         key={finding.id}
                         finding={finding}
                         meId={meId}
+                        group={selectedGroup}
                         onSelect={onSelectFinding}
                       />
                     ))}
@@ -260,6 +271,7 @@ function GroupsView({
                       key={finding.id}
                       finding={finding}
                       meId={meId}
+                      group={selectedGroup}
                       onSelect={onSelectFinding}
                     />
                   ))}
