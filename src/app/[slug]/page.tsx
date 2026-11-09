@@ -686,7 +686,7 @@ export default function ProjectResultViewer({
                 navigates to its URL, which re-loads this page with that
                 project's data (view and search reset, like a fresh
                 visit). */}
-            <div className="relative inline-block">
+            <div className="relative">
               <h1 className="page-title">
                 <button
                   type="button"
