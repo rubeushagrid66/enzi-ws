@@ -169,6 +169,7 @@ function GroupsView({
   project,
   slug,
   meId,
+  currentUserRole,
   selectedGroupId,
   groupFindings,
   groupFindingsLoading,
@@ -179,6 +180,7 @@ function GroupsView({
   project: any;
   slug: string;
   meId: string | null;
+  currentUserRole?: string | null;
   selectedGroupId: string | null;
   groupFindings: Record<string, any[]>;
   groupFindingsLoading: boolean;
@@ -265,7 +267,7 @@ function GroupsView({
             // ADMIN/FACILITATOR are overseers, not group members — they
             // never get a "Me", even though an "Enzi Lead Admin"
             // participant row exists in the group.
-            const isPrivileged = currentUser?.role === "ADMIN" || currentUser?.role === "FACILITATOR";
+            const isPrivileged = currentUserRole === "ADMIN" || currentUserRole === "FACILITATOR";
             const isMyGroup = !isPrivileged && meId != null && (g.participants || []).some((p: any) => p.id === meId);
             return (
               <button
@@ -829,6 +831,7 @@ export default function ProjectResultViewer({
             project={project}
             slug={slug}
             meId={meId}
+            currentUserRole={currentUser?.role ?? null}
             selectedGroupId={selectedGroupId}
             groupFindings={groupFindings}
             groupFindingsLoading={groupFindingsLoading}
