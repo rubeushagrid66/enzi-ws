@@ -122,22 +122,13 @@ function FindingCard({
     >
       <div className="flex-1 space-y-3">
         {plain ? (
-          /* Ideas listing: a lightbulb mark plus the Desirability score
-             (group-independent, from research mentions) — the only score
-             that means something without a group context. */
-          <div className="flex items-center justify-between gap-2">
+          /* Ideas listing: just a lightbulb mark — no score badge here
+             (Desirability/Unscored belongs on the detail page, not the
+             listing). */
+          <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
               <Lightbulb className="h-4 w-4" />
             </span>
-            {s.desirability != null ? (
-              <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">
-                Desirability {s.desirability} / 3
-              </span>
-            ) : (
-              <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-bold text-slate-500">
-                Unscored
-              </span>
-            )}
           </div>
         ) : (
         <div className="flex items-center justify-between gap-2">
@@ -185,7 +176,7 @@ function FindingCard({
                 key={i}
                 className={`rounded-md border px-2 py-0.5 text-xs font-medium ${tagStyle(tag.category || "")}`}
               >
-                {tag.value}
+                {tag.category ? `${tag.category}: ${tag.value}` : tag.value}
               </span>
             ))}
           </div>
