@@ -6,6 +6,7 @@ import { revalidateProjectPages } from "@/lib/revalidate";
 // Never serve a cached answer here: a created or deleted idea must
 // show up (or disappear) in the dashboard immediately.
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 /**
  * Ideas (global). GET lists every idea with the findings it is linked

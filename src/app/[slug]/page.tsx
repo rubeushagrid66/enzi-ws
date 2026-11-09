@@ -181,6 +181,32 @@ function FindingCard({
             ))}
           </div>
         )}
+
+        {/* Linked findings — shown right on the card, so the Ideas
+            listing tells you what each idea relates to without opening
+            the detail page. Compact violet pills, same as the detail
+            page's Related Findings. */}
+        {plain && finding.relatedIdeas && finding.relatedIdeas.length > 0 && (
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              Findings ({finding.relatedIdeas.length})
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {finding.relatedIdeas.map((idea: any) => (
+                <span
+                  key={idea.id}
+                  title={idea.description ? `${idea.title} — ${idea.description}` : idea.title}
+                  className="inline-flex max-w-full items-baseline gap-1 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-900"
+                >
+                  <span className="truncate">{idea.title}</span>
+                  {idea.description && (
+                    <span className="max-w-32 truncate text-[11px] font-normal text-violet-700">· {idea.description}</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Pinned to the card bottom so the footer aligns across every

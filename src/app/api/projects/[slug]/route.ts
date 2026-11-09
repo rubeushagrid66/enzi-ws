@@ -170,6 +170,29 @@ export async function GET(
       };
     });
 
+    // Linked findings for the Ideas listing: each idea (pool item)
+    // carries the findings linked to it, so the card shows them
+    // without opening the detail page. One extra read (all ideas +
+    // their finding ids), then a local join — no per-finding query.
+    let relatedByFinding: Record<string, Array<{ id: string; title: string; description: string }>> = {};
+    try {
+      const allIdeas = await dbService.getIdeas();
+      for (const idea of allIdeas) {
+        for (const fid of idea.findingIds || []) {
+          (relatedByFinding[fid] ||= []).push({
+            id: idea.id,
+            title: idea.title,
+            description: idea.description || "",
+          });
+        }
+      }
+    } catch {
+      // Listing still works without the linked findings.
+    }
+    for (const f of findingsWithScores) {
+      f.relatedIdeas = relatedByFinding[f.id] || [];
+    }
+
     return NextResponse.json({
       project: {
         ...project,

@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth";
 // Never serve a cached answer here: the Idea popup's linked-findings
 // checklist must show the current links.
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 /**
  * Findings linked to one pool idea (finding). GET returns the linked

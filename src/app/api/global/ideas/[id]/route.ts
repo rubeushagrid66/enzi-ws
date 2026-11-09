@@ -3,6 +3,11 @@ import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
 
+// Fresh reads only — see src/lib/supabase.ts for why the
+// Supabase fetch is no-store (stale cache kept returning deleted rows).
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 /** Update or delete one idea. */
 export async function PUT(
   request: Request,
