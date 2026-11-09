@@ -819,10 +819,8 @@ export default function ProjectResultViewer({
                         </td>
                         <td className="px-4 py-3.5 align-top">
                           {finding.relatedIdeas && finding.relatedIdeas.length > 0 ? (
-                            <div className="space-y-1">
-                              {finding.relatedIdeas.map((r: any) => (
-                                <div key={r.id} className="leading-snug text-slate-700">{r.title}</div>
-                              ))}
+                            <div className="leading-snug text-slate-700">
+                              {finding.relatedIdeas.map((r: any) => r.title).join(", ")}
                             </div>
                           ) : (
                             <span className="text-slate-400">—</span>
