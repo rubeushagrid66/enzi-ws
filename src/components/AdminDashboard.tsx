@@ -17,6 +17,8 @@ import {
   Copy,
   Users,
   ChevronRight,
+  ImagePlus,
+  X,
 } from "lucide-react";
 
 async function apiCall(url: string, options?: RequestInit) {
@@ -251,7 +253,12 @@ export default function AdminDashboard() {
   const [ideas, setIdeas] = useState<any[]>([]);
   const [ideaModalOpen, setIdeaModalOpen] = useState(false);
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
-  const [ideaForm, setIdeaForm] = useState({ title: "", description: "", sumber: [] as string[] });
+  const [ideaForm, setIdeaForm] = useState({ title: "", description: "", sumber: [] as string[], imageUrl: null as string | null });
+  // Image evidence upload: drag-over highlight, validation error, and
+  // the hidden file input the drop zone / browse action triggers.
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
   // Finding ids ticked for the idea in the modal.
   const [ideaFindingIds, setIdeaFindingIds] = useState<string[]>([]);
   // Search text filtering the Linked Ideas checklist (title + project).
@@ -770,7 +777,8 @@ export default function AdminDashboard() {
   // ideas on its detail page.
   const openCreateIdea = () => {
     setEditingIdeaId(null);
-    setIdeaForm({ title: "", description: "", sumber: [] });
+    setIdeaForm({ title: "", description: "", sumber: [], imageUrl: null });
+    setImageError(null);
     setIdeaFindingIds([]);
     setIdeaFindingSearch("");
     setIdeaModalOpen(true);
@@ -778,10 +786,63 @@ export default function AdminDashboard() {
 
   const openEditIdea = (idea: any) => {
     setEditingIdeaId(idea.id);
-    setIdeaForm({ title: idea.title || "", description: idea.description || "", sumber: Array.isArray(idea.sumber) ? [...idea.sumber] : [] });
+    setIdeaForm({ title: idea.title || "", description: idea.description || "", sumber: Array.isArray(idea.sumber) ? [...idea.sumber] : [], imageUrl: idea.imageUrl || null });
+    setImageError(null);
     setIdeaFindingIds(Array.isArray(idea.findingIds) ? [...idea.findingIds] : []);
     setIdeaFindingSearch("");
     setIdeaModalOpen(true);
+  };
+
+  // Image evidence: validate (JPEG/JPG/PNG, max 5 MB), then downscale
+  // to max 1200px on the longest side so the stored data URL stays
+  // small (a 5 MB phone photo would otherwise bloat every project
+  // page load). JPEG stays JPEG, PNG stays PNG.
+  const handleImageFile = async (file: File) => {
+    const okType = file.type === "image/jpeg" || file.type === "image/png" || /\.(jpe?g|png)$/i.test(file.name);
+    if (!okType) {
+      setImageError("Please choose a JPEG, JPG or PNG image.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setImageError("Image must be under 5 MB.");
+      return;
+    }
+    setImageError(null);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("Could not read the image file."));
+        reader.onload = () => {
+          const img = new Image();
+          img.onerror = () => reject(new Error("Could not load the image."));
+          img.onload = () => {
+            const MAX = 1200;
+            let width = img.naturalWidth;
+            let height = img.naturalHeight;
+            if (width > MAX || height > MAX) {
+              const scale = MAX / Math.max(width, height);
+              width = Math.round(width * scale);
+              height = Math.round(height * scale);
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              reject(new Error("Could not process the image."));
+              return;
+            }
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL(file.type === "image/png" ? "image/png" : "image/jpeg", 0.85));
+          };
+          img.src = reader.result as string;
+        };
+        reader.readAsDataURL(file);
+      });
+      setIdeaForm((f) => ({ ...f, imageUrl: dataUrl }));
+    } catch {
+      setImageError("Could not read that image — please try another file.");
+    }
   };
 
   const toggleIdeaFinding = (findingId: string) => {
@@ -809,7 +870,7 @@ export default function AdminDashboard() {
           setIdeas((rows: any[]) =>
             rows.map((x: any) =>
               x.id === editingIdeaId
-                ? { ...x, title: idea.title ?? x.title, description: idea.description ?? x.description, findingIds: ideaFindingIds }
+                ? { ...x, title: idea.title ?? x.title, description: idea.description ?? x.description, imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? x.imageUrl ?? null, findingIds: ideaFindingIds }
                 : x
             )
           );
@@ -824,7 +885,7 @@ export default function AdminDashboard() {
         if (idea) {
           setIdeas((rows: any[]) => [
             ...rows,
-            { id: idea.id, title: idea.title, description: idea.description || "", findingIds: ideaFindingIds },
+            { id: idea.id, title: idea.title, description: idea.description || "", imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? null, findingIds: ideaFindingIds },
           ]);
         }
       }
@@ -1940,6 +2001,72 @@ export default function AdminDashboard() {
               <label htmlFor="idea-desc" className="field-label">Description</label>
               <textarea id="idea-desc" rows={3} placeholder="What is the finding?" value={ideaForm.description} onChange={(e) => setIdeaForm((f) => ({ ...f, description: e.target.value }))} className="input w-full" />
             </div>
+            <fieldset>
+              <legend className="field-label">Image evidence</legend>
+              <p className="mb-2 text-xs text-slate-500">Upload a screenshot or photo from your device (JPEG, JPG or PNG, max 5 MB). It shows when someone opens this finding from the Ideas table.</p>
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label="Upload image evidence — drag an image here or press Enter to browse"
+                onClick={() => imageInputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    imageInputRef.current?.click();
+                  }
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDraggingImage(true);
+                }}
+                onDragLeave={() => setIsDraggingImage(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDraggingImage(false);
+                  const f = e.dataTransfer.files?.[0];
+                  if (f) void handleImageFile(f);
+                }}
+                className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-5 text-center transition ${isDraggingImage ? "border-emerald-500 bg-emerald-50" : "border-slate-300 bg-slate-50 hover:border-emerald-400 hover:bg-emerald-50/50"}`}
+              >
+                {ideaForm.imageUrl ? (
+                  <div className="w-full">
+                    <img src={ideaForm.imageUrl} alt="Image evidence preview" className="mx-auto max-h-56 w-auto rounded-lg object-contain" />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIdeaForm((f) => ({ ...f, imageUrl: null }));
+                        setImageError(null);
+                      }}
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-rose-300 hover:text-rose-600"
+                    >
+                      <X className="h-3.5 w-3.5" /> Remove image
+                    </button>
+                    <p className="mt-2 text-xs text-slate-400">Click or drop another image to replace it.</p>
+                  </div>
+                ) : (
+                  <>
+                    <ImagePlus className="h-8 w-8 text-slate-400" />
+                    <p className="mt-2 text-sm font-semibold text-slate-700">
+                      {isDraggingImage ? "Drop the image here" : "Drag & drop an image here"}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">or click to browse your device · JPEG, JPG, PNG · max 5 MB</p>
+                  </>
+                )}
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,.jpeg,.jpg,.png"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void handleImageFile(f);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+              {imageError && <p className="mt-2 text-xs font-medium text-rose-600">{imageError}</p>}
+            </fieldset>
             <fieldset>
               <legend className="field-label">Sumber</legend>
               <div className="flex flex-wrap gap-4">

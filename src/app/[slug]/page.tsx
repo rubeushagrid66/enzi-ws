@@ -12,6 +12,8 @@ import {
   Map,
   ChevronDown,
   Check,
+  X,
+  ImageOff,
 } from "lucide-react";
 
 import { scoresForParticipant, findingBoardPosition, groupAverageScores, findingBoardPositionForScores, calculateDVFScore, type FeasibilityQuadrant, type WeightInput } from "@/lib/scoring";
@@ -234,9 +236,9 @@ function GroupsView({
           </div>
         ) : findings && findings.length > 0 ? (
           // One flat grid — no separation by quadrant, score, or status.
-          // Four columns on wide screens so the cards fill the row
-          // instead of leaving a big empty area.
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          // auto-fit so the cards stretch to fill the row (3 cards fill
+          // it just as 4 do) instead of leaving an empty column.
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-5">
             {findings.map((finding: any) => (
               <FindingCard
                 key={finding.id}
@@ -442,6 +444,19 @@ export default function ProjectResultViewer({
 
   // Filters & State
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Image-evidence popup for the Ideas table: the clicked idea (pool
+  // item). Its related findings' uploaded images show here — the row
+  // no longer opens the detail page (that lives under each group).
+  const [imagePopup, setImagePopup] = useState<any | null>(null);
+  useEffect(() => {
+    if (!imagePopup) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setImagePopup(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [imagePopup]);
 
   // Groups view — separate from the global findings list. A group shows
   // the findings assigned to it (admin + facilitator assign them in the
@@ -812,8 +827,9 @@ export default function ProjectResultViewer({
 
 
             {/* Ideas table — a plain listing: title, linked findings,
-                platform. No chips or labels; the row itself opens the
-                detail page. */}
+                platform. No chips or labels; clicking a row opens the
+                image-evidence popup (the detail page lives under each
+                group instead). */}
             {filteredFindings.length > 0 ? (
               <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs">
                 <table className="w-full text-left text-sm">
@@ -828,7 +844,7 @@ export default function ProjectResultViewer({
                     {filteredFindings.map((finding) => (
                       <tr
                         key={finding.id}
-                        onClick={() => router.push(`/${slug}/ideas/${finding.id}`)}
+                        onClick={() => setImagePopup(finding)}
                         className="cursor-pointer border-b border-slate-100 transition hover:bg-emerald-50/50 last:border-b-0"
                       >
                         <td className="px-4 py-3.5 align-top">
@@ -883,6 +899,66 @@ export default function ProjectResultViewer({
         <span>Bank BSI &times; Aleph</span>
         <span>&copy; Enzi 2026</span>
       </footer>
+
+      {/* Image-evidence popup for the Ideas table. Shows the images
+          uploaded on this idea's related findings; "No image
+          reference" when none of them has one. Responsive: full-width
+          with margins on phones, capped at 2xl on desktop, scrolls
+          when the content is taller than the viewport. */}
+      {imagePopup && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Image evidence — ${imagePopup.title}`}
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        >
+          <button
+            aria-label="Close"
+            onClick={() => setImagePopup(null)}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          />
+          <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+              <div className="min-w-0">
+                <h2 className="text-base font-bold leading-snug text-slate-900 sm:text-lg">{imagePopup.title}</h2>
+                <p className="mt-0.5 text-xs text-slate-500">Image evidence from related findings</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setImagePopup(null)}
+                aria-label="Close dialog"
+                className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto px-5 py-4">
+              {(() => {
+                const withImage = (imagePopup.relatedIdeas || []).filter((r: any) => r.imageUrl);
+                if (withImage.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                      <ImageOff className="h-10 w-10 text-slate-300" />
+                      <p className="mt-3 text-sm font-semibold text-slate-500">No image reference</p>
+                      <p className="mt-1 text-xs text-slate-400">None of this idea&apos;s related findings has an uploaded image yet.</p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="space-y-5">
+                    {withImage.map((r: any) => (
+                      <figure key={r.id}>
+                        <img src={r.imageUrl} alt={`Image evidence for ${r.title}`} className="h-auto w-full rounded-xl border border-slate-200 object-contain" />
+                        <figcaption className="mt-2 text-xs font-medium text-slate-500">{r.title}</figcaption>
+                      </figure>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

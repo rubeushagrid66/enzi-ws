@@ -660,6 +660,7 @@ export const dbService = {
         title: i.title,
         description: i.description || "",
         sumber: Array.isArray(i.sumber) ? i.sumber : [],
+        imageUrl: i.image_url || null,
         findingIds: linkMap[i.id] || [],
         createdAt: i.created_at,
       }));
@@ -685,11 +686,16 @@ export const dbService = {
     }
   },
 
-  async createIdea(data: { title: string; description?: string; sumber?: string[] }) {
+  async createIdea(data: { title: string; description?: string; sumber?: string[]; imageUrl?: string | null }) {
     if (isSupabaseConfigured && supabase) {
+      // image_url is only sent when an image was uploaded — so a
+      // create never fails on a production table that doesn't have the
+      // column yet (the SQL adds it; see supabase-schema.sql).
+      const row: any = { title: data.title, description: data.description || "", sumber: data.sumber || [] };
+      if (data.imageUrl) row.image_url = data.imageUrl;
       const { data: idea, error } = await supabase
         .from("ideas")
-        .insert({ title: data.title, description: data.description || "", sumber: data.sumber || [] })
+        .insert(row)
         .select()
         .single();
       if (error) throw error;
@@ -702,14 +708,26 @@ export const dbService = {
     return { id, title: data.title, description: data.description || "", sumber: data.sumber || [] };
   },
 
-  async updateIdea(id: string, data: { title?: string; description?: string; sumber?: string[] }) {
+  async updateIdea(id: string, data: { title?: string; description?: string; sumber?: string[]; imageUrl?: string | null }) {
     if (isSupabaseConfigured && supabase) {
       const patch: any = {};
       if (data.title !== undefined) patch.title = data.title;
       if (data.description !== undefined) patch.description = data.description;
       if (data.sumber !== undefined) patch.sumber = data.sumber;
+      // imageUrl undefined = leave the image alone; null = remove it;
+      // a string = replace it. Only sent when the image actually
+      // changed, so an edit that doesn't touch the image never fails
+      // on a production table that doesn't have the column yet.
+      if (data.imageUrl !== undefined) patch.image_url = data.imageUrl;
       patch.updated_at = new Date().toISOString();
-      const { data: idea, error } = await supabase.from("ideas").update(patch).eq("id", id).select().single();
+      let { data: idea, error } = await supabase.from("ideas").update(patch).eq("id", id).select().single();
+      // Safety net: if the image_url column doesn't exist yet in
+      // production, retry the save without the image instead of
+      // failing the whole edit.
+      if (error && data.imageUrl !== undefined && String((error as any)?.message || "").includes("image_url")) {
+        delete patch.image_url;
+        ({ data: idea, error } = await supabase.from("ideas").update(patch).eq("id", id).select().single());
+      }
       if (error) throw error;
       return idea;
     }
@@ -758,18 +776,18 @@ export const dbService = {
   },
 
   /** Ideas linked to one finding — shown on that finding's detail
-   *  page. Returns the idea rows (id, title, description). */
+   *  page. Returns the idea rows (id, title, description, imageUrl). */
   async getIdeasForFinding(findingId: string): Promise<any[]> {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase
         .from("idea_findings")
-        .select("idea:ideas(id, title, description)")
+        .select("idea:ideas(id, title, description, image_url)")
         .eq("finding_id", findingId);
       if (error || !data) return [];
       return (data as any[])
         .map((r: any) => r.idea)
         .filter((i: any) => i && i.id)
-        .map((i: any) => ({ id: i.id, title: i.title, description: i.description || "" }));
+        .map((i: any) => ({ id: i.id, title: i.title, description: i.description || "", imageUrl: i.image_url || null }));
     }
     try {
       const rows = await prisma.$queryRaw<Array<{ id: string; title: string; description: string }>>`

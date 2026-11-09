@@ -158,6 +158,10 @@ CREATE TABLE IF NOT EXISTS ideas (
 -- records which research source(s) it came from (Wawancara/Survey/
 -- Internal). Added to existing tables with:
 --   ALTER TABLE ideas ADD COLUMN IF NOT EXISTS sumber JSONB NOT NULL DEFAULT '[]';
+-- Image evidence 2026-11-10: each finding can carry one uploaded image
+-- (JPEG/JPG/PNG, drag & drop in the dashboard Finding modal, downscaled
+-- client-side to max 1200px and stored as a data URL). Added with:
+--   ALTER TABLE ideas ADD COLUMN IF NOT EXISTS image_url TEXT;
 
 CREATE TABLE IF NOT EXISTS idea_findings (
   idea_id TEXT NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
