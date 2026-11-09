@@ -88,11 +88,6 @@ function FindingCard({
   const my = scoresForParticipant(s.participantScores, meId);
   const shownV = groupVF ? groupVF.v : my.viability;
   const shownF = groupVF ? groupVF.f : my.feasibility;
-  // The quadrant: the group's (assignment-gated, pinned or computed
-  // from the group's D/V/F), or the viewer's board position without
-  // a group.
-  const quad = group ? quadrantForGroup(finding, group) : findingBoardPosition(finding, meId).quadrant;
-  const pinned = finding?.feasibilityManual === true && finding?.feasibilityX != null && finding?.feasibilityY != null;
   // Score boxes: label row is a fixed height so a two-line label
   // ("Viability & Feasibility") never pushes its value out of line
   // with the other two boxes.
@@ -120,29 +115,6 @@ function FindingCard({
       className="group flex cursor-pointer flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
     >
       <div className="flex-1 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          {quad ? (
-            <span
-              className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${
-                quad === "QUICK_WINS"
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                  : quad === "BIG_BETS"
-                  ? "border-amber-200 bg-amber-50 text-amber-800"
-                  : quad === "AVOID"
-                  ? "border-rose-200 bg-rose-50 text-rose-800"
-                  : "border-blue-200 bg-blue-50 text-blue-800"
-              }`}
-            >
-              {quad.replace("_", " ")}
-              {pinned && " · manual"}
-            </span>
-          ) : (
-            <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">
-              Awaiting scoring
-            </span>
-          )}
-        </div>
-
         {/* Fixed two-line height so the tags below always start at the
             same place, whether the title wraps or not. */}
         <h3 className="min-h-[2.75rem] text-base font-semibold leading-snug text-slate-900 transition group-hover:text-emerald-700 line-clamp-2 sm:min-h-[3.125rem] sm:text-lg">
