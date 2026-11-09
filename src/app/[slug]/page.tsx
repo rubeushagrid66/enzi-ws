@@ -137,7 +137,7 @@ function FindingCard({
 
       {/* Pinned to the card bottom so the score strip and link align
           across every card in the row, whatever the title/tags above. */}
-      <div className="mt-5 space-y-2.5 border-t border-slate-100 pt-4">
+      <div className="mt-4 space-y-2.5 border-t border-slate-100 pt-4">
         <div className="grid grid-cols-3 gap-2 text-center">
           {scoreBox("Desirability", s.desirability != null ? `${s.desirability} / 3` : null)}
           {scoreBox("Viability & Feasibility", shownV != null ? `${shownV} / 3` : null)}
@@ -202,8 +202,13 @@ function GroupsView({
           >
             <ArrowLeft className="h-4 w-4" /> All groups
           </button>
-          <h2 className="mt-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
+          <h2 className="mt-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
             {selectedGroup.name}
+            {meId != null && (selectedGroup.participants || []).some((p: any) => p.id === meId) && (
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold normal-case tracking-normal text-emerald-800">
+                Me
+              </span>
+            )}
           </h2>
           <p className="mt-0.5 text-xs text-slate-500">
             {(selectedGroup.participants || []).filter((p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR").map((p: any) => p.name).join(", ") || "No participants yet"}
@@ -217,9 +222,9 @@ function GroupsView({
           </div>
         ) : findings && findings.length > 0 ? (
           // One flat grid — no separation by quadrant, score, or status.
-          // auto-fit so the cards stretch to fill the row (3 cards fill
-          // it just as 4 do) instead of leaving an empty column.
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-5">
+          // Fixed columns (1 / 2 / 3) so every card keeps the same width:
+          // a lone card takes one column instead of stretching full-width.
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
             {findings.map((finding: any) => (
               <FindingCard
                 key={finding.id}
@@ -256,6 +261,8 @@ function GroupsView({
           {groups.map((g: any) => {
             const count = groupFindings[g.id]?.length;
             const participants: any[] = (g.participants || []).filter((p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR");
+            // "Me": this group holds the viewer's own participant row.
+            const isMyGroup = meId != null && (g.participants || []).some((p: any) => p.id === meId);
             return (
               <button
                 key={g.id}
@@ -269,7 +276,14 @@ function GroupsView({
                     <Users className="h-5 w-5" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-base font-bold text-slate-900">{g.name}</span>
+                    <span className="flex items-center gap-2">
+                      <span className="truncate text-base font-bold text-slate-900">{g.name}</span>
+                      {isMyGroup && (
+                        <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
+                          Me
+                        </span>
+                      )}
+                    </span>
                     <span className="mt-0.5 block text-xs text-slate-500">
                       {participants.length > 0
                         ? `${participants.length} participant${participants.length === 1 ? "" : "s"}`

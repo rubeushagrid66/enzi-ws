@@ -13,11 +13,12 @@ import { normalizeFramework } from "@/lib/scoring";
  * - Rows show ALL aspects of the project (all labels, grouped under the
  *   D/V/F framework headers). Anyone can read every group's scores
  *   and reasons.
- * - Each aspect lists ALL of the selected group's participants —
- *   there is no role/label restriction on who may score an aspect:
- *   any participant scores any aspect. ADMIN / FACILITATOR are not
- *   listed anywhere in this matrix: the admin account is not a
- *   scorer, so it never appears under any aspect.
+ * - Each aspect lists the participants who may score it. A regular
+ *   user only ever sees their OWN row (score + reason) — the rest of
+ *   the team is not listed, since every user inputs data for their own
+ *   group. ADMIN / FACILITATOR see (and may edit) every participant's
+ *   row in any group. The admin account is not a scorer, so it never
+ *   appears under any aspect.
  * - Editing: only in MY group, on any aspect. Other groups are
  *   read-only for every role — except ADMIN, who can edit any
  *   participant's score and Alasan in any group (an admin is never
@@ -163,11 +164,15 @@ export default function ViabilityVoteMatrix({
     (p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR"
   );
 
-  // Participants assigned to a given aspect: every participant in the
-  // selected group, with no role/label filter — any participant may
-  // score any aspect. (The aspect param is kept so call sites don't
-  // change.)
-  const participantsForAspect = (_aspect: any) => displayParticipants;
+  // Participants assigned to a given aspect. A regular user only sees
+  // their OWN row — the rest of the team is not listed, since every user
+  // inputs data for their own group. ADMIN / FACILITATOR see every
+  // participant's row (they may vote for a named participant).
+  // (The aspect param is kept so call sites don't change.)
+  const isFacilitator = currentUser?.role === "FACILITATOR";
+  const showOnlyMe = !isAdmin && !isFacilitator && meId != null;
+  const participantsForAspect = (_aspect: any) =>
+    showOnlyMe ? displayParticipants.filter((p: any) => p.id === meId) : displayParticipants;
 
   const canVote = Boolean(currentUser) && meId !== null;
   // Editable only in my own group, on any aspect. ADMIN additionally
