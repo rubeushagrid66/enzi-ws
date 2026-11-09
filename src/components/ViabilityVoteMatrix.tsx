@@ -11,26 +11,20 @@ import { normalizeFramework } from "@/lib/scoring";
  *   the viewer's own ("me") participant is marked "• Me". Default
  *   selected group is my group when logged in, otherwise the first group.
  * - Rows show ALL aspects of the project (all labels, grouped under the
- *   D/V/F framework headers). The label filter is lifted for viewing:
- *   anyone can read every group's scores and reasons.
- * - Each aspect lists ONLY the selected group's participants assigned
- *   to that aspect — a participant's role must match the aspect's
- *   label (Tech scores Tech aspects, Product scores Product aspects,
- *   Business & Ops scores Business & Ops aspects). ADMIN /
- *   FACILITATOR are not listed anywhere in this matrix: the admin
- *   account is not a scorer, so it never appears under any aspect.
- *   A Tech user therefore never appears under a Viability aspect
- *   labelled Business & Ops or Product, nor under a Feasibility
- *   aspect labelled anything but Tech.
- * - Editing: only in MY group, and only on aspects my role may score
- *   (label-role users: aspects whose label equals their role;
- *   FACILITATOR: any aspect, in their own group). Other groups are
+ *   D/V/F framework headers). Anyone can read every group's scores
+ *   and reasons.
+ * - Each aspect lists ALL of the selected group's participants —
+ *   there is no role/label restriction on who may score an aspect:
+ *   any participant scores any aspect. ADMIN / FACILITATOR are not
+ *   listed anywhere in this matrix: the admin account is not a
+ *   scorer, so it never appears under any aspect.
+ * - Editing: only in MY group, on any aspect. Other groups are
  *   read-only for every role — except ADMIN, who can edit any
  *   participant's score and Alasan in any group (an admin is never
  *   blocked by not belonging to a group). The server enforces
- *   vote-as-yourself + label match on the vote API, and lets ADMIN /
- *   FACILITATOR vote for a named participant, so the UI rules below
- *   mirror it and never widen it.
+ *   vote-as-yourself on the vote API, and lets ADMIN / FACILITATOR
+ *   vote for a named participant, so the UI rules below mirror it
+ *   and never widen it.
  * - Public (logged-out) viewers are read-only.
  *
  * A score counts toward the participant's own V or F (1–3, defined
@@ -53,10 +47,6 @@ const FRAMEWORK_BADGE_CLASS: Record<string, string> = {
   Feasibility: "bg-amber-100 text-amber-800 border-amber-200",
 };
 
-function isLabelRole(role: string | null | undefined): boolean {
-  return role === "Business & Ops" || role === "Product" || role === "Tech";
-}
-
 export default function ViabilityVoteMatrix({
   project,
   finding,
@@ -72,7 +62,6 @@ export default function ViabilityVoteMatrix({
   selectedGroupId?: string | null;
   onVotesChanged?: (updatedFinding: any) => void;
 }) {
-  const myLabel = isLabelRole(currentUser?.role) ? currentUser!.role : null;
   const isAdmin = currentUser?.role === "ADMIN";
   const groups = (project.groups || []).filter((g: any) => g.isActive !== false);
 
@@ -169,30 +158,21 @@ export default function ViabilityVoteMatrix({
 
   // Participants shown anywhere in this matrix (V/F chips, aspect
   // rows): the admin / facilitator account is not a scorer and is
-  // never listed. Label-role participants are listed; the per-aspect
-  // filter below narrows that to the matching label.
+  // never listed.
   const displayParticipants = orderedParticipants.filter(
     (p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR"
   );
 
-  // Participants assigned to a given aspect: only those whose role
-  // matches the aspect's label. ADMIN / FACILITATOR are not listed
-  // anywhere here — the admin account is not a scorer and must not
-  // appear under any aspect, so a Tech user never appears under a
-  // Business & Ops or Product aspect, and the admin never appears
-  // under any of them.
-  const participantsForAspect = (aspect: any) =>
-    orderedParticipants.filter((p: any) => {
-      const role = p.roleTitle;
-      return isLabelRole(role) && role === aspect.label;
-    });
+  // Participants assigned to a given aspect: every participant in the
+  // selected group, with no role/label filter — any participant may
+  // score any aspect. (The aspect param is kept so call sites don't
+  // change.)
+  const participantsForAspect = (_aspect: any) => displayParticipants;
 
   const canVote = Boolean(currentUser) && meId !== null;
-  // Editable only in my own group, and only on aspects my role may
-  // score (label roles: matching label only; ADMIN/FACILITATOR: any).
-  // ADMIN additionally edits any participant's row in any group.
-  const canEditAspect = (aspect: any) =>
-    canVote && isMyGroup && (!myLabel || aspect.label === myLabel);
+  // Editable only in my own group, on any aspect. ADMIN additionally
+  // edits any participant's row in any group.
+  const canEditAspect = (_aspect: any) => canVote && isMyGroup;
 
   // Scores / reasons, keyed by `${aspectId}:${participantId}` — one
   // entry per row in the table. The "me" row uses the viewer's own
@@ -328,9 +308,6 @@ export default function ViabilityVoteMatrix({
             aspects are skipped. Each participant&apos;s V and F (1–3) are
             shown below for the selected group. Scores and reasons are
             visible to everyone.
-            {myLabel
-              ? ` You are signed in as ${myLabel} — you can only score ${myLabel} aspects, in your own group.`
-              : ""}
             {isAdmin
               ? " You are signed in as Admin — you can edit any participant's score and reason in any group."
               : ""}
@@ -425,11 +402,6 @@ export default function ViabilityVoteMatrix({
                                   No label
                                 </span>
                               )}
-                              {isMyGroup && !editable && myLabel && aspect.label !== myLabel && (
-                                <span className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-400">
-                                  Not your label — view only
-                                </span>
-                              )}
                               {!isMyGroup && currentUser && !isAdmin && (
                                 <span className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-400">
                                   View only
@@ -444,7 +416,7 @@ export default function ViabilityVoteMatrix({
                         {participantsForAspect(aspect).length === 0 ? (
                           <tr className="align-top">
                             <td colSpan={3} className="py-2.5 px-3 text-slate-400 italic">
-                              No {aspect.label || "labelled"} participants in this group.
+                              No participants in this group.
                             </td>
                           </tr>
                         ) : (

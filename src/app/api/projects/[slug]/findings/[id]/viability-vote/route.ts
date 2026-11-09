@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
-import { getSession, isLabelRole } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
 
 /**
@@ -9,12 +9,11 @@ import { revalidateProjectPages } from "@/lib/revalidate";
  * - `score` must be 1, 2 or 3, or null to clear the vote (clearing also
  *   clears the reason). `reason` is free text (max 500 chars).
  * - When `participantId` is omitted the vote is recorded as the session
- *   user (their "me" participant row). A label-role user may only vote
- *   as themselves, and only on aspects whose label equals their role.
+ *   user (their "me" participant row). Any non-admin, non-facilitator
+ *   user (label roles and Group accounts) may only vote as themselves.
  * - ADMIN / FACILITATOR may vote as themselves or as a participant
- *   they name — but the label rule is judged by the VOTER: a
- *   label-role participant may only be scored on aspects carrying
- *   their label, whoever submits the vote.
+ *   they name. There is no label restriction: any participant may be
+ *   scored on any aspect.
  * `isValidated` stays in sync with the score (true exactly when a score
  * is set), so the current Viability formula keeps working unchanged.
  */
@@ -72,7 +71,15 @@ export async function POST(
       );
     }
     let voterId = participantId || me.id;
-    if (participantId && !isLabelRole(session.role)) {
+    // Only ADMIN / FACILITATOR may vote for a named participant. Every
+    // other user (label roles and Group accounts) records only their
+    // own scores. There is no label restriction on which aspects a
+    // participant may score.
+    const isPrivileged = session.role === "ADMIN" || session.role === "FACILITATOR";
+    if (participantId && !isPrivileged) {
+      return NextResponse.json({ error: "You can only record your own scores" }, { status: 400 });
+    }
+    if (participantId && isPrivileged) {
       // ADMIN / FACILITATOR voting for a named participant: that
       // participant must belong to this project, so a vote can never
       // land on a participant from another project.
@@ -82,33 +89,6 @@ export async function POST(
       if (!inProject) {
         return NextResponse.json({ error: "That participant does not belong to this project" }, { status: 400 });
       }
-    }
-    if (isLabelRole(session.role)) {
-      if (voterId !== me.id) {
-        return NextResponse.json({ error: "You can only record your own scores" }, { status: 400 });
-      }
-    }
-
-    // The label rule is judged by the VOTER (the participant being
-    // scored for), not by who submits the vote: a label-role
-    // participant may only be scored on aspects carrying their label —
-    // whether they vote themselves or an admin/facilitator sets the
-    // score for them. This closes the admin-edit bypass that let e.g.
-    // a Tech participant be scored on Business & Ops / Product
-    // aspects. ADMIN / FACILITATOR participants have no label role, so
-    // scoring them is unrestricted. Clearing a vote (score null) is
-    // always allowed, so a bad vote can be removed.
-    let voterRole: string | null = null;
-    for (const g of project.groups || []) {
-      const p = (g.participants || []).find((x: any) => x.id === voterId);
-      if (p) { voterRole = p.roleTitle ?? null; break; }
-    }
-    if (!voterRole && voterId === me.id) voterRole = session.role;
-    if (score !== null && score !== undefined && voterRole && isLabelRole(voterRole) && aspect.label !== voterRole) {
-      return NextResponse.json(
-        { error: `This participant's role (${voterRole}) can only score aspects labelled ${voterRole}` },
-        { status: 400 }
-      );
     }
 
     // Group-scoped scoring: a finding assigned to one or more groups
