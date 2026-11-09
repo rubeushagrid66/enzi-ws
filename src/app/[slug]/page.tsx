@@ -12,8 +12,16 @@ import {
   Map,
 } from "lucide-react";
 
-import { scoresForParticipant, findingBoardPosition, groupAverageScores, findingBoardPositionForScores, type FeasibilityQuadrant } from "@/lib/scoring";
+import { scoresForParticipant, findingBoardPosition, groupAverageScores, findingBoardPositionForScores, calculateDVFScore, type FeasibilityQuadrant, type WeightInput } from "@/lib/scoring";
 import { useMeParticipantId } from "@/lib/useMeParticipant";
+
+// Equal-thirds fallback for the DVF weights (framework is 33/33/33
+// today); the live weights are fetched and replace this.
+const EQUAL_THIRDS: WeightInput[] = [
+  { name: "Desirability", weight: 33 },
+  { name: "Viability", weight: 33 },
+  { name: "Feasibility", weight: 33 },
+];
 
 // Quadrant display names, shared by the per-group quadrant sections
 // and the Roadmap.
@@ -24,21 +32,25 @@ const QUADRANT_META: Record<FeasibilityQuadrant, { title: string; detail: string
   AVOID: { title: "Avoid", detail: "Low Impact, High Effort" },
 };
 
-/** A finding's quadrant FOR one group (null when it has none there).
- *  D is the finding's research score (same for every group in the
- *  project); V/F are this group's participant averages. A finding
- *  assigned to specific groups only has a quadrant for those groups
- *  (an unassigned finding is open to every group). A manual pin wins
- *  over the computed position, same as the board. */
-function quadrantForGroup(finding: any, group: any): FeasibilityQuadrant | null {
+/** A finding's D/V/F FOR one group. D is the finding's research score
+ *  (same for every group in the project); V/F are this group's
+ *  participant averages. All null when the finding isn't assigned to
+ *  (or open to) this group, or the group has no complete score. */
+function groupScoresFor(finding: any, group: any): { d: number | null; v: number | null; f: number | null } {
   const assigned: string[] = finding.groupIds || [];
-  if (assigned.length > 0 && !assigned.includes(group.id)) return null;
+  if (assigned.length > 0 && !assigned.includes(group.id)) return { d: null, v: null, f: null };
   const participantIds: string[] = (group.participants || [])
     .filter((p: any) => p.isActive !== false && p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR")
     .map((p: any) => p.id);
   const vf = groupAverageScores(finding.scores?.participantScores, participantIds);
-  const d = finding.scores?.desirability ?? null;
-  return findingBoardPositionForScores(finding, d, vf.viability, vf.feasibility).quadrant;
+  return { d: finding.scores?.desirability ?? null, v: vf.viability, f: vf.feasibility };
+}
+
+/** A finding's quadrant FOR one group (null when it has none there).
+ *  A manual pin wins over the computed position, same as the board. */
+function quadrantForGroup(finding: any, group: any): FeasibilityQuadrant | null {
+  const { d, v, f } = groupScoresFor(finding, group);
+  return findingBoardPositionForScores(finding, d, v, f).quadrant;
 }
 
 function FindingCard({
@@ -329,9 +341,11 @@ function GroupsView({
  *  quadrants for different groups shows in each matching horizon. */
 function RoadmapView({
   project,
+  weights,
   onSelectFinding,
 }: {
   project: any;
+  weights: WeightInput[] | null;
   onSelectFinding: (f: any) => void;
 }) {
   const groups: any[] = (project.groups || []).filter((g: any) => g.isActive !== false);
@@ -348,13 +362,24 @@ function RoadmapView({
   ];
 
   // For each horizon quadrant, the findings placed there, with the
-  // groups that place them there.
+  // groups that place them there — ordered by DVF score, highest
+  // first. A finding placed by several groups takes its best DVF
+  // among those groups, so the order reflects its strongest case.
   const itemsByHorizon = HORIZONS.map((h) => {
-    const items: { finding: any; groups: any[] }[] = [];
+    const items: { finding: any; groups: any[]; dvf: number | null }[] = [];
     for (const finding of findings) {
       const placing = groups.filter((g) => quadrantForGroup(finding, g) === h.key);
-      if (placing.length > 0) items.push({ finding, groups: placing });
+      if (placing.length === 0) continue;
+      const dvfs = placing
+        .map((g) => {
+          const { d, v, f } = groupScoresFor(finding, g);
+          return calculateDVFScore(d, v, f, weights ?? EQUAL_THIRDS);
+        })
+        .filter((x): x is number => x != null);
+      const dvf = dvfs.length > 0 ? Math.max(...dvfs) : null;
+      items.push({ finding, groups: placing, dvf });
     }
+    items.sort((a, b) => (b.dvf ?? -1) - (a.dvf ?? -1));
     return { ...h, items };
   });
 
@@ -375,7 +400,7 @@ function RoadmapView({
           <p className="mt-0.5 text-xs text-slate-500">{section.subtitle}</p>
           {section.items.length > 0 ? (
             <div className="mt-3 space-y-2.5">
-              {section.items.map(({ finding, groups: placing }) => (
+              {section.items.map(({ finding, groups: placing, dvf }) => (
                 <button
                   key={finding.id + section.key}
                   type="button"
@@ -394,7 +419,12 @@ function RoadmapView({
                       ))}
                     </span>
                   </span>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">
+                      DVF {dvf != null ? dvf.toFixed(2) : "N/A"}
+                    </span>
+                    <ArrowRight className="h-4 w-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+                  </span>
                 </button>
               ))}
             </div>
@@ -434,6 +464,21 @@ export default function ProjectResultViewer({
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [groupFindings, setGroupFindings] = useState<Record<string, any[]>>({});
   const [groupFindingsLoading, setGroupFindingsLoading] = useState(false);
+
+  // Framework weights for the Roadmap's DVF ordering (global, from
+  // Framework & Weighting — today 33/33/33). Fetched once; the
+  // equal-thirds fallback keeps the order right before it lands.
+  const [weights, setWeights] = useState<WeightInput[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/global/weights", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.weights?.length) setWeights(data.weights);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const loadGroupFindings = async (groupId: string) => {
     setGroupFindingsLoading(true);
@@ -662,6 +707,7 @@ export default function ProjectResultViewer({
         {view === "roadmap" ? (
           <RoadmapView
             project={project}
+            weights={weights}
             onSelectFinding={(f: any) => router.push(`/${slug}/findings/${f.id}`)}
           />
         ) : view === "groups" ? (
