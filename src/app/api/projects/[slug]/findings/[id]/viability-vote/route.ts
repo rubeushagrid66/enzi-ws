@@ -101,8 +101,13 @@ export async function POST(
     // editing another participant's score is judged by that
     // participant's group, not the admin's own. A finding with no group
     // assignment yet stays open to anyone in the project, as before.
+    // ADMIN / FACILITATOR scoring as themselves are exempt: they are
+    // real scorers in any group they open, and their vote counts in
+    // the V/F of the groups the finding is assigned to. (Their
+    // participant row lives in only one group, so gating on it would
+    // wrongly block them from scoring a finding assigned elsewhere.)
     const assignedGroupIds = await dbService.getFindingGroupIds(findingId);
-    if (assignedGroupIds.length > 0) {
+    if (assignedGroupIds.length > 0 && !(isPrivileged && voterId === me.id)) {
       let voterGroupId: string | null = null;
       if (voterId === me.id) {
         voterGroupId = (me as any).groupId ?? null;
