@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 
+// Never serve a cached answer here: a deleted idea must stop showing
+// on the finding's detail page immediately.
+export const dynamic = "force-dynamic";
+
 /** Ideas linked to one finding — shown on that finding's detail page. */
 export async function GET(
   _request: Request,

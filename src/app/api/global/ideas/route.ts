@@ -3,6 +3,10 @@ import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
 
+// Never serve a cached answer here: a created or deleted idea must
+// show up (or disappear) in the dashboard immediately.
+export const dynamic = "force-dynamic";
+
 /**
  * Ideas (global). GET lists every idea with the findings it is linked
  * to. POST creates an idea (admin/facilitator only — enforced by the

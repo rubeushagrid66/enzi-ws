@@ -722,6 +722,11 @@ export const dbService = {
 
   async deleteIdea(id: string) {
     if (isSupabaseConfigured && supabase) {
+      // Delete the finding links explicitly first — do not rely on the
+      // FK cascade. An orphaned idea_findings row is what made a deleted
+      // idea keep showing on a finding's detail page.
+      const { error: linkError } = await supabase.from("idea_findings").delete().eq("idea_id", id);
+      if (linkError) throw linkError;
       const { error } = await supabase.from("ideas").delete().eq("id", id);
       if (error) throw error;
       return;
