@@ -196,6 +196,16 @@ export default function ViabilityVoteMatrix({
     return Number((vs.reduce((s: number, v: any) => s + Number(v.score), 0) / vs.length).toFixed(1));
   };
 
+  // Non-empty reasons the selected group's participants gave for one
+  // aspect — the name-free Alasan shown alongside the group average
+  // above. Empty when nobody left a reason.
+  const groupAspectReasons = (aspectId: string): string[] => {
+    return (displayParticipants || [])
+      .map((p: any) => (votesByAspect[aspectId] || {})[p.id])
+      .filter((v: any) => v && v.reason && String(v.reason).trim() !== "")
+      .map((v: any) => String(v.reason).trim());
+  };
+
   const canVote = Boolean(currentUser) && meId !== null;
   // Editable only in my own group, on any aspect. ADMIN additionally
   // edits any participant's row in any group.
@@ -415,6 +425,7 @@ export default function ViabilityVoteMatrix({
                     const fw = normalizeFramework(aspect.framework);
                     const rows = participantsForAspect(aspect);
                     const groupAvg = groupAspectAverage(aspect.id);
+                    const groupReasons = groupAspectReasons(aspect.id);
                     return (
                       <React.Fragment key={aspect.id}>
                         {/* Regular user: the aspect name lives in the
@@ -441,11 +452,15 @@ export default function ViabilityVoteMatrix({
                                 {groupAvg != null ? (
                                   <span className="font-bold text-emerald-700">Score {groupAvg}</span>
                                 ) : (
-                                  <span className="text-slate-400 italic">Not scored yet</span>
+                                  <span className="text-slate-500">N/A</span>
                                 )}
                               </td>
                               <td className="py-2.5 px-3 min-w-[180px]">
-                                <span className="text-slate-600">—</span>
+                                {groupReasons.length > 0 ? (
+                                  <span className="text-slate-600">{groupReasons.join(" · ")}</span>
+                                ) : (
+                                  <span className="text-slate-500">N/A</span>
+                                )}
                               </td>
                             </tr>
                           ) : (
