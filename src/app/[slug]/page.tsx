@@ -680,9 +680,69 @@ export default function ProjectResultViewer({
             <span className="eyebrow">
               Bewize Workshop &middot; Phase DVF
             </span>
-            <h1 className="page-title">
-              {project.name}
-            </h1>
+            {/* Project name doubles as the project switcher — a
+                chevron sits next to it; clicking the title opens the
+                dropdown to jump to the other workshop. Picking one
+                navigates to its URL, which re-loads this page with that
+                project's data (view and search reset, like a fresh
+                visit). */}
+            <div className="relative inline-block">
+              <h1 className="page-title">
+                <button
+                  type="button"
+                  onClick={() => setSwitcherOpen((o) => !o)}
+                  aria-haspopup="listbox"
+                  aria-expanded={switcherOpen}
+                  className="inline-flex items-center gap-2 text-left transition hover:text-emerald-700"
+                >
+                  {project.name}
+                  <ChevronDown className={`h-7 w-7 shrink-0 text-slate-400 transition-transform ${switcherOpen ? "rotate-180" : ""}`} />
+                </button>
+              </h1>
+              {switcherOpen && projects.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Close project switcher"
+                    onClick={() => setSwitcherOpen(false)}
+                    className="fixed inset-0 z-10 cursor-default bg-transparent"
+                  />
+                  <div
+                    role="listbox"
+                    className="absolute left-0 z-20 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white py-1.5 shadow-lg"
+                  >
+                    {projects.map((p: any) => {
+                      const isCurrent = p.slug === slug;
+                      return (
+                        <button
+                          key={p.slug}
+                          type="button"
+                          role="option"
+                          aria-selected={isCurrent}
+                          disabled={isCurrent}
+                          onClick={() => {
+                            setSwitcherOpen(false);
+                            if (isCurrent) return;
+                            setView("findings");
+                            setSelectedGroupId(null);
+                            setSearchQuery("");
+                            router.push(`/${p.slug}`);
+                          }}
+                          className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm transition ${
+                            isCurrent
+                              ? "cursor-default font-semibold text-emerald-700"
+                              : "font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
+                          }`}
+                        >
+                          <span className="min-w-0 truncate">{p.name}</span>
+                          {isCurrent && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
             {/* The DVC description is still the literal placeholder "test"
                 in the database (restoring it to blank awaits the user's
                 call); never render that placeholder as if it were copy.
@@ -696,67 +756,6 @@ export default function ProjectResultViewer({
                   {project.description}
                 </p>
               )}
-            {/* Project switcher — jump to the other workshop. Picking a
-                project navigates to its URL, which re-loads this page
-                with that project's data (view and search reset, like a
-                fresh visit). */}
-            {projects.length > 1 && (
-              <div className="relative inline-block pt-1">
-                <button
-                  type="button"
-                  onClick={() => setSwitcherOpen((o) => !o)}
-                  aria-haspopup="listbox"
-                  aria-expanded={switcherOpen}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-xs transition hover:border-emerald-300 hover:text-emerald-700"
-                >
-                  Switch project
-                  <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition-transform ${switcherOpen ? "rotate-180" : ""}`} />
-                </button>
-                {switcherOpen && (
-                  <>
-                    <button
-                      type="button"
-                      aria-label="Close project switcher"
-                      onClick={() => setSwitcherOpen(false)}
-                      className="fixed inset-0 z-10 cursor-default bg-transparent"
-                    />
-                    <div
-                      role="listbox"
-                      className="absolute left-0 z-20 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white py-1.5 shadow-lg"
-                    >
-                      {projects.map((p: any) => {
-                        const isCurrent = p.slug === slug;
-                        return (
-                          <button
-                            key={p.slug}
-                            type="button"
-                            role="option"
-                            aria-selected={isCurrent}
-                            disabled={isCurrent}
-                            onClick={() => {
-                              setSwitcherOpen(false);
-                              if (isCurrent) return;
-                              setView("findings");
-                              setSelectedGroupId(null);
-                              setSearchQuery("");
-                              router.push(`/${p.slug}`);
-                            }}
-                            className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm transition ${
-                              isCurrent
-                                ? "cursor-default font-semibold text-emerald-700"
-                                : "font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
-                            }`}
-                          >
-                            <span className="min-w-0 truncate">{p.name}</span>
-                            {isCurrent && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </section>
