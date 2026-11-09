@@ -262,7 +262,11 @@ function GroupsView({
             const count = groupFindings[g.id]?.length;
             const participants: any[] = (g.participants || []).filter((p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR");
             // "Me": this group holds the viewer's own participant row.
-            const isMyGroup = meId != null && (g.participants || []).some((p: any) => p.id === meId);
+            // ADMIN/FACILITATOR are overseers, not group members — they
+            // never get a "Me", even though an "Enzi Lead Admin"
+            // participant row exists in the group.
+            const isPrivileged = currentUser?.role === "ADMIN" || currentUser?.role === "FACILITATOR";
+            const isMyGroup = !isPrivileged && meId != null && (g.participants || []).some((p: any) => p.id === meId);
             return (
               <button
                 key={g.id}

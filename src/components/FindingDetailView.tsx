@@ -426,7 +426,11 @@ export default function FindingDetailView({
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap gap-2" role="group" aria-label="Choose a group to view">
               {groups.map((g: any) => {
-                const isMe = Boolean(meId && myGroupId && g.id === myGroupId);
+                // "Me": ADMIN/FACILITATOR are overseers, not group
+                // members — they never get a "Me" on a group chip, even
+                // though an "Enzi Lead Admin" participant row exists.
+                const isPrivileged = currentUser?.role === "ADMIN" || currentUser?.role === "FACILITATOR";
+                const isMe = !isPrivileged && Boolean(meId && myGroupId && g.id === myGroupId);
                 const selected = g.id === activeGroupId;
                 return (
                   <button
