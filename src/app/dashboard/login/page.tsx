@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
   return (
     <main id="main-content" className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <Link href="/" className="inline-flex items-center gap-2 group mb-4">
+        <Link href="/" className="inline-flex items-center gap-2 group">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold text-xl shadow-md group-hover:bg-emerald-700 transition">
             E
           </div>
@@ -55,12 +55,6 @@ export default function AdminLoginPage() {
             Enzi Workshop
           </span>
         </Link>
-        <h2 className="text-xl font-bold tracking-tight text-slate-900">
-          Admin & Facilitator Portal
-        </h2>
-        <p className="mt-1 text-xs text-slate-500">
-          Sign in to manage projects, frameworks, and workshop scoring mechanics.
-        </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
