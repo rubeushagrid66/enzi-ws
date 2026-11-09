@@ -75,8 +75,26 @@ export default function FeasibilityMatrix({
     const vf = groupAverageScores(other.scores?.participantScores, groupParticipantIds);
     return findingBoardPositionForScores(other, d, vf.viability, vf.feasibility);
   };
-  const placedX = displayPos.x ?? 50;
-  const placedY = displayPos.y ?? 50;
+  const placedPoint = (() => {
+    // A computed position snaps to the center of its quadrant. The 1–3
+    // scale only yields 0/50/100, so a raw computed position often lands
+    // exactly on the crosshairs (a 2/2/2 finding is 50/50) or in a
+    // corner — and reads as no quadrant at all. A manual pin stays
+    // exactly where it was dropped; an unplaced card stays at 50/50.
+    if (displayPos.pinned && displayPos.x != null && displayPos.y != null) {
+      return { x: displayPos.x, y: displayPos.y };
+    }
+    const center: Record<FeasibilityQuadrant, { x: number; y: number }> = {
+      QUICK_WINS: { x: 75, y: 75 },
+      BIG_BETS: { x: 25, y: 75 },
+      FILL_INS: { x: 75, y: 25 },
+      AVOID: { x: 25, y: 25 },
+    };
+    if (displayPos.quadrant) return center[displayPos.quadrant];
+    return { x: 50, y: 50 };
+  })();
+  const placedX = placedPoint.x;
+  const placedY = placedPoint.y;
   // Local state for optimistic drag
   const [posX, setPosX] = useState<number>(placedX);
   const [posY, setPosY] = useState<number>(placedY);
@@ -94,16 +112,16 @@ export default function FeasibilityMatrix({
   useEffect(() => {
     // Never snap the card back while a drag is in progress, and never
     // overwrite the just-dropped position with the pre-save prop value.
-    // A new computed position (scores changed) moves the card; a pin
-    // keeps it where it was dragged.
+    // A new computed position (scores changed) moves the card to its
+    // quadrant center; a pin keeps it where it was dragged.
     if (isDraggingRef.current) return;
-    const x = displayPos.x ?? 50;
-    const y = displayPos.y ?? 50;
+    const x = placedX;
+    const y = placedY;
     latestPosRef.current = { x, y };
     setPosX(x);
     setPosY(y);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [finding.id, displayPos.x, displayPos.y, displayPos.pinned]);
+  }, [finding.id, displayPos.x, displayPos.y, displayPos.pinned, displayPos.quadrant]);
 
   // Compute quadrant from continuous coordinates
   const computeQuadrant = (x: number, y: number): {

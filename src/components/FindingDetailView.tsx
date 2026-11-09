@@ -9,7 +9,17 @@ import {
 } from "lucide-react";
 import FeasibilityMatrix from "./FeasibilityMatrix";
 import ViabilityVoteMatrix from "./ViabilityVoteMatrix";
-import { groupAverageScores, normalizeFramework } from "@/lib/scoring";
+import { groupAverageScores, normalizeFramework, findingBoardPositionForScores, type FeasibilityQuadrant } from "@/lib/scoring";
+
+// Quadrant display names + what they mean, shared by the Matrix score
+// box and the board. The Matrix box shows the quadrant the finding
+// lands in — not the F number — because that is what "Matrix" means.
+const QUADRANT_LABEL: Record<FeasibilityQuadrant, { title: string; detail: string }> = {
+  QUICK_WINS: { title: "Quick Wins", detail: "High Impact, Low Effort" },
+  BIG_BETS: { title: "Big Bets", detail: "High Impact, High Effort" },
+  FILL_INS: { title: "Fill-ins", detail: "Low Impact, Low Effort" },
+  AVOID: { title: "Avoid", detail: "Low Impact, High Effort" },
+};
 
 interface FindingDetailViewProps {
   finding: any;
@@ -73,6 +83,11 @@ export default function FindingDetailView({
   const groupD = isGroupAssigned ? (localFinding.scores?.desirability ?? null) : null;
   const groupV = isGroupAssigned ? groupVF.viability : null;
   const groupF = isGroupAssigned ? groupVF.feasibility : null;
+  // The quadrant this group lands in on the board (from its D/V/F —
+  // a manual pin wins, same as the board). This is what the Matrix
+  // score box shows: the quadrant name, not the F number.
+  const groupBoardPos = findingBoardPositionForScores(localFinding, groupD, groupV, groupF);
+  const groupQuadrant = groupBoardPos.quadrant;
   // "N/A" when the selected group has no value for this finding,
   // "—" only when a value exists but is genuinely unscored at the
   // finding level (kept distinct so N/A always means "not this group").
@@ -186,17 +201,12 @@ export default function FindingDetailView({
           Matrix Score ({groupLabel})
         </div>
         <div className="mt-1 text-3xl font-bold text-slate-900">
-          {groupF != null ? (
-            <>
-              {groupF}
-              <span className="text-sm font-normal text-slate-400"> / 3</span>
-            </>
-          ) : (
-            "N/A"
-          )}
+          {groupQuadrant ? QUADRANT_LABEL[groupQuadrant].title : "N/A"}
         </div>
         <p className="mt-1 text-xs text-slate-500">
-          4 − average of {groupLabel}&apos;s Effort aspect scores
+          {groupQuadrant
+            ? QUADRANT_LABEL[groupQuadrant].detail
+            : "Not placed on the board yet — score the finding to place it"}
         </p>
       </div>
     </div>
