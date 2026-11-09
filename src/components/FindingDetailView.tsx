@@ -243,7 +243,7 @@ export default function FindingDetailView({
         <p className="mt-1 text-xs text-slate-500">
           {groupQuadrant
             ? QUADRANT_LABEL[groupQuadrant].detail
-            : "Not placed on the board yet — score the finding to place it"}
+            : "Not placed on the board yet — score the idea to place it"}
         </p>
       </div>
     </div>
@@ -389,17 +389,28 @@ export default function FindingDetailView({
             </div>
           )}
 
-          {/* Related ideas — the ideas this finding is linked to
-              (assigned in the admin Ideas tab). */}
+          {/* Related findings — the findings this idea is linked to
+              (assigned in the admin Findings tab). Compact pills in a
+              wrapping row, so many linked findings stay one or two
+              lines tall instead of a tall card each. Full description
+              is in the tooltip. */}
           {relatedIdeas.length > 0 && (
             <div className="mt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Related Findings</h3>
-              <div className="mt-2 flex flex-col gap-2">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Related Findings ({relatedIdeas.length})
+              </h3>
+              <div className="mt-2 flex flex-wrap gap-2">
                 {relatedIdeas.map((idea: any) => (
-                  <div key={idea.id} className="rounded-xl border border-violet-200 bg-violet-50 px-3.5 py-2.5">
-                    <div className="text-sm font-semibold text-violet-900">{idea.title}</div>
-                    {idea.description && <div className="mt-0.5 text-xs text-violet-700">{idea.description}</div>}
-                  </div>
+                  <span
+                    key={idea.id}
+                    title={idea.description ? `${idea.title} — ${idea.description}` : idea.title}
+                    className="inline-flex max-w-full items-baseline gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 py-1"
+                  >
+                    <span className="truncate text-sm font-semibold text-violet-900">{idea.title}</span>
+                    {idea.description && (
+                      <span className="max-w-48 truncate text-xs text-violet-700">· {idea.description}</span>
+                    )}
+                  </span>
                 ))}
               </div>
             </div>
@@ -497,7 +508,7 @@ export default function FindingDetailView({
               <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
                 <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
                   <HelpCircle className="h-4 w-4 text-emerald-600" />
-                  <span>Research mentions — how many users mentioned this finding</span>
+                  <span>Research mentions — how many users mentioned this idea</span>
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
                   D comes from research numbers only. A mention is a user mentioning this finding in that source. Internal is not counted. A source with no count entered does not score D. Both numbers are typed by hand — the mentions for this finding, and the totals for the whole project (changing a total here updates every finding in this project). The system only does the calculation.
@@ -522,7 +533,7 @@ export default function FindingDetailView({
                         disabled={!isAdmin}
                         title={
                           isAdmin
-                            ? "How many interview users mentioned this finding"
+                            ? "How many interview users mentioned this idea"
                             : "Only an admin can change the research numbers"
                         }
                         className="input w-28"
@@ -558,7 +569,7 @@ export default function FindingDetailView({
                   {interviewN == null && (
                     <p className="mt-2 text-xs text-amber-700">
                       {isAdmin
-                        ? "Total interview users is not set — type it above (it applies to every finding in this project)."
+                        ? "Total interview users is not set — type it above (it applies to every idea in this project)."
                         : "Total interview users is not set for this project — an admin sets it here or in the dashboard (Framework & Weighting → Research basis)."}
                     </p>
                   )}
@@ -583,7 +594,7 @@ export default function FindingDetailView({
                         disabled={!isAdmin}
                         title={
                           isAdmin
-                            ? "How many survey respondents mentioned this finding"
+                            ? "How many survey respondents mentioned this idea"
                             : "Only an admin can change the research numbers"
                         }
                         className="input w-28"
@@ -619,7 +630,7 @@ export default function FindingDetailView({
                   {surveyN == null && (
                     <p className="mt-2 text-xs text-amber-700">
                       {isAdmin
-                        ? "Total survey respondents is not set — type it above (it applies to every finding in this project)."
+                        ? "Total survey respondents is not set — type it above (it applies to every idea in this project)."
                         : "Total survey respondents is not set for this project — an admin sets it here or in the dashboard (Framework & Weighting → Research basis)."}
                     </p>
                   )}
@@ -656,7 +667,7 @@ export default function FindingDetailView({
               <div role="note" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
                 <span className="font-bold">How this score is built: </span>
                 {desirability.formulaExplanation ||
-                  "No research numbers yet \u2014 enter how many users mentioned this finding in Wawancara and/or Survey."}
+                  "No research numbers yet \u2014 enter how many users mentioned this idea in Wawancara and/or Survey."}
               </div>
             </div>
           )}

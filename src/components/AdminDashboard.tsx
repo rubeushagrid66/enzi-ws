@@ -235,13 +235,23 @@ export default function AdminDashboard() {
   // Where a new finding goes: the shared pool, or the selected project.
   const [findingTarget, setFindingTarget] = useState<"pool" | "project">("pool");
   const [findingForm, setFindingForm] = useState({ title: "", description: "", sumber: [] as string[], fitur: "", platform: [] as string[] });
+  // Finding ids (the linked "Findings" tab items) ticked for this pool
+  // idea in its modal — the reverse of an idea's Linked Ideas list.
+  const [findingIdeaIds, setFindingIdeaIds] = useState<string[]>([]);
+  // Search text filtering the Findings checklist in the idea modal.
+  const [findingIdeaSearch, setFindingIdeaSearch] = useState("");
+  const toggleFindingIdea = (ideaId: string) => {
+    setFindingIdeaIds((prev) =>
+      prev.includes(ideaId) ? prev.filter((i) => i !== ideaId) : [...prev, ideaId]
+    );
+  };
 
   // Ideas (global): an idea is linked to 1 or many findings, and a
   // finding shows its linked ideas on its detail page.
   const [ideas, setIdeas] = useState<any[]>([]);
   const [ideaModalOpen, setIdeaModalOpen] = useState(false);
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
-  const [ideaForm, setIdeaForm] = useState({ title: "", description: "" });
+  const [ideaForm, setIdeaForm] = useState({ title: "", description: "", sumber: [] as string[] });
   // Finding ids ticked for the idea in the modal.
   const [ideaFindingIds, setIdeaFindingIds] = useState<string[]>([]);
   // Search text filtering the Linked Ideas checklist (title + project).
@@ -544,10 +554,12 @@ export default function AdminDashboard() {
     setEditingFindingId(null);
     setFindingTarget("pool");
     setFindingForm({ title: "", description: "", sumber: [], fitur: "", platform: [] });
+    setFindingIdeaIds([]);
+    setFindingIdeaSearch("");
     setFindingModalOpen(true);
   };
 
-  const openEditFinding = (f: any) => {
+  const openEditFinding = async (f: any) => {
     setEditingFindingId(f.id);
     setFindingTarget(f.projectId ? "project" : "pool");
     const meta = findingMeta(f);
@@ -558,6 +570,15 @@ export default function AdminDashboard() {
       fitur: meta.fitur,
       platform: meta.platform,
     });
+    // Pre-tick the findings already linked to this idea.
+    setFindingIdeaIds([]);
+    setFindingIdeaSearch("");
+    try {
+      const res = await apiCall(`/api/global/findings/${f.id}/ideas`);
+      if (Array.isArray(res?.ideaIds)) setFindingIdeaIds(res.ideaIds);
+    } catch {
+      // Leave the checklist unticked if the links cannot be read.
+    }
     setFindingModalOpen(true);
   };
 
@@ -659,6 +680,21 @@ export default function AdminDashboard() {
           ]);
         }
       }
+      // Save the linked findings (the reverse of an idea's Linked Ideas
+      // list). The pool idea's id is the edited id, or the new row's id.
+      const ideaRowId = editingFindingId || saved?.finding?.id;
+      if (ideaRowId) {
+        try {
+          await apiCall(`/api/global/findings/${ideaRowId}/ideas`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ideaIds: findingIdeaIds }),
+          });
+        } catch {
+          // The idea itself is saved; a failed link save must not
+          // reopen the modal as if nothing was saved.
+        }
+      }
       // Close the modal as soon as the save succeeds — the list refresh
       // (global data + project details) takes several more seconds, and
       // waiting for it before closing is what made saves look broken.
@@ -668,7 +704,7 @@ export default function AdminDashboard() {
       loadGlobalData();
       if (selectedProjectSlug) loadProjectDetails(selectedProjectSlug);
     } catch (err: any) {
-      setError(err.message || "Failed to save finding");
+      setError(err.message || "Failed to save idea");
     } finally {
       setSavingFinding(false);
     }
@@ -686,7 +722,7 @@ export default function AdminDashboard() {
         await loadGlobalData();
         if (selectedProjectSlug) await loadProjectDetails(selectedProjectSlug);
       } catch (err: any) {
-        setError(err.message || "Failed to delete finding");
+        setError(err.message || "Failed to delete idea");
       }
     });
   };
@@ -711,7 +747,7 @@ export default function AdminDashboard() {
       setError(null);
       const slug = assignFinding.projectSlug || selectedProjectSlug;
       if (!slug) {
-        setError("Select a project in the sidebar first, then assign this finding.");
+        setError("Select a project in the sidebar first, then assign this idea.");
         return;
       }
       await apiCall(`/api/projects/${slug}/findings/${assignFinding.id}/groups`, {
@@ -722,7 +758,7 @@ export default function AdminDashboard() {
       setAssignFinding(null);
       await loadGlobalData();
     } catch (err: any) {
-      setError(err.message || "Failed to assign finding to groups");
+      setError(err.message || "Failed to assign idea to groups");
     } finally {
       setAssignSaving(false);
     }
@@ -734,7 +770,7 @@ export default function AdminDashboard() {
   // ideas on its detail page.
   const openCreateIdea = () => {
     setEditingIdeaId(null);
-    setIdeaForm({ title: "", description: "" });
+    setIdeaForm({ title: "", description: "", sumber: [] });
     setIdeaFindingIds([]);
     setIdeaFindingSearch("");
     setIdeaModalOpen(true);
@@ -742,7 +778,7 @@ export default function AdminDashboard() {
 
   const openEditIdea = (idea: any) => {
     setEditingIdeaId(idea.id);
-    setIdeaForm({ title: idea.title || "", description: idea.description || "" });
+    setIdeaForm({ title: idea.title || "", description: idea.description || "", sumber: Array.isArray(idea.sumber) ? [...idea.sumber] : [] });
     setIdeaFindingIds(Array.isArray(idea.findingIds) ? [...idea.findingIds] : []);
     setIdeaFindingSearch("");
     setIdeaModalOpen(true);
@@ -795,7 +831,7 @@ export default function AdminDashboard() {
       setIdeaModalOpen(false);
       await loadGlobalData();
     } catch (err: any) {
-      setError(err.message || "Failed to save idea");
+      setError(err.message || "Failed to save finding");
     } finally {
       setSavingIdea(false);
     }
@@ -815,7 +851,7 @@ export default function AdminDashboard() {
           await apiCall(`/api/global/ideas/${idea.id}`, { method: "DELETE" });
           setIdeas((rows: any[]) => rows.filter((x: any) => x.id !== idea.id));
         } catch (err: any) {
-          setError(err.message || "Failed to delete idea");
+          setError(err.message || "Failed to delete finding");
         } finally {
           setConfirm(null);
         }
@@ -828,7 +864,7 @@ export default function AdminDashboard() {
    *  Unscored; the pool original is untouched. */
   const handleCopyFindingToProject = async (f: any) => {
     if (!selectedProjectSlug) {
-      setError("Select a project in the sidebar first, then copy this finding into it.");
+      setError("Select a project in the sidebar first, then copy this idea into it.");
       return;
     }
     try {
@@ -841,7 +877,7 @@ export default function AdminDashboard() {
       await loadGlobalData();
       await loadProjectDetails(selectedProjectSlug);
     } catch (err: any) {
-      setError(err.message || "Failed to copy finding into project");
+      setError(err.message || "Failed to copy idea into project");
     }
   };
 
@@ -856,7 +892,7 @@ export default function AdminDashboard() {
       });
       await loadGlobalData();
     } catch (err: any) {
-      setError(err.message || "Failed to copy finding to pool");
+      setError(err.message || "Failed to copy idea to pool");
     }
   };
 
@@ -1209,8 +1245,8 @@ export default function AdminDashboard() {
           {activeTab === "findings" && (
             <section aria-labelledby="findings-heading" className="space-y-6">
               <div>
-                <h2 id="findings-heading" className="section-title">Ideas Pool (User Needs &amp; Pain Points)</h2>
-                <p className="section-sub">Shared library for all projects. A finding is copied into a project before scoring — the copy is scored independently, so moving it in one workshop never moves it in another.</p>
+                <h2 id="findings-heading" className="section-title">Ideas Pool</h2>
+                <p className="section-sub">Shared library for all projects. An idea is copied into a project before scoring — the copy is scored independently, so moving it in one workshop never moves it in another.</p>
                 {globalSetupNote && (
                   <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{globalSetupNote}</p>
                 )}
@@ -1219,7 +1255,7 @@ export default function AdminDashboard() {
               <div className="card overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-                    <caption className="sr-only">All findings: the shared pool and every project's findings</caption>
+                    <caption className="sr-only">All ideas: the shared pool and every project&apos;s ideas</caption>
                     <colgroup>
                       <col className="w-[32%]" />
                       <col className="w-[28%]" />
@@ -1348,7 +1384,7 @@ export default function AdminDashboard() {
               <div className="card overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-                    <caption className="sr-only">All ideas and the findings they are linked to</caption>
+                    <caption className="sr-only">All findings and the ideas they are linked to</caption>
                     <colgroup>
                       <col className="w-[30%]" />
                       <col className="w-[30%]" />
@@ -1386,7 +1422,7 @@ export default function AdminDashboard() {
                                       </span>
                                     ))
                                   ) : (
-                                    <span className="text-xs font-medium text-slate-400">No findings linked yet</span>
+                                    <span className="text-xs font-medium text-slate-400">No ideas linked yet</span>
                                   )}
                                 </div>
                               </td>
@@ -1500,7 +1536,7 @@ export default function AdminDashboard() {
                   </div>
                   <h2 className="mt-1 text-xl font-semibold text-slate-900">Desirability Research Basis</h2>
                   <p className="mt-1 text-sm font-medium text-slate-500">Per project — {activeProject?.name ?? "no project selected"}.</p>
-                  <p className="mt-1 text-sm text-slate-600">Total users per research source. D is computed from each finding&apos;s mention counts against these totals (Wawancara: &ge;66% &rarr; 3, &ge;33% &rarr; 2; Survey: &ge;30% &rarr; 3, &ge;15% &rarr; 2). Leave a basis blank and that source cannot score D.</p>
+                  <p className="mt-1 text-sm text-slate-600">Total users per research source. D is computed from each idea&apos;s mention counts against these totals (Wawancara: &ge;66% &rarr; 3, &ge;33% &rarr; 2; Survey: &ge;30% &rarr; 3, &ge;15% &rarr; 2). Leave a basis blank and that source cannot score D.</p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1800,7 +1836,7 @@ export default function AdminDashboard() {
           <form onSubmit={handleSaveFinding} className="space-y-3">
             {!editingFindingId && (
               <fieldset>
-                <legend className="field-label">Where should this finding live?</legend>
+                <legend className="field-label">Where should this idea live?</legend>
                 <div className="flex flex-wrap gap-4">
                   <label className="flex cursor-pointer items-center gap-1.5">
                     <input type="radio" name="finding-target" checked={findingTarget === "pool"} onChange={() => setFindingTarget("pool")} className="h-4 w-4 accent-emerald-600" />
@@ -1821,17 +1857,6 @@ export default function AdminDashboard() {
               <label htmlFor="finding-desc" className="field-label">Description</label>
               <textarea id="finding-desc" rows={2} placeholder="Elaborate on participant feedback..." value={findingForm.description} onChange={(e) => setFindingForm((f) => ({ ...f, description: e.target.value }))} className="input w-full" />
             </div>
-            <fieldset>
-              <legend className="field-label">Sumber</legend>
-              <div className="flex flex-wrap gap-4">
-                {SUMBER_OPTIONS.map((opt) => (
-                  <label key={opt} className="flex cursor-pointer items-center gap-1.5">
-                    <input type="checkbox" checked={findingForm.sumber.includes(opt)} onChange={(e) => setFindingForm((f) => ({ ...f, sumber: e.target.checked ? [...f.sumber, opt] : f.sumber.filter((s) => s !== opt) }))} className="h-4 w-4 rounded accent-emerald-600" />
-                    <span className="text-sm text-slate-700">{opt}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
             <div>
               <label htmlFor="finding-fitur" className="field-label">Fitur</label>
               <input id="finding-fitur" type="text" placeholder="e.g. Bulk Payment" value={findingForm.fitur} onChange={(e) => setFindingForm((f) => ({ ...f, fitur: e.target.value }))} className="input w-full" />
@@ -1846,6 +1871,53 @@ export default function AdminDashboard() {
                   </label>
                 ))}
               </div>
+            </fieldset>
+            <fieldset>
+              <legend className="field-label">Findings</legend>
+              <p className="mb-2 text-xs text-slate-500">Tick the findings this idea relates to. An idea can be linked to one or many findings.</p>
+              {ideas.length === 0 ? (
+                <p className="text-sm italic text-slate-500">No findings yet — add a finding first (Findings tab).</p>
+              ) : (
+                <>
+                  <input
+                    type="search"
+                    placeholder="Search findings…"
+                    aria-label="Search findings"
+                    value={findingIdeaSearch}
+                    onChange={(e) => setFindingIdeaSearch(e.target.value)}
+                    className="input mb-2 w-full"
+                  />
+                  {(() => {
+                    const q = findingIdeaSearch.trim().toLowerCase();
+                    const shown = q
+                      ? ideas.filter((i: any) =>
+                          `${i.title || ""} ${i.description || ""}`.toLowerCase().includes(q)
+                        )
+                      : ideas;
+                    if (shown.length === 0) {
+                      return <p className="rounded-xl border border-slate-200 px-3 py-3 text-sm italic text-slate-500">No findings match “{findingIdeaSearch.trim()}”.</p>;
+                    }
+                    return (
+                      <div className="max-h-96 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">
+                        {shown.map((i: any) => (
+                          <label key={i.id} className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+                            <input
+                              type="checkbox"
+                              checked={findingIdeaIds.includes(i.id)}
+                              onChange={() => toggleFindingIdea(i.id)}
+                              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-emerald-600"
+                            />
+                            <span className="min-w-0">
+                              <span className="block font-medium leading-snug text-slate-900">{i.title}</span>
+                              {i.description && <span className="mt-0.5 block truncate text-xs text-slate-400">{i.description}</span>}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
             </fieldset>
             <div className="flex items-center justify-end gap-2 pt-3">
               <button type="button" onClick={() => setFindingModalOpen(false)} className="btn-secondary">Cancel</button>
@@ -1866,11 +1938,22 @@ export default function AdminDashboard() {
             </div>
             <div>
               <label htmlFor="idea-desc" className="field-label">Description</label>
-              <textarea id="idea-desc" rows={3} placeholder="What is the idea?" value={ideaForm.description} onChange={(e) => setIdeaForm((f) => ({ ...f, description: e.target.value }))} className="input w-full" />
+              <textarea id="idea-desc" rows={3} placeholder="What is the finding?" value={ideaForm.description} onChange={(e) => setIdeaForm((f) => ({ ...f, description: e.target.value }))} className="input w-full" />
             </div>
             <fieldset>
+              <legend className="field-label">Sumber</legend>
+              <div className="flex flex-wrap gap-4">
+                {SUMBER_OPTIONS.map((opt) => (
+                  <label key={opt} className="flex cursor-pointer items-center gap-1.5">
+                    <input type="checkbox" checked={ideaForm.sumber.includes(opt)} onChange={(e) => setIdeaForm((f) => ({ ...f, sumber: e.target.checked ? [...f.sumber, opt] : f.sumber.filter((s) => s !== opt) }))} className="h-4 w-4 rounded accent-emerald-600" />
+                    <span className="text-sm text-slate-700">{opt}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset>
               <legend className="field-label">Linked Ideas</legend>
-              <p className="mb-2 text-xs text-slate-500">Tick the findings this idea relates to. An idea can be linked to one or many findings.</p>
+              <p className="mb-2 text-xs text-slate-500">Tick the ideas this finding relates to. A finding can be linked to one or many ideas.</p>
               {poolFindings.length === 0 ? (
                 <p className="text-sm italic text-slate-500">No ideas yet — add an idea first (Ideas &amp; Tags tab).</p>
               ) : (
@@ -1928,7 +2011,7 @@ export default function AdminDashboard() {
         <Modal title={`Assign to groups — ${assignFinding.title}`} onClose={() => setAssignFinding(null)}>
           <div className="space-y-3">
             <p className="text-sm text-slate-600">
-              Tick the groups this finding belongs to. It will show inside those groups on the project page, and only
+              Tick the groups this idea belongs to. It will show inside those groups on the project page, and only
               participants in those groups can score it. A finding with no group ticked stays visible in the global
               findings and can be scored by anyone in its project, as before.
             </p>

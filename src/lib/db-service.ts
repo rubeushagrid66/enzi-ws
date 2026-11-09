@@ -659,6 +659,7 @@ export const dbService = {
         id: i.id,
         title: i.title,
         description: i.description || "",
+        sumber: Array.isArray(i.sumber) ? i.sumber : [],
         findingIds: linkMap[i.id] || [],
         createdAt: i.created_at,
       }));
@@ -684,11 +685,11 @@ export const dbService = {
     }
   },
 
-  async createIdea(data: { title: string; description?: string }) {
+  async createIdea(data: { title: string; description?: string; sumber?: string[] }) {
     if (isSupabaseConfigured && supabase) {
       const { data: idea, error } = await supabase
         .from("ideas")
-        .insert({ title: data.title, description: data.description || "" })
+        .insert({ title: data.title, description: data.description || "", sumber: data.sumber || [] })
         .select()
         .single();
       if (error) throw error;
@@ -698,14 +699,15 @@ export const dbService = {
     await prisma.$executeRaw`
       INSERT INTO ideas (id, title, description) VALUES (${id}, ${data.title}, ${data.description || ""})
     `;
-    return { id, title: data.title, description: data.description || "" };
+    return { id, title: data.title, description: data.description || "", sumber: data.sumber || [] };
   },
 
-  async updateIdea(id: string, data: { title?: string; description?: string }) {
+  async updateIdea(id: string, data: { title?: string; description?: string; sumber?: string[] }) {
     if (isSupabaseConfigured && supabase) {
       const patch: any = {};
       if (data.title !== undefined) patch.title = data.title;
       if (data.description !== undefined) patch.description = data.description;
+      if (data.sumber !== undefined) patch.sumber = data.sumber;
       patch.updated_at = new Date().toISOString();
       const { data: idea, error } = await supabase.from("ideas").update(patch).eq("id", id).select().single();
       if (error) throw error;
@@ -816,6 +818,43 @@ export const dbService = {
       `;
     }
     return this.getIdeaFindingIds(ideaId);
+  },
+
+  /** Replace a finding's (pool idea's) linked ideas — the reverse of
+   *  setIdeaFindings. Used by the Idea edit popup, so an idea can pick
+   *  its findings from either side. Unknown idea ids are dropped, so a
+   *  deleted finding never leaves a dangling link behind. */
+  async setFindingIdeas(findingId: string, ideaIds: string[]): Promise<string[]> {
+    const clean = Array.from(new Set((ideaIds || []).filter((i) => typeof i === "string" && i.trim() !== "")));
+    if (isSupabaseConfigured && supabase) {
+      let valid = clean;
+      if (clean.length > 0) {
+        const { data } = await supabase.from("ideas").select("id").in("id", clean);
+        const existing = new Set(((data as any[]) || []).map((i: any) => i.id));
+        valid = clean.filter((i) => existing.has(i));
+      }
+      const del = await supabase.from("idea_findings").delete().eq("finding_id", findingId);
+      if (del.error) throw del.error;
+      if (valid.length > 0) {
+        const ins = await supabase
+          .from("idea_findings")
+          .insert(valid.map((idea_id) => ({ idea_id, finding_id: findingId })));
+        if (ins.error) throw ins.error;
+      }
+      return valid;
+    }
+    await prisma.$executeRaw`DELETE FROM idea_findings WHERE finding_id = ${findingId}`;
+    for (const iid of clean) {
+      const exists = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM ideas WHERE id = ${iid}
+      `;
+      if (exists.length === 0) continue;
+      await prisma.$executeRaw`
+        INSERT INTO idea_findings (idea_id, finding_id) VALUES (${iid}, ${findingId})
+        ON CONFLICT (idea_id, finding_id) DO NOTHING
+      `;
+    }
+    return this.getIdeasForFinding(findingId).then((rows) => rows.map((r: any) => r.id));
   },
 
   /** Every group in every project, with its project — for the

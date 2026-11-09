@@ -270,7 +270,7 @@ function GroupsView({
             {byQuadrant.UNPLACED.length > 0 && (
               <section>
                 <h3 className="text-base font-bold text-slate-900">Not yet placed</h3>
-                <p className="mt-0.5 text-xs text-slate-500">No quadrant yet — score the finding to place it.</p>
+                <p className="mt-0.5 text-xs text-slate-500">No quadrant yet — score the idea to place it.</p>
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {byQuadrant.UNPLACED.map((finding: any) => (
                     <FindingCard
@@ -288,7 +288,7 @@ function GroupsView({
         ) : (
           <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
             <Users className="h-10 w-10 text-slate-300 mx-auto" />
-            <h3 className="mt-3 text-base font-bold text-slate-800">No findings in this group yet</h3>
+            <h3 className="mt-3 text-base font-bold text-slate-800">No ideas in this group yet</h3>
             <p className="mt-1 text-xs text-slate-500">
               An admin or facilitator assigns findings to this group from the dashboard (Findings &amp; Tags).
             </p>
@@ -330,7 +330,7 @@ function GroupsView({
                     : "No participants yet"}
                 </p>
                 <p className="mt-2 text-xs font-semibold text-emerald-700">
-                  {count != null ? `${count} finding${count === 1 ? "" : "s"}` : "Loading findings…"}
+                  {count != null ? `${count} idea${count === 1 ? "" : "s"}` : "Loading ideas…"}
                 </p>
                 <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-600">
                   View findings <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
@@ -502,7 +502,7 @@ export default function ProjectResultViewer({
     setGroupFindingsLoading(true);
     try {
       const res = await fetch(`/api/projects/${slug}/groups/${groupId}/findings`, { cache: "no-store" });
-      if (!res.ok) throw new Error("Failed to load group findings");
+      if (!res.ok) throw new Error("Failed to load group ideas");
       const data = await res.json();
       setGroupFindings((prev) => ({ ...prev, [groupId]: data.findings || [] }));
     } catch {
@@ -726,7 +726,7 @@ export default function ProjectResultViewer({
           <RoadmapView
             project={project}
             weights={weights}
-            onSelectFinding={(f: any) => router.push(`/${slug}/findings/${f.id}`)}
+            onSelectFinding={(f: any) => router.push(`/${slug}/ideas/${f.id}`)}
           />
         ) : view === "groups" ? (
           <GroupsView
@@ -738,7 +738,7 @@ export default function ProjectResultViewer({
             groupFindingsLoading={groupFindingsLoading}
             onOpenGroup={openGroup}
             onBackToGroups={() => setSelectedGroupId(null)}
-            onSelectFinding={(f: any) => router.push(`/${slug}/findings/${f.id}`)}
+            onSelectFinding={(f: any) => router.push(`/${slug}/ideas/${f.id}`)}
           />
         ) : (
         <>
@@ -790,7 +790,7 @@ export default function ProjectResultViewer({
             {filteredFindings.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filteredFindings.map((finding) => (
-                  <FindingCard key={finding.id} finding={finding} meId={meId} plain onSelect={(f) => router.push(`/${slug}/findings/${f.id}`)} />
+                  <FindingCard key={finding.id} finding={finding} meId={meId} plain onSelect={(f) => router.push(`/${slug}/ideas/${f.id}`)} />
                 ))}
               </div>
             ) : (

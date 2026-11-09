@@ -30,13 +30,13 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, description, findingIds } = body;
+    const { title, description, findingIds, sumber } = body;
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
 
-    const idea = await dbService.createIdea({ title, description });
+    const idea = await dbService.createIdea({ title, description, sumber });
     if (Array.isArray(findingIds)) {
       await dbService.setIdeaFindings(idea.id, findingIds);
     }

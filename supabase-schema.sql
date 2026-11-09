@@ -150,9 +150,14 @@ CREATE TABLE IF NOT EXISTS ideas (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   title TEXT NOT NULL,
   description TEXT DEFAULT '',
+  sumber JSONB NOT NULL DEFAULT '[]',
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+-- Sumber moved to Findings (the linked items) 2026-11-09: each finding
+-- records which research source(s) it came from (Wawancara/Survey/
+-- Internal). Added to existing tables with:
+--   ALTER TABLE ideas ADD COLUMN IF NOT EXISTS sumber JSONB NOT NULL DEFAULT '[]';
 
 CREATE TABLE IF NOT EXISTS idea_findings (
   idea_id TEXT NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,

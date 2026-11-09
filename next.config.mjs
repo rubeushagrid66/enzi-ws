@@ -1,5 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // The finding detail page moved from /[slug]/findings/[id] to
+  // /[slug]/ideas/[id] (it is an Idea Detail page now). Keep the old
+  // URL working with a permanent redirect.
+  async redirects() {
+    return [
+      {
+        source: "/:slug/findings/:id",
+        destination: "/:slug/ideas/:id",
+        permanent: true,
+      },
+    ];
+  },
   experimental: {
     // The viewer/detail pages are client components that fetch their data
     // in a mount effect. With the default dynamic stale time (30s),

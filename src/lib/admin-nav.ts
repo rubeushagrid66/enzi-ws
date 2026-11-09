@@ -27,8 +27,8 @@ export const ADMIN_NAV: AdminNavItem[] = [
   // weighting, one user list). Groups, aspects and the projects
   // themselves stay per-project. The L1–L3 parameter tree was removed
   // 2026-11-09: nothing read it — D/V/F use mention counts + basis N.
-  { id: "findings", label: "Ideas & Tags", href: "/dashboard/findings", badge: "Global", group: "Workshop" },
-  { id: "ideas", label: "Findings", href: "/dashboard/ideas", badge: "Global", group: "Workshop" },
+  { id: "findings", label: "Ideas & Tags", href: "/dashboard/ideas", badge: "Global", group: "Workshop" },
+  { id: "ideas", label: "Findings", href: "/dashboard/findings", badge: "Global", group: "Workshop" },
   { id: "weights", label: "Framework & Weighting", href: "/dashboard/framework", badge: "Global", group: "Workshop" },
   { id: "groups", label: "Groups & Participants", href: "/dashboard/groups", group: "Workshop" },
   { id: "aspects", label: "Viability Aspects", href: "/dashboard/aspects", group: "Workshop" },
