@@ -3,12 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
-import { Modal } from "@/components/Modal";
 import {
   Search,
   Target,
   ArrowRight,
-  Plus,
   Users,
   ArrowLeft,
 } from "lucide-react";
@@ -261,11 +259,6 @@ function GroupsView({
   );
 }
 
-// Registered parameter values — the only options offered for Sumber and
-// Platform in the Add Finding form, same as the dashboard's finding form.
-const SUMBER_OPTIONS = ["Wawancara", "Survey", "Internal"];
-const PLATFORM_OPTIONS = ["CMS", "DVC"];
-
 export default function ProjectResultViewer({
   params,
 }: {
@@ -322,45 +315,6 @@ export default function ProjectResultViewer({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, project?.slug]);
-
-  // Add Finding — same fields as the dashboard's finding modal. Creates the
-  // finding in THIS project; open to any logged-in user, like editing
-  // findings (the API only requires a session).
-  const [addFindingOpen, setAddFindingOpen] = useState(false);
-  const [findingForm, setFindingForm] = useState({
-    title: "",
-    description: "",
-    sumber: [] as string[],
-    fitur: "",
-    platform: [] as string[],
-  });
-  const [savingFinding, setSavingFinding] = useState(false);
-  const [findingError, setFindingError] = useState<string | null>(null);
-
-  const handleSaveFinding = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!findingForm.title.trim() || savingFinding) return;
-    setSavingFinding(true);
-    setFindingError(null);
-    try {
-      const res = await fetch(`/api/projects/${slug}/findings`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(findingForm),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.error || "Failed to create finding");
-      }
-      setAddFindingOpen(false);
-      setFindingForm({ title: "", description: "", sumber: [], fitur: "", platform: [] });
-      await loadProjectData(true);
-    } catch (err: any) {
-      setFindingError(err.message || "Failed to create finding");
-    } finally {
-      setSavingFinding(false);
-    }
-  };
 
   // Fetch project data. `silent` refreshes in the background without
   // flashing the full-page loading screen or unmounting the matrix —
@@ -518,18 +472,6 @@ export default function ProjectResultViewer({
             </div>
           </div>
 
-          {/* Add Finding */}
-          {currentUser && (
-            <div className="mt-6 pt-6 border-t border-slate-100 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setAddFindingOpen(true)}
-                className="btn-primary btn-sm"
-              >
-                <Plus className="h-3.5 w-3.5" /> Add Finding
-              </button>
-            </div>
-          )}
         </div>
       </section>
 
@@ -654,55 +596,6 @@ export default function ProjectResultViewer({
         <span>Bank BSI &times; Aleph</span>
         <span>&copy; Enzi 2026</span>
       </footer>
-
-      {/* Add Finding — same fields as the dashboard's finding form */}
-      {addFindingOpen && (
-        <Modal title="Add Finding" onClose={() => setAddFindingOpen(false)} wide>
-          <form onSubmit={handleSaveFinding} className="space-y-3">
-            <div>
-              <label htmlFor="finding-title" className="field-label">Finding Title (User Need / Pain Point)</label>
-              <input id="finding-title" type="text" required placeholder="e.g. Tampilan Membingungkan" value={findingForm.title} onChange={(e) => setFindingForm((f) => ({ ...f, title: e.target.value }))} className="input w-full" />
-            </div>
-            <div>
-              <label htmlFor="finding-desc" className="field-label">Description</label>
-              <textarea id="finding-desc" rows={2} placeholder="Elaborate on participant feedback..." value={findingForm.description} onChange={(e) => setFindingForm((f) => ({ ...f, description: e.target.value }))} className="input w-full" />
-            </div>
-            <fieldset>
-              <legend className="field-label">Sumber</legend>
-              <div className="flex flex-wrap gap-4">
-                {SUMBER_OPTIONS.map((opt) => (
-                  <label key={opt} className="flex cursor-pointer items-center gap-1.5">
-                    <input type="checkbox" checked={findingForm.sumber.includes(opt)} onChange={(e) => setFindingForm((f) => ({ ...f, sumber: e.target.checked ? [...f.sumber, opt] : f.sumber.filter((s) => s !== opt) }))} className="h-4 w-4 rounded accent-emerald-600" />
-                    <span className="text-sm text-slate-700">{opt}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <div>
-              <label htmlFor="finding-fitur" className="field-label">Fitur</label>
-              <input id="finding-fitur" type="text" placeholder="e.g. Bulk Payment" value={findingForm.fitur} onChange={(e) => setFindingForm((f) => ({ ...f, fitur: e.target.value }))} className="input w-full" />
-            </div>
-            <fieldset>
-              <legend className="field-label">Platform</legend>
-              <div className="flex flex-wrap gap-4">
-                {PLATFORM_OPTIONS.map((opt) => (
-                  <label key={opt} className="flex cursor-pointer items-center gap-1.5">
-                    <input type="checkbox" checked={findingForm.platform.includes(opt)} onChange={(e) => setFindingForm((f) => ({ ...f, platform: e.target.checked ? [...f.platform, opt] : f.platform.filter((p) => p !== opt) }))} className="h-4 w-4 rounded accent-emerald-600" />
-                    <span className="text-sm text-slate-700">{opt}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            {findingError && (
-              <p className="text-sm text-rose-600">{findingError}</p>
-            )}
-            <div className="flex items-center justify-end gap-2 pt-3">
-              <button type="button" onClick={() => setAddFindingOpen(false)} className="btn-secondary">Cancel</button>
-              <button type="submit" disabled={savingFinding} className="btn-primary disabled:opacity-60">{savingFinding ? "Saving…" : "Create Finding"}</button>
-            </div>
-          </form>
-        </Modal>
-      )}
     </div>
   );
 }
