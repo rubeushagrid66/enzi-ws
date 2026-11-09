@@ -10,7 +10,9 @@ import { revalidateProjectPages } from "@/lib/revalidate";
  *   clears the reason). `reason` is free text (max 500 chars).
  * - When `participantId` is omitted the vote is recorded as the session
  *   user (their "me" participant row). Any non-admin, non-facilitator
- *   user (label roles and Group accounts) may only vote as themselves.
+ *   user (label roles, Group and Participant accounts) may only vote
+ *   as themselves — naming their own participant is allowed, naming
+ *   anyone else is rejected.
  * - ADMIN / FACILITATOR may vote as themselves or as a participant
  *   they name. There is no label restriction: any participant may be
  *   scored on any aspect.
@@ -72,11 +74,13 @@ export async function POST(
     }
     let voterId = participantId || me.id;
     // Only ADMIN / FACILITATOR may vote for a named participant. Every
-    // other user (label roles and Group accounts) records only their
-    // own scores. There is no label restriction on which aspects a
-    // participant may score.
+    // other user (label roles, Group and Participant accounts) records
+    // only their own scores — voting as themselves (participantId ===
+    // their own "me" row) or omitting participantId (defaults to me)
+    // is allowed; voting for anyone else is not. There is no label
+    // restriction on which aspects a participant may score.
     const isPrivileged = session.role === "ADMIN" || session.role === "FACILITATOR";
-    if (participantId && !isPrivileged) {
+    if (participantId && participantId !== me.id && !isPrivileged) {
       return NextResponse.json({ error: "You can only record your own scores" }, { status: 400 });
     }
     if (participantId && isPrivileged) {

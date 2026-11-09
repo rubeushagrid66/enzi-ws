@@ -2225,9 +2225,11 @@ export default function AdminDashboard() {
               <select id="user-role" value={userForm.role} onChange={(e) => setUserForm((f) => ({ ...f, role: e.target.value }))} className="input w-full">
                 <option value="FACILITATOR">Facilitator</option>
                 <option value="ADMIN">Admin</option>
-                <option value="Business & Ops">Business &amp; Ops (scores Business &amp; Ops aspects only)</option>
-                <option value="Product">Product (scores Product aspects only)</option>
-                <option value="Tech">Tech (scores Tech aspects only)</option>
+                <option value="Group">Group (scores in their assigned group)</option>
+                <option value="Participant">Participant (scores in their assigned group)</option>
+                <option value="Business & Ops">Business &amp; Ops</option>
+                <option value="Product">Product</option>
+                <option value="Tech">Tech</option>
               </select>
             </div>
             <div>

@@ -157,9 +157,11 @@ export default function ViabilityVoteMatrix({
     votesByAspect[v.aspectId][v.participantId] = v;
   }
 
-  // Participants shown anywhere in this matrix (V/F chips, aspect
-  // rows): the admin / facilitator account is not a scorer and is
-  // never listed.
+  // Participants shown in this matrix (aspect rows): the admin /
+  // facilitator account is not a scorer and is never listed. A login
+  // is identified by its role + group, not by a participant name —
+  // participant names are informational only, so a regular user never
+  // sees any name here, only their own score row.
   const displayParticipants = orderedParticipants.filter(
     (p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR"
   );
@@ -307,12 +309,11 @@ export default function ViabilityVoteMatrix({
             <span>Viability Scoring</span>
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
-            Score your aspects 1–3 in your own group (marked Me). Other
+            Score each aspect 1–3 for your own group (marked Me). Other
             groups are view-only. V = average of your Viability aspect
             scores; F = 4 − average of your Effort aspect scores. Unscored
-            aspects are skipped. Each participant&apos;s V and F (1–3) are
-            shown below for the selected group. Scores and reasons are
-            visible to everyone.
+            aspects are skipped. Scores and reasons are visible to
+            everyone.
             {isAdmin
               ? " You are signed in as Admin — you can edit any participant's score and reason in any group."
               : ""}
@@ -333,47 +334,18 @@ export default function ViabilityVoteMatrix({
 
       {/* Group chips live in the parent (above the detail tabs) and
           scope the whole page — this matrix only shows the group the
-          parent selected. */}
-
-      {/* V/F per participant in the selected group (1–3, no composite).
-          Switching groups shows that group's participants' own V/F. */}
-      {activeGroup && displayParticipants.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-2" aria-label="Viability and Feasibility scores per participant">
-          {displayParticipants.map((p: any) => {
-            const entry = (finding.scores?.participantScores || []).find(
-              (ps: any) => ps.participantId === p.id
-            );
-            return (
-              <span
-                key={p.id}
-                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700"
-              >
-                <span className="font-bold text-slate-900">{p.name}</span>
-                {p.id === meId && (
-                  <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-extrabold text-emerald-800">You</span>
-                )}
-                <span>V {entry?.viability ?? "—"}</span>
-                <span className="text-slate-400">·</span>
-                <span>F {entry?.feasibility ?? "—"}</span>
-              </span>
-            );
-          })}
-        </div>
-      )}
-
-      {activeGroup && displayParticipants.length === 0 && (
-        <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-          No participants in {activeGroup.name} yet — add participants in the
-          Dashboard to see their scores here.
-        </p>
-      )}
+          parent selected. No participant names are shown in this tab:
+          participant names are informational only and a login is
+          identified by its role + group, so the per-participant V/F
+          chips were removed. The group's V/F lives in the summary
+          cards above. */}
 
       {allAspects.length > 0 ? (
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[680px] text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70">
-                <th scope="col" className="py-2.5 px-3 font-bold text-slate-700">Participant</th>
+                <th scope="col" className="py-2.5 px-3 font-bold text-slate-700">{showOnlyMe ? "Your score" : "Participant"}</th>
                 <th scope="col" className="py-2.5 px-3 font-bold text-slate-700 text-center">Score (1–3)</th>
                 <th scope="col" className="py-2.5 px-3 font-bold text-slate-700">Alasan</th>
               </tr>
@@ -439,14 +411,20 @@ export default function ViabilityVoteMatrix({
                           return (
                             <tr key={`${aspect.id}:${p.id}`} className="hover:bg-slate-50/80 transition align-top">
                               <td className="py-2.5 px-3">
-                                <span className="font-bold text-slate-800 text-[13px]">{p.name}</span>
-                                {p.roleTitle && (
-                                  <span className="text-slate-500"> ({p.roleTitle})</span>
-                                )}
-                                {isMe && (
-                                  <span className="ml-1.5 inline-flex rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-extrabold text-emerald-800">
-                                    You
-                                  </span>
+                                {showOnlyMe ? (
+                                  <span className="font-bold text-slate-800 text-[13px]">Your score</span>
+                                ) : (
+                                  <>
+                                    <span className="font-bold text-slate-800 text-[13px]">{p.name}</span>
+                                    {p.roleTitle && (
+                                      <span className="text-slate-500"> ({p.roleTitle})</span>
+                                    )}
+                                    {isMe && (
+                                      <span className="ml-1.5 inline-flex rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-extrabold text-emerald-800">
+                                        You
+                                      </span>
+                                    )}
+                                  </>
                                 )}
                               </td>
                               <td className="py-2.5 px-3 text-center whitespace-nowrap">
