@@ -160,6 +160,13 @@ export default function AdminDashboard() {
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProjectSlug, setSelectedProjectSlug] = useState<string>("");
   const [activeProject, setActiveProject] = useState<any>(null);
+  // True while a project's details are being fetched (initial load or a
+  // switch). The dashboard clears activeProject on switch, so without
+  // this the Groups/Aspects tabs flash "No groups created yet." and the
+  // sidebar badges vanish while the new project loads — which reads as
+  // "switching does nothing". While this is true, show a loading state
+  // instead of the empty state.
+  const [projectLoading, setProjectLoading] = useState(false);
   // The slug whose details were most recently requested. loadProjectDetails
   // is async and several requests can be in flight (switching projects,
   // then saving); only the latest one's response may update activeProject,
@@ -301,6 +308,7 @@ export default function AdminDashboard() {
 
   const loadProjectDetails = async (slug: string) => {
     latestProjectSlugRef.current = slug;
+    setProjectLoading(true);
     try {
       const res = await fetch(`/api/projects/${slug}`);
       if (!res.ok) throw new Error("Failed to load project details");
@@ -310,10 +318,12 @@ export default function AdminDashboard() {
       // newer request's data must win.
       if (latestProjectSlugRef.current === slug) {
         setActiveProject(data.project);
+        setProjectLoading(false);
       }
     } catch (err: any) {
       if (latestProjectSlugRef.current === slug) {
         setError(err.message || "Failed to load project details");
+        setProjectLoading(false);
       }
     }
   };
@@ -1245,6 +1255,7 @@ export default function AdminDashboard() {
         selectedProjectSlug={selectedProjectSlug}
         onSelectProject={handleProjectSelect}
         activeProject={activeProject}
+        projectLoading={projectLoading}
         counts={sidebarCounts}
         isAdmin={isAdmin}
         open={sidebarOpen}
@@ -1668,7 +1679,12 @@ export default function AdminDashboard() {
 
                 <div className={`space-y-4 ${isAdmin ? "border-t border-slate-100 pt-5" : ""}`}>
                   <h3 className="text-sm font-semibold text-slate-900">Active Groups &amp; Participants</h3>
-                  {activeProject?.groups?.length > 0 ? (
+                  {projectLoading && !activeProject ? (
+                    <div className="flex items-center gap-2 py-4 text-sm text-slate-500">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" aria-hidden />
+                      Loading project…
+                    </div>
+                  ) : activeProject?.groups?.length > 0 ? (
                     <div className="max-h-[500px] space-y-4 overflow-y-auto pr-1">
                       {activeProject.groups.map((group: any) => (
                         <div key={group.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
@@ -1745,8 +1761,13 @@ export default function AdminDashboard() {
                 </form>
                 )}
                 <div className="space-y-2 border-t border-slate-100 pt-4">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Active Aspects ({activeProject?.viabilityAspects?.length || 0})</h3>
-                  {activeProject?.viabilityAspects?.map((aspect: any) => (
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Active Aspects ({projectLoading && !activeProject ? "…" : (activeProject?.viabilityAspects?.length || 0)})</h3>
+                  {projectLoading && !activeProject ? (
+                    <div className="flex items-center gap-2 py-2 text-sm text-slate-500">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" aria-hidden />
+                      Loading project…
+                    </div>
+                  ) : activeProject?.viabilityAspects?.map((aspect: any) => (
                     <div key={aspect.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">

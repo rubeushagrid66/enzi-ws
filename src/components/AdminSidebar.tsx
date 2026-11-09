@@ -30,6 +30,7 @@ export default function AdminSidebar({
   selectedProjectSlug,
   onSelectProject,
   activeProject,
+  projectLoading,
   counts,
   isAdmin,
   open,
@@ -42,6 +43,7 @@ export default function AdminSidebar({
   selectedProjectSlug: string;
   onSelectProject: (slug: string) => void;
   activeProject: any;
+  projectLoading: boolean;
   counts: Record<string, number | undefined>;
   isAdmin: boolean;
   open: boolean;
@@ -139,9 +141,9 @@ export default function AdminSidebar({
                               {item.badge}
                             </span>
                           )}
-                          {count !== undefined && (
+                          {(count !== undefined || (projectLoading && (item.id === "groups" || item.id === "aspects"))) && (
                             <span className={`text-xs font-medium tabular-nums ${active ? "text-emerald-700" : "text-slate-400"}`}>
-                              {count}
+                              {count !== undefined ? count : "…"}
                             </span>
                           )}
                         </Link>
