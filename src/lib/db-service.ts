@@ -205,7 +205,7 @@ export const dbService = {
           // the project's own tree; the global rows win below when
           // present, exactly as before.
           supabase.from("parameters_l1").select("*, subCategories:parameters_l2(*, segments:parameters_l3(*))").or(`project_id.is.null,project_id.eq.${project.id}`).order("created_at", { ascending: true }),
-          supabase.from("findings").select("*, parameterValues:finding_parameter_values(*, segment:parameters_l3(*, subCategory:parameters_l2(*))), viabilityVotes:viability_votes(*)").eq("project_id", project.id).order("created_at", { ascending: true }),
+          supabase.from("findings").select("*, viabilityVotes:viability_votes(*)").eq("project_id", project.id).order("created_at", { ascending: true }),
           dbService.getGlobalWeights(),
         ]);
 
@@ -232,7 +232,7 @@ export const dbService = {
         if (assignedIds.length > 0) {
           const { data: assigned } = await supabase
             .from("findings")
-            .select("*, parameterValues:finding_parameter_values(*, segment:parameters_l3(*, subCategory:parameters_l2(*))), viabilityVotes:viability_votes(*)")
+            .select("*, viabilityVotes:viability_votes(*)")
             .in("id", assignedIds)
             .order("created_at", { ascending: true });
           assignedFindings = assigned || [];
@@ -310,18 +310,6 @@ export const dbService = {
           // Group assignment (Step 10): the groups this finding is
           // assigned to; [] when unassigned.
           groupIds: groupMap[f.id] || [],
-          parameterValues: (f.parameterValues || []).map((pv: any) => ({
-            id: pv.id,
-            l3Id: pv.l3_id,
-            value: pv.value,
-            segment: pv.segment
-              ? {
-                  id: pv.segment.id,
-                  name: pv.segment.name,
-                  subCategory: pv.segment.subCategory || {},
-                }
-              : undefined,
-          })),
           viabilityVotes: (f.viabilityVotes || []).map((v: any) => ({
             id: v.id,
             participantId: v.participant_id,
@@ -358,13 +346,6 @@ export const dbService = {
         },
         findings: {
           include: {
-            parameterValues: {
-              include: {
-                segment: {
-                  include: { subCategory: true },
-                },
-              },
-            },
             viabilityVotes: true,
           },
           orderBy: { createdAt: "asc" },

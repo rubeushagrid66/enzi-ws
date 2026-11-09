@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import {
@@ -607,10 +607,18 @@ export default function ProjectResultViewer({
 
   // Auto-refresh when the tab comes back into view, so changes made in
   // the admin dashboard (possibly in another tab) show up without a
-  // manual reload.
+  // manual reload. Throttled to at most once per 30s: without this,
+  // every alt-tab back re-ran the whole project load (all Supabase
+  // queries, no cache), so 15 people switching tabs at once hammered
+  // the database for no new data.
+  const lastFocusRefreshRef = useRef(0);
   useEffect(() => {
     const refresh = () => {
-      if (document.visibilityState === "visible") loadProjectData(true);
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastFocusRefreshRef.current < 30_000) return;
+      lastFocusRefreshRef.current = now;
+      loadProjectData(true);
     };
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", refresh);
