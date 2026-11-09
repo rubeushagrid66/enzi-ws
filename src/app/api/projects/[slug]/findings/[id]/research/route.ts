@@ -58,7 +58,14 @@ export async function PUT(
             ? Number((project as any).surveyN)
             : null,
     };
-    const finding = (project?.findings || []).find((f: any) => f.id === id);
+    // Re-read the finding by ID, not from this slug's project list.
+    // The detail page loads a finding by ID even when it belongs to
+    // the other project (cross-project fallback in the GET route), so
+    // a save from that page must not 404 just because the finding is
+    // not in this slug's findings list. D is still computed against
+    // this slug's project basis N, matching how the page displays it.
+    const found = await dbService.getFindingsByIds([id]);
+    const finding = found[0];
     if (!finding) {
       return NextResponse.json({ error: "Finding not found" }, { status: 404 });
     }
