@@ -73,14 +73,17 @@ export default function FindingDetailView({
   // The selected group's values for this finding. V/F are the average
   // of the group's participants who scored that dimension (1 decimal);
   // a dimension nobody in the group scored is null. D is the finding's
-  // research score — but only when the group is assigned to (or the
-  // finding is open to) this finding; otherwise the group has no value
-  // here at all and every tab shows N/A.
+  // research score — it comes from the research mentions and the
+  // project's basis N, NOT from any group's votes, so it is the same
+  // for every group in this project and is NOT gated by group
+  // assignment (a non-assigned group still sees the D the admin just
+  // saved). Only V/F are group scores, so only they are N/A when the
+  // group is not assigned to (or has not scored) this finding.
   const groupVF = groupAverageScores(
     localFinding.scores?.participantScores,
     groupParticipantIds
   );
-  const groupD = isGroupAssigned ? (localFinding.scores?.desirability ?? null) : null;
+  const groupD = localFinding.scores?.desirability ?? null;
   const groupV = isGroupAssigned ? groupVF.viability : null;
   const groupF = isGroupAssigned ? groupVF.feasibility : null;
   // The quadrant this group lands in on the board (from its D/V/F —
