@@ -8,7 +8,6 @@ export interface PlatformEntry {
   id: string;
   name: string;
   slug: string;
-  findings: number;
   groups: number;
 }
 
@@ -117,8 +116,7 @@ export default function LandingEntry({
                       {project.name}
                     </span>
                     <span className="mt-0.5 block text-xs uppercase tracking-[0.14em] text-neutral-400">
-                      {project.findings} findings &middot; {project.groups}{" "}
-                      groups
+                      {project.groups} groups
                     </span>
                   </span>
                   <ArrowRight

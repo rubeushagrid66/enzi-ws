@@ -16,7 +16,6 @@ export default async function HomePage() {
     id: project.id,
     name: project.name,
     slug: project.slug,
-    findings: project._count?.findings ?? 0,
     groups: project._count?.groups ?? 0,
   }));
 
