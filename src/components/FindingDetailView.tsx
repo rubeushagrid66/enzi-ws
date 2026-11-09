@@ -419,7 +419,7 @@ export default function FindingDetailView({
               <Compass className="hidden sm:block h-4 w-4" />
               <span>Impact vs Effort Matrix</span>
               <span className="badge bg-emerald-100 text-emerald-800">
-                {groupF != null ? `${groupF} / 3` : "N/A"}
+                {groupQuadrant ? QUADRANT_LABEL[groupQuadrant].title : "N/A"}
               </span>
             </button>
           </div>
