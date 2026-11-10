@@ -298,6 +298,17 @@ export const dbService = {
           title: f.title,
           description: f.description,
           tags: typeof f.tags === "string" ? f.tags : JSON.stringify(f.tags || []),
+          // Idea detail fields (same columns as getAllFindings; missing
+          // means not entered yet). The project page's idea popup reads
+          // these — without them it shows only title + description.
+          tujuan: f.tujuan ?? "",
+          scopeTermasuk: f.scope_termasuk ?? "",
+          scopeTidakTermasuk: f.scope_tidak_termasuk ?? "",
+          roleUsers: f.role_users ?? "",
+          stepFeatureScreen: f.step_feature_screen ?? "",
+          apaYangBerubah: f.apa_yang_berubah ?? "",
+          outputKeberhasilan: f.output_keberhasilan ?? "",
+          tujuanBisnis: f.tujuan_bisnis ?? "",
           // Null stays null: an unplaced finding has no feasibility
           // position. The UI may display it at 50/50 as a neutral
           // default, but null is what marks it "not yet scored".
@@ -1186,10 +1197,11 @@ export const dbService = {
 
   /**
    * Copy a finding into a project (or into the pool when targetProjectId
-   * is null). Only the listing is copied — title, description, tags.
-   * Votes, L3 mappings, research mentions and matrix position are NOT
-   * copied: the copy starts Unscored and is scored independently in its
-   * own workshop.
+   * is null). The listing is copied — title, description, tags, and the
+   * 8 idea detail fields (Tujuan, Scope, Role/Users, Step, Apa Yang
+   * Berubah, Output, Tujuan Bisnis). Votes, L3 mappings, research
+   * mentions and matrix position are NOT copied: the copy starts
+   * Unscored and is scored independently in its own workshop.
    */
   async copyFinding(findingId: string, targetProjectId: string | null) {
     const source = await dbService.getFindingById(findingId);
@@ -1204,9 +1216,22 @@ export const dbService = {
     } catch {
       parsed = {};
     }
-    let data: { title: string; description: string; sumber: string[]; fitur: string; platform: string[] };
+    // Idea detail fields — snake_case from Supabase, camelCase from
+    // Prisma; read both so a copy never silently drops them.
+    const s: any = source;
+    const detail = {
+      tujuan: s.tujuan ?? "",
+      scopeTermasuk: s.scope_termasuk ?? s.scopeTermasuk ?? "",
+      scopeTidakTermasuk: s.scope_tidak_termasuk ?? s.scopeTidakTermasuk ?? "",
+      roleUsers: s.role_users ?? s.roleUsers ?? "",
+      stepFeatureScreen: s.step_feature_screen ?? s.stepFeatureScreen ?? "",
+      apaYangBerubah: s.apa_yang_berubah ?? s.apaYangBerubah ?? "",
+      outputKeberhasilan: s.output_keberhasilan ?? s.outputKeberhasilan ?? "",
+      tujuanBisnis: s.tujuan_bisnis ?? s.tujuanBisnis ?? "",
+    };
+    let data: { title: string; description: string; sumber: string[]; fitur: string; platform: string[] } & typeof detail;
     if (Array.isArray(parsed)) {
-      data = { title: source.title, description: source.description || "", sumber: [], fitur: "", platform: [] };
+      data = { title: source.title, description: source.description || "", sumber: [], fitur: "", platform: [], ...detail };
       for (const t of parsed) {
         if (!t || typeof t.value !== "string") continue;
         if (t.category === "Sumber") data.sumber.push(t.value);
@@ -1220,6 +1245,7 @@ export const dbService = {
         sumber: Array.isArray(parsed.sumber) ? parsed.sumber : [],
         fitur: parsed.fitur || "",
         platform: Array.isArray(parsed.platform) ? parsed.platform.map((p: any) => (p === "CMS Portal" ? "CMS" : p)) : [],
+        ...detail,
       };
     }
     // Reuse createFinding (same shape, null feasibility). For a pool
