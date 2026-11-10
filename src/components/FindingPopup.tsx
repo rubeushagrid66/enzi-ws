@@ -65,6 +65,14 @@ export default function FindingPopup({
           ) : (
             <p className="text-sm text-slate-500">No description yet.</p>
           )}
+          {finding.verbatimEvidence && String(finding.verbatimEvidence).trim() !== "" && (
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Verbatim Evidence</p>
+              <blockquote className="mt-2 rounded-xl border-l-4 border-gold-400 bg-gold-50/40 px-4 py-3 text-sm italic leading-relaxed text-slate-700">
+                &ldquo;{finding.verbatimEvidence}&rdquo;
+              </blockquote>
+            </div>
+          )}
           {(finding.subFindings || []).filter((s: any) =>
             (s.fitur && String(s.fitur).trim() !== "") ||
             (s.description && String(s.description).trim() !== "") ||

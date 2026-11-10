@@ -253,6 +253,7 @@ export async function GET(
           description: idea.description || "",
           imageUrl: idea.imageUrl || null,
           categoryId: idea.categoryId ?? null,
+          verbatimEvidence: idea.verbatimEvidence || "",
           subFindings: subMap[idea.id] || [],
           linkedIdeas: linkedIds.map((fid: string) => ({ id: fid, title: poolTitleById.get(fid) || "Untitled" })),
         };

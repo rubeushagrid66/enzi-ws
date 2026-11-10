@@ -720,6 +720,7 @@ export const dbService = {
         sumber: Array.isArray(i.sumber) ? i.sumber : [],
         imageUrl: i.image_url || null,
         categoryId: i.category_id ?? null,
+        verbatimEvidence: i.verbatim_evidence || "",
         findingIds: linkMap[i.id] || [],
         createdAt: i.created_at,
       }));
@@ -745,7 +746,7 @@ export const dbService = {
     }
   },
 
-  async createIdea(data: { title: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null }) {
+  async createIdea(data: { title: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null; verbatimEvidence?: string | null }) {
     if (isSupabaseConfigured && supabase) {
       // image_url is only sent when an image was uploaded — so a
       // create never fails on a production table that doesn't have the
@@ -753,6 +754,7 @@ export const dbService = {
       const row: any = { title: data.title, description: data.description || "", sumber: data.sumber || [] };
       if (data.imageUrl) row.image_url = data.imageUrl;
       if (data.categoryId) row.category_id = data.categoryId;
+      if (data.verbatimEvidence) row.verbatim_evidence = data.verbatimEvidence;
       const { data: idea, error } = await supabase
         .from("ideas")
         .insert(row)
@@ -768,12 +770,17 @@ export const dbService = {
     return { id, title: data.title, description: data.description || "", sumber: data.sumber || [] };
   },
 
-  async updateIdea(id: string, data: { title?: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null }) {
+  async updateIdea(id: string, data: { title?: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null; verbatimEvidence?: string | null }) {
     if (isSupabaseConfigured && supabase) {
       const patch: any = {};
       if (data.title !== undefined) patch.title = data.title;
       if (data.description !== undefined) patch.description = data.description;
       if (data.sumber !== undefined) patch.sumber = data.sumber;
+      // verbatimEvidence undefined = leave it alone; empty string =
+      // clear it; a string = set it. Only sent when the form actually
+      // carries the field, so an edit from an older client never fails
+      // on a production table that doesn't have the column yet.
+      if (data.verbatimEvidence !== undefined) patch.verbatim_evidence = data.verbatimEvidence || null;
       // categoryId undefined = leave it alone; null = clear it; a
       // string = assign it. Only sent when the form actually carries
       // the field, so an edit from an older client never fails on a
@@ -791,6 +798,12 @@ export const dbService = {
       // failing the whole edit.
       if (error && data.imageUrl !== undefined && String((error as any)?.message || "").includes("image_url")) {
         delete patch.image_url;
+        ({ data: idea, error } = await supabase.from("ideas").update(patch).eq("id", id).select().single());
+      }
+      // Same safety net for verbatim_evidence: retry without it
+      // instead of failing the whole edit.
+      if (error && data.verbatimEvidence !== undefined && String((error as any)?.message || "").includes("verbatim_evidence")) {
+        delete patch.verbatim_evidence;
         ({ data: idea, error } = await supabase.from("ideas").update(patch).eq("id", id).select().single());
       }
       if (error) throw error;
@@ -899,13 +912,13 @@ export const dbService = {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase
         .from("idea_findings")
-        .select("idea:ideas(id, title, description, image_url)")
+        .select("idea:ideas(id, title, description, image_url, verbatim_evidence)")
         .eq("finding_id", findingId);
       if (error || !data) return [];
       return (data as any[])
         .map((r: any) => r.idea)
         .filter((i: any) => i && i.id)
-        .map((i: any) => ({ id: i.id, title: i.title, description: i.description || "", imageUrl: i.image_url || null }));
+        .map((i: any) => ({ id: i.id, title: i.title, description: i.description || "", imageUrl: i.image_url || null, verbatimEvidence: i.verbatim_evidence || "" }));
     }
     try {
       const rows = await prisma.$queryRaw<Array<{ id: string; title: string; description: string }>>`

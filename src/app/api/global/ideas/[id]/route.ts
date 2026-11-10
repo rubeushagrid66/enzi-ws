@@ -20,9 +20,9 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { title, description, findingIds, sumber, imageUrl, categoryId } = body;
+    const { title, description, findingIds, sumber, imageUrl, categoryId, verbatimEvidence } = body;
 
-    const idea = await dbService.updateIdea(params.id, { title, description, sumber, imageUrl, categoryId });
+    const idea = await dbService.updateIdea(params.id, { title, description, sumber, imageUrl, categoryId, verbatimEvidence });
     if (Array.isArray(findingIds)) {
       await dbService.setIdeaFindings(params.id, findingIds);
     }

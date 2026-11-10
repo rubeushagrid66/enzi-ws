@@ -281,7 +281,7 @@ export default function AdminDashboard() {
   const [ideas, setIdeas] = useState<any[]>([]);
   const [ideaModalOpen, setIdeaModalOpen] = useState(false);
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
-  const [ideaForm, setIdeaForm] = useState({ title: "", description: "", sumber: [] as string[], imageUrl: null as string | null, categoryId: null as string | null });
+  const [ideaForm, setIdeaForm] = useState({ title: "", description: "", sumber: [] as string[], imageUrl: null as string | null, categoryId: null as string | null, verbatimEvidence: "" });
   // Finding categories (global): admin creates them; a Finding is
   // assigned to at most one. `editingCategory` is the row being
   // renamed inline, or null.
@@ -871,7 +871,7 @@ export default function AdminDashboard() {
   // ideas on its detail page.
   const openCreateIdea = () => {
     setEditingIdeaId(null);
-    setIdeaForm({ title: "", description: "", sumber: [], imageUrl: null, categoryId: null });
+    setIdeaForm({ title: "", description: "", sumber: [], imageUrl: null, categoryId: null, verbatimEvidence: "" });
     setImageError(null);
     setSubFindings([]);
     setOrigSubFindingIds([]);
@@ -883,7 +883,7 @@ export default function AdminDashboard() {
 
   const openEditIdea = async (idea: any) => {
     setEditingIdeaId(idea.id);
-    setIdeaForm({ title: idea.title || "", description: idea.description || "", sumber: Array.isArray(idea.sumber) ? [...idea.sumber] : [], imageUrl: idea.imageUrl || null, categoryId: idea.categoryId ?? null });
+    setIdeaForm({ title: idea.title || "", description: idea.description || "", sumber: Array.isArray(idea.sumber) ? [...idea.sumber] : [], imageUrl: idea.imageUrl || null, categoryId: idea.categoryId ?? null, verbatimEvidence: idea.verbatimEvidence || "" });
     setImageError(null);
     setSubImageError(null);
     setIdeaFindingIds(Array.isArray(idea.findingIds) ? [...idea.findingIds] : []);
@@ -984,7 +984,7 @@ export default function AdminDashboard() {
           setIdeas((rows: any[]) =>
             rows.map((x: any) =>
               x.id === editingIdeaId
-                ? { ...x, title: idea.title ?? x.title, description: idea.description ?? x.description, imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? x.imageUrl ?? null, categoryId: (idea as any).category_id ?? ideaForm.categoryId ?? x.categoryId ?? null, findingIds: ideaFindingIds }
+                ? { ...x, title: idea.title ?? x.title, description: idea.description ?? x.description, imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? x.imageUrl ?? null, categoryId: (idea as any).category_id ?? ideaForm.categoryId ?? x.categoryId ?? null, verbatimEvidence: (idea as any).verbatim_evidence ?? ideaForm.verbatimEvidence ?? x.verbatimEvidence ?? "", findingIds: ideaFindingIds }
                 : x
             )
           );
@@ -1000,7 +1000,7 @@ export default function AdminDashboard() {
           ideaId = idea.id;
           setIdeas((rows: any[]) => [
             ...rows,
-            { id: idea.id, title: idea.title, description: idea.description || "", imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? null, categoryId: (idea as any).category_id ?? ideaForm.categoryId ?? null, createdAt: (idea as any).created_at ?? new Date().toISOString(), findingIds: ideaFindingIds },
+            { id: idea.id, title: idea.title, description: idea.description || "", imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? null, categoryId: (idea as any).category_id ?? ideaForm.categoryId ?? null, verbatimEvidence: (idea as any).verbatim_evidence ?? ideaForm.verbatimEvidence ?? "", createdAt: (idea as any).created_at ?? new Date().toISOString(), findingIds: ideaFindingIds },
           ]);
         }
       }
@@ -2353,6 +2353,11 @@ export default function AdminDashboard() {
                     : "No categories yet — create one in the Findings Category menu first."
                   : "Only an admin can change the category."}
               </p>
+            </div>
+            <div>
+              <label htmlFor="idea-verbatim" className="field-label">Verbatim Evidence</label>
+              <textarea id="idea-verbatim" rows={3} placeholder="Paste the exact quote from the user, word for word..." value={ideaForm.verbatimEvidence} onChange={(e) => setIdeaForm((f) => ({ ...f, verbatimEvidence: e.target.value }))} className="input w-full" />
+              <p className="mt-1 text-xs text-slate-500">The user&apos;s own words, quoted exactly. It shows when someone opens this finding.</p>
             </div>
             <fieldset>
               <legend className="field-label">Image evidence</legend>
