@@ -1505,7 +1505,7 @@ export default function AdminDashboard() {
         {!isAdmin && currentUser && (
           <p className="border-b border-bsi-200 bg-bsi-50 px-4 py-2 text-xs font-medium text-bsi-800 sm:px-6 lg:px-8">
             {isLabelUser
-              ? `You're signed in as ${currentUser.name} (${currentUser.role}) — Groups & Participants and Viability Aspects for your project, view-only.`
+              ? `Anda masuk sebagai ${currentUser.name} (${currentUser.role}). Anda dapat melihat Groups & Participants dan Viability Aspects pada proyek ini, tetapi tidak dapat mengubah data.`
               : `You're signed in as ${currentUser.name} (${currentUser.role}) — you can edit Findings; everything else here is view-only.`}
           </p>
         )}
@@ -1906,7 +1906,7 @@ export default function AdminDashboard() {
             <section aria-labelledby="groups-heading" className="space-y-6">
               <div>
                 <h2 id="groups-heading" className="section-title">Groups &amp; Participants</h2>
-                <p className="section-sub">{isAdmin ? "Create groups, and edit or remove participants. Participants are added by creating a user in Users & Roles and assigning them a group." : "The groups and participants of your project."}</p>
+                <p className="section-sub">{isAdmin ? "Create groups, and edit or remove participants. Participants are added by creating a user in Users & Roles and assigning them a group." : "Daftar kelompok dan peserta yang terlibat dalam proyek ini."}</p>
               </div>
               <div className="card space-y-5 p-5">
                 {isAdmin && (
@@ -1971,7 +1971,7 @@ export default function AdminDashboard() {
               <div className="card space-y-5 p-6">
                 <div>
                   <h2 id="aspects-heading" className="text-base font-semibold text-slate-900">Viability Aspects (Aspek)</h2>
-                  <p className="mt-0.5 text-sm text-slate-600">{isAdmin ? "Define aspects for the participant validation voting matrix, and link each one to the framework its votes feed — Desirability, Viability, or Feasibility." : "The aspects of your project, and the framework each one's votes feed — Desirability, Viability, or Feasibility."}</p>
+                  <p className="mt-0.5 text-sm text-slate-600">{isAdmin ? "Define aspects for the participant validation voting matrix, and link each one to the framework its votes feed — Desirability, Viability, or Feasibility." : "Halaman ini menampilkan daftar aspek yang perlu dinilai dalam proyek, kategori DVF untuk setiap aspek, serta tim yang bertanggung jawab memberikan penilaian."}</p>
                 </div>
                 {isAdmin && (
                 <form onSubmit={handleCreateAspect} className="space-y-3">

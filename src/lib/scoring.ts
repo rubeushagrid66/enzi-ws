@@ -199,15 +199,15 @@ export function calculateDesirabilityFromResearch(
   let formulaExplanation: string;
   if (available.length === 0) {
     formulaExplanation =
-      "No research numbers yet — enter how many users mentioned this finding in Wawancara and/or Survey to score Desirability.";
+      "Belum ada angka riset — masukkan berapa pengguna yang menyebut ide ini dalam Wawancara dan/atau Survei.";
   } else if (available.length === 1) {
     const s = available[0];
     score = s.score;
-    formulaExplanation = `Only one source: D = ${s.source} ${s.score} (${s.mentions} of ${s.total} users, ${s.percent}%).`;
+    formulaExplanation = `Hanya satu sumber: D = ${s.source} ${s.score} (${s.mentions} dari ${s.total} pengguna, ${s.percent}%).`;
   } else {
     const sum = (available[0].score as number) + (available[1].score as number);
     score = Math.ceil(sum / 2);
-    formulaExplanation = `D = round up average of Wawancara ${available[0].score} and Survey ${available[1].score} = (${sum} / 2) → ${score}.`;
+    formulaExplanation = `Rata-rata skor Wawancara dan Survei, dibulatkan ke atas: (${available[0].score} + ${available[1].score}) / 2 = ${score}.`;
   }
   return { score, interview, survey, formulaExplanation, inputs };
 }

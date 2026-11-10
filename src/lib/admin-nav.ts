@@ -33,7 +33,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
   { id: "categories", label: "Findings Category", href: "/dashboard/categories", badge: "Global", group: "Workshop" },
   { id: "weights", label: "Framework & Weighting", href: "/dashboard/framework", badge: "Global", group: "Workshop" },
   { id: "groups", label: "Groups & Participants", href: "/dashboard/groups", group: "Workshop" },
-  { id: "aspects", label: "Viability Aspects", href: "/dashboard/aspects", group: "Workshop" },
+  { id: "aspects", label: "Desirability, Viability, Feasibility (DVF) Aspects", href: "/dashboard/aspects", group: "Workshop" },
   { id: "projects", label: "All Projects", href: "/dashboard/projects", group: "Manage" },
   { id: "users", label: "Users & Roles", href: "/dashboard/user", badge: "Global", group: "Manage" },
 ];

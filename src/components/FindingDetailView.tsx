@@ -241,10 +241,10 @@ export default function FindingDetailView({
 
   // Score summary — the idea's verdict at a glance, shown once in
   // the hero (not repeated inside every tab). DVF is the headline;
-  // D and V are the 1–3 scores; Position is the board quadrant the
+  // D, V and F are the 1–3 scores; Position is the board quadrant the
   // idea lands in (a manual pin wins, same as the board).
   const scoreSummary = (
-    <div className="mt-5 grid auto-rows-fr grid-cols-2 gap-2.5 sm:grid-cols-4">
+    <div className="mt-5 grid auto-rows-fr grid-cols-2 gap-2.5 sm:grid-cols-5">
       <div className="rounded-xl border border-gold-200 bg-gold-50 px-3.5 py-3">
         <div className="text-xs font-bold uppercase tracking-wider text-gold-700">
           DVF Score
@@ -253,7 +253,10 @@ export default function FindingDetailView({
           {groupDVF != null ? groupDVF.toFixed(2) : "N/A"}
         </div>
         <p className="mt-1 text-xs leading-relaxed text-gold-700">
-          Weighted composite
+          Skor gabungan menggunakan bobot (wD: 33%, wV: 33%, wF: 33%)
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-gold-700">
+          Rumus DVF: (wD × D) + (wV × V) + (wF × F)
         </p>
       </div>
 
@@ -272,7 +275,7 @@ export default function FindingDetailView({
           )}
         </div>
         <p className="mt-1 text-xs leading-relaxed text-slate-600">
-          From research mentions
+          Berdasarkan data riset
         </p>
       </div>
 
@@ -291,13 +294,32 @@ export default function FindingDetailView({
           )}
         </div>
         <p className="mt-1 text-xs leading-relaxed text-slate-600">
-          All roles&apos; average
+          Rata-rata skor seluruh kelompok
         </p>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
         <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
-          Position
+          Feasibility
+        </div>
+        <div className="mt-0.5 text-2xl font-bold leading-none text-slate-900">
+          {groupF != null ? (
+            <>
+              {groupF}
+              <span className="text-sm font-medium text-slate-600"> / 3</span>
+            </>
+          ) : (
+            "N/A"
+          )}
+        </div>
+        <p className="mt-1 text-xs leading-relaxed text-slate-600">
+          Rata-rata skor seluruh kelompok
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+        <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
+          Impact vs Effort Matrix Position
         </div>
         <div className="mt-0.5 text-2xl font-bold leading-none text-slate-900">
           {groupQuadrant ? QUADRANT_LABEL[groupQuadrant].title : "N/A"}
@@ -652,10 +674,13 @@ export default function FindingDetailView({
               <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
                 <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
                   <HelpCircle className="h-4 w-4 text-bsi-600" />
-                  <span>Research mentions — how many users mentioned this idea</span>
+                  <span>Jumlah pengguna yang menyebut temuan ini dalam riset</span>
                 </div>
                 <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                  D comes from research numbers only. A mention is a user mentioning this finding in that source. Internal is not counted. A source with no count entered does not score D. Both numbers are typed by hand — the mentions for this finding, and the totals for the whole project (changing a total here updates every finding in this project). The system only does the calculation.
+                  D dihitung hanya berdasarkan angka dari hasil riset. Satu penyebutan berarti satu pengguna menyampaikan temuan ini melalui sumber riset tersebut.
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                  Angka diisi secara manual: jumlah pengguna yang menyebut temuan ini dan total responden dari fitur terkait.
                 </p>
 
                 {/* Wawancara */}
@@ -787,7 +812,7 @@ export default function FindingDetailView({
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                   <p className="text-sm text-slate-600">
                     {previewD != null ? (
-                      <>Resulting D: <span className="font-extrabold text-bsi-700">{previewD} / 3</span> (round up the average of the source scores; a single source stands alone)</>
+                      <>Hasil D: <span className="font-extrabold text-bsi-700">{previewD} / 3</span></>
                     ) : (
                       "Enter a count for Wawancara and/or Survey to score Desirability."
                     )}
@@ -813,9 +838,9 @@ export default function FindingDetailView({
 
               {/* How D is built */}
               <div role="note" className="rounded-xl border border-bsi-200 bg-bsi-50 p-4 text-sm text-bsi-800">
-                <span className="font-bold">How this score is built: </span>
+                <span className="font-bold">Perhitungan D: </span>
                 {desirability.formulaExplanation ||
-                  "No research numbers yet \u2014 enter how many users mentioned this idea in Wawancara and/or Survey."}
+                  "Belum ada angka riset — masukkan berapa pengguna yang menyebut ide ini dalam Wawancara dan/atau Survei."}
               </div>
             </div>
           )}
@@ -857,9 +882,14 @@ export default function FindingDetailView({
       </section>
 
       {/* Footer note */}
-      <p className="px-1 text-sm leading-relaxed text-slate-600">
-        D, V and F are all on the 1–3 scale. D = research mentions (Wawancara + Survey, rounded-up average); V = average of your Viability aspect scores; F = 4 − average of your Effort aspect scores. There is no composite score.
-      </p>
+      <div className="px-1 text-sm leading-relaxed text-slate-600">
+        <p>Semua skor D, V, dan F menggunakan skala 1–3.</p>
+        <ul className="mt-1 list-disc pl-5">
+          <li>D (Desirability): Berdasarkan jumlah penyebutan dalam riset (Wawancara dan Survei), dengan rata-rata dibulatkan ke atas.</li>
+          <li>V (Viability): Rata-rata skor dari seluruh aspek Viability yang dinilai kelompok Anda.</li>
+          <li>F (Feasibility): 4 dikurangi rata-rata skor dari seluruh aspek Effort yang dinilai kelompok Anda.</li>
+        </ul>
+      </div>
 
       {/* ── Related-finding popup: the same modal the Findings tab
           shows, over this detail page. A linked idea goes to that

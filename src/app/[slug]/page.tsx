@@ -258,9 +258,14 @@ function GroupsView({
     <div className="space-y-6">
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">Groups</h2>
-        <p className="mt-0.5 text-xs text-slate-500">
-          Each group is a label team — Product, Tech, or Business &amp; Ops — and scores every idea in the project on its own label&apos;s aspects. Open a group to see its ideas.
-        </p>
+        <div className="mt-0.5 space-y-1 text-xs text-slate-500">
+          <p>
+            Setiap kelompok mewakili satu fungsi: Business &amp; Ops, Tech, atau Product. Setiap kelompok bertugas menilai semua ide berdasarkan aspek yang menjadi tanggung jawabnya. Pilih kelompok Anda untuk melihat daftar ide yang perlu dinilai.
+          </p>
+          <p>
+            <span className="font-semibold">Catatan:</span> Anda dapat melihat hasil penilaian dari kelompok lain, tetapi hanya dapat memberikan atau mengubah nilai untuk kelompok Anda sendiri.
+          </p>
+        </div>
       </div>
       {groups.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -364,8 +369,9 @@ function GroupsView({
 
 /** Roadmap — all scored findings, globally across every group in this
  *  project, organised by time horizon from their quadrant:
- *  Jangka Pendek = Quick Wins only, Jangka Menengah = Fill-ins only,
- *  Jangka Panjang = Big Bets only. Avoid is deliberately not on the
+ *  Jangka Pendek = Quick Wins only, Jangka Menengah = Fill-ins plus
+ *  Big Bets whose Effort is below 2.5, Jangka Panjang = Big Bets
+ *  whose Effort is 2.5 or above. Avoid is deliberately not on the
  *  roadmap. A finding appears under each group that places it in that
  *  quadrant, so a finding in different quadrants for different groups
  *  shows in each matching horizon. Cards show only the idea title and
@@ -395,6 +401,23 @@ function RoadmapView({
     { key: "BIG_BETS", horizon: "Jangka Panjang", subtitle: "High impact, high effort. Plan these for later.", banner: "bg-bsi-900" },
   ];
 
+  // A finding's roadmap horizon (null = not on the roadmap). Quick
+  // Wins go to Jangka Pendek and Fill-ins to Jangka Menengah; a Big
+  // Bet splits on Effort (the average Effort aspect score = 4 − F):
+  // below 2.5 it fits Jangka Menengah, 2.5 or above (or F unscored)
+  // it stays in Jangka Panjang. Avoid is never on the roadmap.
+  const horizonForFinding = (finding: any): "QUICK_WINS" | "FILL_INS" | "BIG_BETS" | null => {
+    const quadrant = overallQuadrantFor(finding, groups, meId ? [meId] : []);
+    if (quadrant === "QUICK_WINS") return "QUICK_WINS";
+    if (quadrant === "FILL_INS") return "FILL_INS";
+    if (quadrant === "BIG_BETS") {
+      const { f } = overallScoresFor(finding, groups, meId ? [meId] : []);
+      const effort = f != null ? 4 - f : null;
+      return effort != null && effort < 2.5 ? "FILL_INS" : "BIG_BETS";
+    }
+    return null;
+  };
+
   // For each horizon quadrant, the findings placed there — ordered by
   // the idea's overall DVF score, highest first. Ideas are assigned
   // to roles, not groups, so each idea has ONE overall position (all
@@ -402,7 +425,7 @@ function RoadmapView({
   const itemsByHorizon = HORIZONS.map((h) => {
     const items: { finding: any; dvf: number | null }[] = [];
     for (const finding of findings) {
-      if (overallQuadrantFor(finding, groups, meId ? [meId] : []) !== h.key) continue;
+      if (horizonForFinding(finding) !== h.key) continue;
       const { d, v, f } = overallScoresFor(finding, groups, meId ? [meId] : []);
       const dvf = calculateDVFScore(d, v, f, weights ?? EQUAL_THIRDS);
       items.push({ finding, dvf });
@@ -415,9 +438,14 @@ function RoadmapView({
     <div className="space-y-6">
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">Roadmap</h2>
-        <p className="mt-0.5 text-xs text-slate-500">
-          All scored findings, across every group, placed on the timeline by their quadrant.
-        </p>
+        <div className="mt-0.5 space-y-1 text-xs text-slate-500">
+          <p>
+            Semua temuan yang sudah dinilai oleh seluruh kelompok dikelompokkan berdasarkan kuadrannya, kemudian disusun menjadi roadmap jangka pendek, menengah, dan panjang.
+          </p>
+          <p>
+            Urutan pengerjaan: Dalam setiap jangka waktu, inisiatif dengan skor DVF tertinggi dikerjakan lebih dulu.
+          </p>
+        </div>
       </div>
       {/* Three horizon columns side by side on tablet/desktop, stacked
           on mobile. Each column is headed by a colored banner (teal /

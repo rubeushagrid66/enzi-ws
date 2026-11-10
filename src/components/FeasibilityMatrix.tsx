@@ -373,16 +373,19 @@ export default function FeasibilityMatrix({
 
       {/* 2x2 Matrix Canvas */}
       <div className="relative">
-        {/* Y-Axis Label (Impact) — hidden on phones, where it crowds
-            the board's left edge. */}
-        <div className="absolute -left-6 top-1/2 -translate-y-1/2 -rotate-90 text-xs font-bold uppercase tracking-widest text-slate-500 select-none hidden sm:block">
-          Impact (Low → High)
+        {/* Y-Axis Labels (Impact) — hidden on phones, where they crowd
+            the board's left edge. Top = high impact, bottom = low. */}
+        <div className="absolute -left-6 top-[15%] -translate-y-1/2 -rotate-90 text-xs font-bold uppercase tracking-widest text-slate-500 select-none hidden sm:block">
+          Impact Tinggi
+        </div>
+        <div className="absolute -left-6 top-[85%] -translate-y-1/2 -rotate-90 text-xs font-bold uppercase tracking-widest text-slate-500 select-none hidden sm:block">
+          Impact Rendah
         </div>
 
         {/* X-Axis Label (Effort) — short form on phones. */}
         <div className="text-center text-xs font-bold uppercase tracking-widest text-slate-500 select-none pb-1">
-          <span className="sm:hidden">← Harder ———— Easier →</span>
-          <span className="hidden sm:inline">← High Effort (Harder) —————— Low Effort (Easier) →</span>
+          <span className="sm:hidden">← Tinggi ———— Rendah →</span>
+          <span className="hidden sm:inline">← Effort Tinggi —————— Effort Rendah →</span>
         </div>
 
         <div
@@ -539,6 +542,25 @@ export default function FeasibilityMatrix({
             <div className="h-2.5 w-2.5 rounded-full bg-rose-500" />
             <span>Avoid (Low Impact, High Effort)</span>
           </div>
+        </div>
+
+        {/* How the board is read */}
+        <div role="note" className="mt-4 rounded-xl border border-bsi-200 bg-bsi-50 p-4 text-sm text-bsi-800">
+          <p>Impact = Rata-rata D dan V.</p>
+          <p className="mt-1">Effort = 4 dikurangi rata-rata skor empat aspek Effort = Nilai F.</p>
+          <p className="mt-1">Batas kuadran matrix ada di skor 2,0. Artinya, skor 2,0 ke atas masuk kategori tinggi.</p>
+        </div>
+
+        {/* Roadmap placement rules */}
+        <div role="note" className="mt-3 rounded-xl border border-bsi-200 bg-bsi-50 p-4 text-sm text-bsi-800">
+          <p className="font-bold">Aturan Penempatan pada Roadmap:</p>
+          <ul className="mt-1 list-disc pl-5">
+            <li>Quick Wins: Masuk jangka pendek.</li>
+            <li>Big Bets: Masuk jangka menengah jika Effort di bawah 2,5, atau jangka panjang jika Effort 2,5 ke atas.</li>
+            <li>Fill-ins: Dikerjakan jika masih ada kapasitas.</li>
+            <li>Avoid: Tidak masuk roadmap. Tetap dicatat untuk ditinjau kembali.</li>
+          </ul>
+          <p className="mt-2">Urutan pengerjaan: Dalam setiap jangka waktu, inisiatif dengan skor tertinggi dikerjakan lebih dulu</p>
         </div>
       </div>
     </div>

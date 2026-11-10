@@ -396,26 +396,45 @@ export default function ViabilityVoteMatrix({
     );
   };
 
+  // Summary scores for the whole finding (all roles combined), shown
+  // under each framework group — same style as the Desirability
+  // "Perhitungan D" note. V = average of the Viability aspects'
+  // overall averages; F = 4 − average of the Feasibility (Effort)
+  // aspects' overall averages. Null when no aspect in the group has
+  // a score yet.
+  const frameworkSummary = (fw: string): { avgs: number[]; avg: number } | null => {
+    const aspects = allAspects.filter((a: any) => normalizeFramework(a.framework) === fw);
+    const avgs = aspects
+      .map((a: any) => groupAspectAverage(a.id))
+      .filter((x: number | null): x is number => x != null);
+    if (avgs.length === 0) return null;
+    return { avgs, avg: Number((avgs.reduce((s: number, x: number) => s + x, 0) / avgs.length).toFixed(1)) };
+  };
+  const viabilitySummary = frameworkSummary("Viability");
+  const feasibilitySummary = frameworkSummary("Feasibility");
+  const fScore = feasibilitySummary != null ? Number((4 - feasibilitySummary.avg).toFixed(1)) : null;
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
       <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-slate-200">
         <div>
           <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
             <Users2 className="h-4 w-4 text-bsi-600" />
-            <span>Viability Scoring</span>
+            <span>Viability &amp; Feasibility Scoring</span>
           </h3>
-          <p className="text-sm leading-relaxed text-slate-600 mt-0.5">
-            Score each aspect 1–3 for your own group (marked Me). Other
-            groups are view-only. V = average of your Viability aspect
-            scores; F = 4 − average of your Effort aspect scores. Unscored
-            aspects are skipped. Scores and reasons are visible to
-            everyone.
-            {isAdmin
-              ? " You are signed in as Admin — you score each aspect as yourself, in any group."
-              : ""}
-            {!currentUser ? " Sign in to score." : ""}
-            {meFailed ? " Your voter profile could not be resolved — read-only for now." : ""}
-          </p>
+          <div className="text-sm leading-relaxed text-slate-600 mt-0.5 space-y-1">
+            <p>
+              Beri skor 1-3 pada setiap aspek untuk kelompok Anda sendiri (ditandai dengan label &quot;Me&quot;). Anda hanya bisa melihat hasil penilaian kelompok lain, tanpa mengubah atau memberikan skor.
+            </p>
+            <p>
+              V dihitung dari rata-rata skor seluruh aspek Viability, sedangkan F dihitung dari 4 dikurangi rata-rata skor seluruh aspek Effort. Skor dan alasan penilaian dapat dilihat oleh semua kelompok.
+              {isAdmin
+                ? " You are signed in as Admin — you score each aspect as yourself, in any group."
+                : ""}
+              {!currentUser ? " Sign in to score." : ""}
+              {meFailed ? " Your voter profile could not be resolved — read-only for now." : ""}
+            </p>
+          </div>
         </div>
         {Object.values(saving).some(Boolean) && (
           <span className="text-xs text-bsi-600 font-semibold animate-pulse">Saving…</span>
@@ -601,6 +620,30 @@ export default function ViabilityVoteMatrix({
                       </React.Fragment>
                     );
                   })}
+                  {g.framework === "Viability" && (
+                    <tr>
+                      <td colSpan={3} className="px-3 py-3">
+                        <div role="note" className="rounded-xl border border-bsi-200 bg-bsi-50 p-4 text-sm text-bsi-800">
+                          <span className="font-bold">Skor V: {viabilitySummary != null ? `${viabilitySummary.avg} / 3` : "N/A"}</span>
+                          {viabilitySummary != null && (
+                            <> Perhitungan V: Rata-rata skor dari seluruh aspek Viability: ({viabilitySummary.avgs.join(" + ")}) / {viabilitySummary.avgs.length} = {viabilitySummary.avg}</>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  {g.framework === "Feasibility" && (
+                    <tr>
+                      <td colSpan={3} className="px-3 py-3">
+                        <div role="note" className="rounded-xl border border-bsi-200 bg-bsi-50 p-4 text-sm text-bsi-800">
+                          <span className="font-bold">Skor F: {fScore != null ? `${fScore} / 3` : "N/A"}</span>
+                          {feasibilitySummary != null && fScore != null && (
+                            <> Perhitungan F: 4 dikurangi rata-rata skor dari seluruh aspek Effort: 4 - [(({feasibilitySummary.avgs.join(" + ")}) / {feasibilitySummary.avgs.length})] = {fScore}</>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </React.Fragment>
               ))}
             </tbody>
