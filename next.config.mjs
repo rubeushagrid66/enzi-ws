@@ -2,11 +2,19 @@
 const nextConfig = {
   // The finding detail page moved from /[slug]/findings/[id] to
   // /[slug]/ideas/[id] (it is an Idea Detail page now). Keep the old
-  // URL working with a permanent redirect.
+  // URL working with a permanent redirect — but ONLY for real ids
+  // (UUIDs and short hex ids). A title slug (/{slug}/findings/{title})
+  // is a finding popup URL now and must NOT redirect; it is served
+  // by the [slug]/[...path] catch-all instead.
   async redirects() {
     return [
       {
-        source: "/:slug/findings/:id",
+        source: "/:slug/findings/:id([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})",
+        destination: "/:slug/ideas/:id",
+        permanent: true,
+      },
+      {
+        source: "/:slug/findings/:id([0-9a-f]{8})",
         destination: "/:slug/ideas/:id",
         permanent: true,
       },
