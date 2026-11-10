@@ -25,8 +25,11 @@ export async function PUT(
       scopeTermasuk: body.scopeTermasuk,
       scopeTidakTermasuk: body.scopeTidakTermasuk,
       roleUsers: body.roleUsers,
+      roleUsersTidakTermasuk: body.roleUsersTidakTermasuk,
       stepFeatureScreen: body.stepFeatureScreen,
+      stepTidakTermasuk: body.stepTidakTermasuk,
       apaYangBerubah: body.apaYangBerubah,
+      apaYangBerubahTidakTermasuk: body.apaYangBerubahTidakTermasuk,
       outputKeberhasilan: body.outputKeberhasilan,
       tujuanBisnis: body.tujuanBisnis,
     });

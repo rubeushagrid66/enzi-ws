@@ -1134,49 +1134,48 @@ export default function ProjectResultViewer({
                   <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.tujuan}</p>
                 </section>
               )}
-              {((ideaDetail.scopeTermasuk && String(ideaDetail.scopeTermasuk).trim() !== "") ||
-                (ideaDetail.scopeTidakTermasuk && String(ideaDetail.scopeTidakTermasuk).trim() !== "")) && (
-                <section>
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Scope</p>
-                  <div className="mt-2 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-                      <p className="text-xs font-bold text-slate-500">Termasuk</p>
-                      <p className="mt-1 text-sm leading-relaxed text-slate-700">
-                        {ideaDetail.scopeTermasuk && String(ideaDetail.scopeTermasuk).trim() !== "" ? ideaDetail.scopeTermasuk : "—"}
-                      </p>
+              {(() => {
+                // Scope table — one row per aspect (Siapa, Di mana, Apa
+                // yang berubah), one column per side (Termasuk / Tidak
+                // Termasuk). A row shows when either side has a value;
+                // an empty side reads "—". There is no scope description
+                // row: the scope is expressed through these three rows.
+                const has = (v: any) => v && String(v).trim() !== "";
+                const rows = [
+                  { label: "Siapa", sub: "Peran atau pengguna", a: ideaDetail.roleUsers, b: ideaDetail.roleUsersTidakTermasuk },
+                  { label: "Di mana", sub: "Langkah, fitur, layar", a: ideaDetail.stepFeatureScreen, b: ideaDetail.stepTidakTermasuk },
+                  { label: "Apa yang berubah", sub: "Tampilan, alur, sistem", a: ideaDetail.apaYangBerubah, b: ideaDetail.apaYangBerubahTidakTermasuk },
+                ].filter((r) => has(r.a) || has(r.b));
+                if (rows.length === 0) return null;
+                return (
+                  <section>
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Scope</p>
+                    <div className="mt-2 overflow-hidden rounded-xl border border-slate-200">
+                      <div className="hidden grid-cols-[140px_1fr_1fr] bg-slate-50 sm:grid">
+                        <div className="px-3 py-2" />
+                        <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-emerald-700">Termasuk</div>
+                        <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-amber-700">Tidak Termasuk</div>
+                      </div>
+                      {rows.map((r) => (
+                        <div key={r.label} className="grid grid-cols-1 gap-1 border-t border-slate-100 px-3 py-3 sm:grid-cols-[140px_1fr_1fr] sm:gap-0 sm:px-0 sm:py-0">
+                          <div className="sm:px-3 sm:py-3">
+                            <p className="text-sm font-bold text-slate-800">{r.label}</p>
+                            <p className="text-xs text-slate-400">{r.sub}</p>
+                          </div>
+                          <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
+                            <span className="mb-0.5 block text-xs font-semibold text-emerald-700 sm:hidden">Termasuk</span>
+                            <p className="text-sm leading-relaxed text-slate-700">{has(r.a) ? r.a : "—"}</p>
+                          </div>
+                          <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
+                            <span className="mb-0.5 block text-xs font-semibold text-amber-700 sm:hidden">Tidak Termasuk</span>
+                            <p className="text-sm leading-relaxed text-slate-700">{has(r.b) ? r.b : "—"}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-                      <p className="text-xs font-bold text-slate-500">Tidak Termasuk</p>
-                      <p className="mt-1 text-sm leading-relaxed text-slate-700">
-                        {ideaDetail.scopeTidakTermasuk && String(ideaDetail.scopeTidakTermasuk).trim() !== "" ? ideaDetail.scopeTidakTermasuk : "—"}
-                      </p>
-                    </div>
-                  </div>
-                </section>
-              )}
-              {((ideaDetail.roleUsers && String(ideaDetail.roleUsers).trim() !== "") ||
-                (ideaDetail.stepFeatureScreen && String(ideaDetail.stepFeatureScreen).trim() !== "")) && (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {ideaDetail.roleUsers && String(ideaDetail.roleUsers).trim() !== "" && (
-                    <section>
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Role / Users</p>
-                      <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.roleUsers}</p>
-                    </section>
-                  )}
-                  {ideaDetail.stepFeatureScreen && String(ideaDetail.stepFeatureScreen).trim() !== "" && (
-                    <section>
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Step / Feature / Screen</p>
-                      <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.stepFeatureScreen}</p>
-                    </section>
-                  )}
-                </div>
-              )}
-              {ideaDetail.apaYangBerubah && String(ideaDetail.apaYangBerubah).trim() !== "" && (
-                <section>
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Apa Yang Berubah</p>
-                  <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.apaYangBerubah}</p>
-                </section>
-              )}
+                  </section>
+                );
+              })()}
               {ideaDetail.outputKeberhasilan && String(ideaDetail.outputKeberhasilan).trim() !== "" && (
                 <section>
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Output Keberhasilan</p>

@@ -264,7 +264,7 @@ export default function AdminDashboard() {
   const [editingFindingId, setEditingFindingId] = useState<string | null>(null);
   // Where a new finding goes: the shared pool, or the selected project.
   const [findingTarget, setFindingTarget] = useState<"pool" | "project">("pool");
-  const [findingForm, setFindingForm] = useState({ title: "", description: "", sumber: [] as string[], fitur: "", platform: [] as string[], tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", stepFeatureScreen: "", apaYangBerubah: "", outputKeberhasilan: "", tujuanBisnis: "" });
+  const [findingForm, setFindingForm] = useState({ title: "", description: "", sumber: [] as string[], fitur: "", platform: [] as string[], tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", roleUsersTidakTermasuk: "", stepFeatureScreen: "", stepTidakTermasuk: "", apaYangBerubah: "", apaYangBerubahTidakTermasuk: "", outputKeberhasilan: "", tujuanBisnis: "" });
   // Finding ids (the linked "Findings" tab items) ticked for this pool
   // idea in its modal — the reverse of an idea's Linked Ideas list.
   const [findingIdeaIds, setFindingIdeaIds] = useState<string[]>([]);
@@ -640,7 +640,7 @@ export default function AdminDashboard() {
   const openCreateFinding = () => {
     setEditingFindingId(null);
     setFindingTarget("pool");
-    setFindingForm({ title: "", description: "", sumber: [], fitur: "", platform: [], tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", stepFeatureScreen: "", apaYangBerubah: "", outputKeberhasilan: "", tujuanBisnis: "" });
+    setFindingForm({ title: "", description: "", sumber: [], fitur: "", platform: [], tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", roleUsersTidakTermasuk: "", stepFeatureScreen: "", stepTidakTermasuk: "", apaYangBerubah: "", apaYangBerubahTidakTermasuk: "", outputKeberhasilan: "", tujuanBisnis: "" });
     setFindingIdeaIds([]);
     setFindingIdeaSearch("");
     setFindingModalOpen(true);
@@ -660,8 +660,11 @@ export default function AdminDashboard() {
       scopeTermasuk: f.scopeTermasuk || "",
       scopeTidakTermasuk: f.scopeTidakTermasuk || "",
       roleUsers: f.roleUsers || "",
+      roleUsersTidakTermasuk: f.roleUsersTidakTermasuk || "",
       stepFeatureScreen: f.stepFeatureScreen || "",
+      stepTidakTermasuk: f.stepTidakTermasuk || "",
       apaYangBerubah: f.apaYangBerubah || "",
+      apaYangBerubahTidakTermasuk: f.apaYangBerubahTidakTermasuk || "",
       outputKeberhasilan: f.outputKeberhasilan || "",
       tujuanBisnis: f.tujuanBisnis || "",
     });
@@ -729,8 +732,11 @@ export default function AdminDashboard() {
                     scopeTermasuk: f.scope_termasuk ?? x.scopeTermasuk ?? "",
                     scopeTidakTermasuk: f.scope_tidak_termasuk ?? x.scopeTidakTermasuk ?? "",
                     roleUsers: f.role_users ?? x.roleUsers ?? "",
+                    roleUsersTidakTermasuk: f.role_users_tidak_termasuk ?? x.roleUsersTidakTermasuk ?? "",
                     stepFeatureScreen: f.step_feature_screen ?? x.stepFeatureScreen ?? "",
+                    stepTidakTermasuk: f.step_feature_screen_tidak_termasuk ?? x.stepTidakTermasuk ?? "",
                     apaYangBerubah: f.apa_yang_berubah ?? x.apaYangBerubah ?? "",
+                    apaYangBerubahTidakTermasuk: f.apa_yang_berubah_tidak_termasuk ?? x.apaYangBerubahTidakTermasuk ?? "",
                     outputKeberhasilan: f.output_keberhasilan ?? x.outputKeberhasilan ?? "",
                     tujuanBisnis: f.tujuan_bisnis ?? x.tujuanBisnis ?? "",
                   }
@@ -758,8 +764,11 @@ export default function AdminDashboard() {
               scopeTermasuk: f.scope_termasuk ?? "",
               scopeTidakTermasuk: f.scope_tidak_termasuk ?? "",
               roleUsers: f.role_users ?? "",
+              roleUsersTidakTermasuk: f.role_users_tidak_termasuk ?? "",
               stepFeatureScreen: f.step_feature_screen ?? "",
+              stepTidakTermasuk: f.step_feature_screen_tidak_termasuk ?? "",
               apaYangBerubah: f.apa_yang_berubah ?? "",
+              apaYangBerubahTidakTermasuk: f.apa_yang_berubah_tidak_termasuk ?? "",
               outputKeberhasilan: f.output_keberhasilan ?? "",
               tujuanBisnis: f.tujuan_bisnis ?? "",
               feasibilityX: null,
@@ -792,8 +801,11 @@ export default function AdminDashboard() {
               scopeTermasuk: f.scope_termasuk ?? "",
               scopeTidakTermasuk: f.scope_tidak_termasuk ?? "",
               roleUsers: f.role_users ?? "",
+              roleUsersTidakTermasuk: f.role_users_tidak_termasuk ?? "",
               stepFeatureScreen: f.step_feature_screen ?? "",
+              stepTidakTermasuk: f.step_feature_screen_tidak_termasuk ?? "",
               apaYangBerubah: f.apa_yang_berubah ?? "",
+              apaYangBerubahTidakTermasuk: f.apa_yang_berubah_tidak_termasuk ?? "",
               outputKeberhasilan: f.output_keberhasilan ?? "",
               tujuanBisnis: f.tujuan_bisnis ?? "",
               feasibilityX: null,
@@ -2174,33 +2186,61 @@ export default function AdminDashboard() {
               <label htmlFor="finding-tujuan" className="field-label">Tujuan</label>
               <textarea id="finding-tujuan" rows={2} placeholder="What is this idea trying to achieve?" value={findingForm.tujuan} onChange={(e) => setFindingForm((f) => ({ ...f, tujuan: e.target.value }))} className="input w-full" />
             </div>
-            <fieldset className="rounded-xl border border-slate-200 p-3">
+            {/* Scope table — Termasuk and Tidak Termasuk are the two
+                columns; each has its own Siapa (role), Di mana (step)
+                and Apa yang berubah. There is no scope description box:
+                the scope is expressed through these three rows. On
+                phones the columns stack under each row label. */}
+            <fieldset className="overflow-hidden rounded-xl border border-slate-200">
               <legend className="field-label px-1">Scope</legend>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="finding-scope-termasuk" className="mb-1 block text-xs font-semibold text-slate-600">Termasuk <span className="font-normal text-slate-400">(optional)</span></label>
-                  <textarea id="finding-scope-termasuk" rows={2} placeholder="What is in scope..." value={findingForm.scopeTermasuk} onChange={(e) => setFindingForm((f) => ({ ...f, scopeTermasuk: e.target.value }))} className="input w-full" />
+              <div className="hidden grid-cols-[150px_1fr_1fr] bg-slate-50 sm:grid">
+                <div className="px-3 py-2" />
+                <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-emerald-700">Termasuk</div>
+                <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-amber-700">Tidak Termasuk</div>
+              </div>
+              <div className="grid grid-cols-1 gap-2 border-t border-slate-100 px-3 py-3 first:border-t-0 sm:grid-cols-[150px_1fr_1fr] sm:gap-0 sm:px-0 sm:py-0">
+                <div className="sm:px-3 sm:py-3">
+                  <p className="text-sm font-bold text-slate-800">Siapa</p>
+                  <p className="text-xs text-slate-400">Peran atau pengguna</p>
                 </div>
-                <div>
-                  <label htmlFor="finding-scope-tidak-termasuk" className="mb-1 block text-xs font-semibold text-slate-600">Tidak Termasuk <span className="font-normal text-slate-400">(optional)</span></label>
-                  <textarea id="finding-scope-tidak-termasuk" rows={2} placeholder="What is out of scope..." value={findingForm.scopeTidakTermasuk} onChange={(e) => setFindingForm((f) => ({ ...f, scopeTidakTermasuk: e.target.value }))} className="input w-full" />
+                <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
+                  <span className="mb-1 block text-xs font-semibold text-emerald-700 sm:hidden">Termasuk</span>
+                  <input id="finding-role-users" type="text" placeholder="e.g. Semua pelanggan" value={findingForm.roleUsers} onChange={(e) => setFindingForm((f) => ({ ...f, roleUsers: e.target.value }))} className="input w-full" />
+                </div>
+                <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
+                  <span className="mb-1 block text-xs font-semibold text-amber-700 sm:hidden">Tidak Termasuk</span>
+                  <input id="finding-role-users-tidak-termasuk" type="text" placeholder="e.g. Admin" value={findingForm.roleUsersTidakTermasuk} onChange={(e) => setFindingForm((f) => ({ ...f, roleUsersTidakTermasuk: e.target.value }))} className="input w-full" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-2 border-t border-slate-100 px-3 py-3 sm:grid-cols-[150px_1fr_1fr] sm:gap-0 sm:px-0 sm:py-0">
+                <div className="sm:px-3 sm:py-3">
+                  <p className="text-sm font-bold text-slate-800">Di mana</p>
+                  <p className="text-xs text-slate-400">Langkah, fitur, layar</p>
+                </div>
+                <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
+                  <span className="mb-1 block text-xs font-semibold text-emerald-700 sm:hidden">Termasuk</span>
+                  <input id="finding-step-feature-screen" type="text" placeholder="e.g. Home dan notifikasi aplikasi" value={findingForm.stepFeatureScreen} onChange={(e) => setFindingForm((f) => ({ ...f, stepFeatureScreen: e.target.value }))} className="input w-full" />
+                </div>
+                <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
+                  <span className="mb-1 block text-xs font-semibold text-amber-700 sm:hidden">Tidak Termasuk</span>
+                  <input id="finding-step-tidak-termasuk" type="text" placeholder="e.g. Menu pembayaran" value={findingForm.stepTidakTermasuk} onChange={(e) => setFindingForm((f) => ({ ...f, stepTidakTermasuk: e.target.value }))} className="input w-full" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-2 border-t border-slate-100 px-3 py-3 sm:grid-cols-[150px_1fr_1fr] sm:gap-0 sm:px-0 sm:py-0">
+                <div className="sm:px-3 sm:py-3">
+                  <p className="text-sm font-bold text-slate-800">Apa yang berubah</p>
+                  <p className="text-xs text-slate-400">Tampilan, alur, sistem</p>
+                </div>
+                <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
+                  <span className="mb-1 block text-xs font-semibold text-emerald-700 sm:hidden">Termasuk</span>
+                  <textarea id="finding-apa-yang-berubah" rows={2} placeholder="What changes for the user?" value={findingForm.apaYangBerubah} onChange={(e) => setFindingForm((f) => ({ ...f, apaYangBerubah: e.target.value }))} className="input w-full" />
+                </div>
+                <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
+                  <span className="mb-1 block text-xs font-semibold text-amber-700 sm:hidden">Tidak Termasuk</span>
+                  <textarea id="finding-apa-yang-berubah-tidak-termasuk" rows={2} placeholder="What changes outside scope?" value={findingForm.apaYangBerubahTidakTermasuk} onChange={(e) => setFindingForm((f) => ({ ...f, apaYangBerubahTidakTermasuk: e.target.value }))} className="input w-full" />
                 </div>
               </div>
             </fieldset>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
-                <label htmlFor="finding-role-users" className="field-label">Role / Users</label>
-                <input id="finding-role-users" type="text" placeholder="e.g. Teller, Nasabah" value={findingForm.roleUsers} onChange={(e) => setFindingForm((f) => ({ ...f, roleUsers: e.target.value }))} className="input w-full" />
-              </div>
-              <div>
-                <label htmlFor="finding-step-feature-screen" className="field-label">Step / Feature / Screen</label>
-                <input id="finding-step-feature-screen" type="text" placeholder="e.g. Bulk Payment upload screen" value={findingForm.stepFeatureScreen} onChange={(e) => setFindingForm((f) => ({ ...f, stepFeatureScreen: e.target.value }))} className="input w-full" />
-              </div>
-            </div>
-            <div>
-              <label htmlFor="finding-apa-yang-berubah" className="field-label">Apa Yang Berubah</label>
-              <textarea id="finding-apa-yang-berubah" rows={2} placeholder="What changes for the user?" value={findingForm.apaYangBerubah} onChange={(e) => setFindingForm((f) => ({ ...f, apaYangBerubah: e.target.value }))} className="input w-full" />
-            </div>
             <div>
               <label htmlFor="finding-output-keberhasilan" className="field-label">Output Keberhasilan</label>
               <textarea id="finding-output-keberhasilan" rows={2} placeholder="What does success look like?" value={findingForm.outputKeberhasilan} onChange={(e) => setFindingForm((f) => ({ ...f, outputKeberhasilan: e.target.value }))} className="input w-full" />

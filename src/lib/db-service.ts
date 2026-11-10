@@ -301,12 +301,18 @@ export const dbService = {
           // Idea detail fields (same columns as getAllFindings; missing
           // means not entered yet). The project page's idea popup reads
           // these — without them it shows only title + description.
+          // Role / Step / Apa Yang Berubah are split per Scope side:
+          // the plain field is the Termasuk side, the *_tidak_termasuk
+          // field is the Tidak Termasuk side.
           tujuan: f.tujuan ?? "",
           scopeTermasuk: f.scope_termasuk ?? "",
           scopeTidakTermasuk: f.scope_tidak_termasuk ?? "",
           roleUsers: f.role_users ?? "",
+          roleUsersTidakTermasuk: f.role_users_tidak_termasuk ?? "",
           stepFeatureScreen: f.step_feature_screen ?? "",
+          stepTidakTermasuk: f.step_feature_screen_tidak_termasuk ?? "",
           apaYangBerubah: f.apa_yang_berubah ?? "",
+          apaYangBerubahTidakTermasuk: f.apa_yang_berubah_tidak_termasuk ?? "",
           outputKeberhasilan: f.output_keberhasilan ?? "",
           tujuanBisnis: f.tujuan_bisnis ?? "",
           // Null stays null: an unplaced finding has no feasibility
@@ -511,12 +517,17 @@ export const dbService = {
           createdAt: f.created_at ?? null,
           // Idea detail fields (docs/findings-category-and-idea-fields-
           // sql.md adds the columns; missing means not entered yet).
+          // Role / Step / Apa Yang Berubah are split per Scope side:
+          // the plain field is Termasuk, *_tidak_termasuk is Tidak Termasuk.
           tujuan: f.tujuan ?? "",
           scopeTermasuk: f.scope_termasuk ?? "",
           scopeTidakTermasuk: f.scope_tidak_termasuk ?? "",
           roleUsers: f.role_users ?? "",
+          roleUsersTidakTermasuk: f.role_users_tidak_termasuk ?? "",
           stepFeatureScreen: f.step_feature_screen ?? "",
+          stepTidakTermasuk: f.step_feature_screen_tidak_termasuk ?? "",
           apaYangBerubah: f.apa_yang_berubah ?? "",
+          apaYangBerubahTidakTermasuk: f.apa_yang_berubah_tidak_termasuk ?? "",
           outputKeberhasilan: f.output_keberhasilan ?? "",
           tujuanBisnis: f.tujuan_bisnis ?? "",
           tags: typeof f.tags === "string" ? f.tags : JSON.stringify(f.tags || []),
@@ -1224,8 +1235,11 @@ export const dbService = {
       scopeTermasuk: s.scope_termasuk ?? s.scopeTermasuk ?? "",
       scopeTidakTermasuk: s.scope_tidak_termasuk ?? s.scopeTidakTermasuk ?? "",
       roleUsers: s.role_users ?? s.roleUsers ?? "",
+      roleUsersTidakTermasuk: s.role_users_tidak_termasuk ?? s.roleUsersTidakTermasuk ?? "",
       stepFeatureScreen: s.step_feature_screen ?? s.stepFeatureScreen ?? "",
+      stepTidakTermasuk: s.step_feature_screen_tidak_termasuk ?? s.stepTidakTermasuk ?? "",
       apaYangBerubah: s.apa_yang_berubah ?? s.apaYangBerubah ?? "",
+      apaYangBerubahTidakTermasuk: s.apa_yang_berubah_tidak_termasuk ?? s.apaYangBerubahTidakTermasuk ?? "",
       outputKeberhasilan: s.output_keberhasilan ?? s.outputKeberhasilan ?? "",
       tujuanBisnis: s.tujuan_bisnis ?? s.tujuanBisnis ?? "",
     };
@@ -1832,8 +1846,11 @@ export const dbService = {
     scopeTermasuk?: string;
     scopeTidakTermasuk?: string;
     roleUsers?: string;
+    roleUsersTidakTermasuk?: string;
     stepFeatureScreen?: string;
+    stepTidakTermasuk?: string;
     apaYangBerubah?: string;
+    apaYangBerubahTidakTermasuk?: string;
     outputKeberhasilan?: string;
     tujuanBisnis?: string;
   }) {
@@ -1857,8 +1874,11 @@ export const dbService = {
           scope_termasuk: data.scopeTermasuk || null,
           scope_tidak_termasuk: data.scopeTidakTermasuk || null,
           role_users: data.roleUsers || null,
+          role_users_tidak_termasuk: data.roleUsersTidakTermasuk || null,
           step_feature_screen: data.stepFeatureScreen || null,
+          step_feature_screen_tidak_termasuk: data.stepTidakTermasuk || null,
           apa_yang_berubah: data.apaYangBerubah || null,
+          apa_yang_berubah_tidak_termasuk: data.apaYangBerubahTidakTermasuk || null,
           output_keberhasilan: data.outputKeberhasilan || null,
           tujuan_bisnis: data.tujuanBisnis || null,
           feasibility_x: null,
@@ -1903,8 +1923,11 @@ export const dbService = {
     scopeTermasuk?: string;
     scopeTidakTermasuk?: string;
     roleUsers?: string;
+    roleUsersTidakTermasuk?: string;
     stepFeatureScreen?: string;
+    stepTidakTermasuk?: string;
     apaYangBerubah?: string;
+    apaYangBerubahTidakTermasuk?: string;
     outputKeberhasilan?: string;
     tujuanBisnis?: string;
   }) {
@@ -1924,8 +1947,11 @@ export const dbService = {
           ...(data.scopeTermasuk !== undefined && { scope_termasuk: data.scopeTermasuk || null }),
           ...(data.scopeTidakTermasuk !== undefined && { scope_tidak_termasuk: data.scopeTidakTermasuk || null }),
           ...(data.roleUsers !== undefined && { role_users: data.roleUsers || null }),
+          ...(data.roleUsersTidakTermasuk !== undefined && { role_users_tidak_termasuk: data.roleUsersTidakTermasuk || null }),
           ...(data.stepFeatureScreen !== undefined && { step_feature_screen: data.stepFeatureScreen || null }),
+          ...(data.stepTidakTermasuk !== undefined && { step_feature_screen_tidak_termasuk: data.stepTidakTermasuk || null }),
           ...(data.apaYangBerubah !== undefined && { apa_yang_berubah: data.apaYangBerubah || null }),
+          ...(data.apaYangBerubahTidakTermasuk !== undefined && { apa_yang_berubah_tidak_termasuk: data.apaYangBerubahTidakTermasuk || null }),
           ...(data.outputKeberhasilan !== undefined && { output_keberhasilan: data.outputKeberhasilan || null }),
           ...(data.tujuanBisnis !== undefined && { tujuan_bisnis: data.tujuanBisnis || null }),
           tags: tagsJson,
