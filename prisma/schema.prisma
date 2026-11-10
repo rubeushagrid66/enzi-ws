@@ -98,6 +98,7 @@ model Group {
   id           String        @id @default(cuid())
   projectId    String
   name         String
+  label        String?
   isActive     Boolean       @default(true)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt

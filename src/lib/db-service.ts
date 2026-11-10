@@ -275,6 +275,10 @@ export const dbService = {
         groups: (groupsRes.data || []).map((g: any) => ({
           id: g.id,
           name: g.name,
+          // The label role assigned to this group (Product / Tech /
+          // Business & Ops). The label gate reads it from here, so it
+          // must be included — dropping it silently opens the gate.
+          label: g.label ?? null,
           isActive: g.is_active,
           participants: (g.participants || []).map((p: any) => ({
             id: p.id,
@@ -901,12 +905,13 @@ export const dbService = {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase
         .from("groups")
-        .select("id, name, project_id, projects(id, slug, name)")
+        .select("id, name, label, project_id, projects(id, slug, name)")
         .order("created_at", { ascending: true });
       if (error || !data) return [];
       return (data as any[]).map((g: any) => ({
         id: g.id,
         name: g.name,
+        label: g.label ?? null,
         projectId: g.project_id,
         projectSlug: g.projects?.slug ?? null,
         projectName: g.projects?.name ?? null,
@@ -919,6 +924,7 @@ export const dbService = {
     return rows.map((g: any) => ({
       id: g.id,
       name: g.name,
+      label: (g as any).label ?? null,
       projectId: g.projectId,
       projectSlug: g.project?.slug ?? null,
       projectName: g.project?.name ?? null,
