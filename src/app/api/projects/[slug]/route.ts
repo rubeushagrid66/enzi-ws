@@ -195,6 +195,7 @@ export async function GET(
     // without opening the detail page. One extra read (all ideas +
     // their finding ids), then a local join — no per-finding query.
     let relatedByFinding: Record<string, Array<{ id: string; title: string; description: string; imageUrl: string | null; subFindings: any[] }>> = {};
+    let findingsByCategory: Array<{ categoryId: string | null; categoryName: string; findings: any[] }> = [];
     try {
       const allIdeas = await dbService.getIdeas();
       const subMap = await dbService.getSubFindingsForIdeas(allIdeas.map((i: any) => i.id));
@@ -209,6 +210,43 @@ export async function GET(
           });
         }
       }
+      // Findings tab: every finding linked to one of this project's
+      // ideas, grouped by its category (uncategorised last). A finding
+      // linked to an idea with no Platform tag appears in both
+      // projects — the same rule as the Ideas tab.
+      const projectFindingIds = new Set(findingsWithScores.map((f: any) => f.id));
+      const poolTitleById = new Map(findingsWithScores.map((f: any) => [f.id, f.title]));
+      const categories = await dbService.getFindingCategories().catch(() => []);
+      const categoryNameById = new Map((categories || []).map((c: any) => [c.id, c.name]));
+      const byCategory = new Map<string | null, any[]>();
+      for (const idea of allIdeas) {
+        const linkedIds = (idea.findingIds || []).filter((fid: string) => projectFindingIds.has(fid));
+        if (linkedIds.length === 0) continue;
+        const groupKey = idea.categoryId ?? null;
+        const entry = {
+          id: idea.id,
+          title: idea.title,
+          description: idea.description || "",
+          imageUrl: idea.imageUrl || null,
+          categoryId: idea.categoryId ?? null,
+          subFindings: subMap[idea.id] || [],
+          linkedIdeas: linkedIds.map((fid: string) => ({ id: fid, title: poolTitleById.get(fid) || "Untitled" })),
+        };
+        if (!byCategory.has(groupKey)) byCategory.set(groupKey, []);
+        byCategory.get(groupKey)!.push(entry);
+      }
+      findingsByCategory = Array.from(byCategory.entries())
+        .map(([categoryId, findings]) => ({
+          categoryId,
+          categoryName: categoryId ? (categoryNameById.get(categoryId) || "Uncategorized") : "Uncategorized",
+          findings,
+        }))
+        .sort((a, b) => {
+          // Most findings first; uncategorised always last; ties by name.
+          if ((a.categoryId === null) !== (b.categoryId === null)) return a.categoryId === null ? 1 : -1;
+          if (b.findings.length !== a.findings.length) return b.findings.length - a.findings.length;
+          return a.categoryName.localeCompare(b.categoryName);
+        });
     } catch {
       // Listing still works without the linked findings.
     }
@@ -224,6 +262,7 @@ export async function GET(
         interviewN: researchN.interviewN,
         surveyN: researchN.surveyN,
         findings: findingsWithScores,
+        findingsByCategory,
         weightsMap,
       },
     });
