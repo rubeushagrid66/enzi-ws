@@ -554,6 +554,13 @@ export default function ViabilityVoteMatrix({
                                       </button>
                                     )}
                                   </span>
+                                ) : groupAvg != null ? (
+                                  // Not your role (or not your row): show
+                                  // the role's average for this aspect, so
+                                  // every role can see what each role
+                                  // scored. "Not scored yet" only when
+                                  // nobody scored it.
+                                  <span className="font-bold text-emerald-700">Score {groupAvg}</span>
                                 ) : (
                                   renderVote(vote)
                                 )}
@@ -570,6 +577,8 @@ export default function ViabilityVoteMatrix({
                                     onBlur={() => handleReasonBlur(aspect.id, p.id)}
                                     className="input w-full !py-1.5 !text-xs"
                                   />
+                                ) : groupReasons.length > 0 ? (
+                                  <span className="text-slate-600">{groupReasons.join(" · ")}</span>
                                 ) : (
                                   <span className="text-slate-600">
                                     {vote?.reason || "—"}
