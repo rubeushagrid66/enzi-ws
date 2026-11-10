@@ -364,8 +364,9 @@ function GroupsView({
  *  Jangka Pendek = Quick Wins only, Jangka Menengah = Fill-ins only,
  *  Jangka Panjang = Big Bets only. Avoid is deliberately not on the
  *  roadmap. A finding appears under each group that places it in that
- *  quadrant (with the group named), so a finding in different
- *  quadrants for different groups shows in each matching horizon. */
+ *  quadrant, so a finding in different quadrants for different groups
+ *  shows in each matching horizon. Cards show only the idea title and
+ *  its DVF score — the placing group names are hidden. */
 function RoadmapView({
   project,
   weights,
@@ -437,7 +438,7 @@ function RoadmapView({
           </div>
           {section.items.length > 0 ? (
             <div className="mt-3 space-y-2.5">
-              {section.items.map(({ finding, groups: placing, dvf }) => (
+              {section.items.map(({ finding, dvf }) => (
                 <button
                   key={finding.id + section.key}
                   type="button"
@@ -447,13 +448,6 @@ function RoadmapView({
                   <span className="min-w-0">
                     <span className="block text-sm font-semibold text-slate-900 group-hover:text-emerald-700">
                       {finding.title}
-                    </span>
-                    <span className="mt-1.5 flex flex-wrap gap-1.5">
-                      {placing.map((g: any) => (
-                        <span key={g.id} className="rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
-                          {g.name}
-                        </span>
-                      ))}
                     </span>
                   </span>
                   <span className="flex shrink-0 items-center gap-2">
