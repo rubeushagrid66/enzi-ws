@@ -825,6 +825,119 @@ export const dbService = {
     }
   },
 
+  /** Sub findings of one finding (idea). Each has a Fitur, a
+   *  Description, and `images` — a JSONB array of image evidences,
+   *  each { image_url, description }. Ordered oldest first. Returns
+   *  [] when the table does not exist yet (the SQL in
+   *  docs/sub-findings-sql.md adds it). */
+  async getSubFindings(ideaId: string): Promise<any[]> {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from("sub_findings")
+          .select("*")
+          .eq("idea_id", ideaId)
+          .order("created_at", { ascending: true });
+        if (error || !data) return [];
+        return (data as any[]).map((s: any) => ({
+          id: s.id,
+          ideaId: s.idea_id,
+          fitur: s.fitur || "",
+          description: s.description || "",
+          images: Array.isArray(s.images) ? s.images : [],
+          createdAt: s.created_at,
+        }));
+      } catch {
+        return [];
+      }
+    }
+    try {
+      const rows = await prisma.$queryRaw<Array<{ id: string; fitur: string; description: string; images: any }>>`
+        SELECT id, fitur, description, images FROM sub_findings
+        WHERE idea_id = ${ideaId} ORDER BY created_at ASC
+      `;
+      return rows.map((s: any) => ({
+        id: s.id,
+        ideaId,
+        fitur: s.fitur || "",
+        description: s.description || "",
+        images: Array.isArray(s.images) ? s.images : [],
+      }));
+    } catch {
+      return [];
+    }
+  },
+
+  /** Sub findings for many findings at once, grouped by idea id —
+   *  one query for the project page popup. Missing table → {}. */
+  async getSubFindingsForIdeas(ideaIds: string[]): Promise<Record<string, any[]>> {
+    const ids = Array.from(new Set((ideaIds || []).filter(Boolean)));
+    if (ids.length === 0) return {};
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from("sub_findings")
+          .select("*")
+          .in("idea_id", ids)
+          .order("created_at", { ascending: true });
+        if (error || !data) return {};
+        const map: Record<string, any[]> = {};
+        for (const s of data as any[]) {
+          (map[s.idea_id] ||= []).push({
+            id: s.id,
+            ideaId: s.idea_id,
+            fitur: s.fitur || "",
+            description: s.description || "",
+            images: Array.isArray(s.images) ? s.images : [],
+            createdAt: s.created_at,
+          });
+        }
+        return map;
+      } catch {
+        return {};
+      }
+    }
+    return {};
+  },
+
+  /** Create one sub finding under a finding (idea). */
+  async createSubFinding(ideaId: string, data: { fitur?: string; description?: string; images?: Array<{ image_url: string; description?: string }> }) {
+    if (isSupabaseConfigured && supabase) {
+      const { data: row, error } = await supabase
+        .from("sub_findings")
+        .insert({ idea_id: ideaId, fitur: data.fitur || "", description: data.description || "", images: data.images || [] })
+        .select()
+        .single();
+      if (error) throw error;
+      return row;
+    }
+    throw new Error("Sub findings need Supabase (local database has no sub_findings table).");
+  },
+
+  /** Update one sub finding. Only the given fields change. */
+  async updateSubFinding(id: string, data: { fitur?: string; description?: string; images?: Array<{ image_url: string; description?: string }> }) {
+    if (isSupabaseConfigured && supabase) {
+      const patch: any = { updated_at: new Date().toISOString() };
+      if (data.fitur !== undefined) patch.fitur = data.fitur;
+      if (data.description !== undefined) patch.description = data.description;
+      if (data.images !== undefined) patch.images = data.images;
+      const { data: row, error } = await supabase.from("sub_findings").update(patch).eq("id", id).select().single();
+      if (error) throw error;
+      return row;
+    }
+    throw new Error("Sub findings need Supabase (local database has no sub_findings table).");
+  },
+
+  /** Delete one sub finding. */
+  async deleteSubFinding(id: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase.from("sub_findings").delete().eq("id", id);
+      if (error) throw error;
+      return true;
+    }
+    throw new Error("Sub findings need Supabase (local database has no sub_findings table).");
+  },
+
   /** Replace an idea's finding links (admin only at the route).
    *  Unknown finding ids are dropped, so a deleted finding never
    *  leaves a dangling link behind. */

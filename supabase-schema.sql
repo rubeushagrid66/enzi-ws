@@ -167,6 +167,21 @@ CREATE TABLE IF NOT EXISTS ideas (
 -- (JPEG/JPG/PNG, drag & drop in the dashboard Finding modal, downscaled
 -- client-side to max 1200px and stored as a data URL). Added with:
 --   ALTER TABLE ideas ADD COLUMN IF NOT EXISTS image_url TEXT;
+--
+-- Sub findings 2026-11-10: a finding can hold many sub findings. Each
+-- sub finding has a Fitur, a Description, and multiple image evidences
+-- (each image + its own description, stored as a JSONB array of
+-- { image_url, description }). See docs/sub-findings-sql.md. Added with:
+--   CREATE TABLE IF NOT EXISTS sub_findings (
+--     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+--     idea_id TEXT NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
+--     fitur TEXT NOT NULL DEFAULT '',
+--     description TEXT NOT NULL DEFAULT '',
+--     images JSONB NOT NULL DEFAULT '[]',
+--     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+--     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+--   );
+--   CREATE INDEX IF NOT EXISTS idx_sub_findings_idea_id ON sub_findings(idea_id);
 
 CREATE TABLE IF NOT EXISTS idea_findings (
   idea_id TEXT NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,

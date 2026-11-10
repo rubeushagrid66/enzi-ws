@@ -269,6 +269,33 @@ export default function AdminDashboard() {
   const [ideaModalOpen, setIdeaModalOpen] = useState(false);
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
   const [ideaForm, setIdeaForm] = useState({ title: "", description: "", sumber: [] as string[], imageUrl: null as string | null });
+  // Sub findings (inside a Finding): each has a Fitur, a Description,
+  // and multiple image evidences — each image + its own description.
+  // `id` is the DB id once saved, or a `new_…` temp id for a row added
+  // in this modal session. `origSubFindingIds` remembers which rows
+  // existed when the modal opened, so a removed row is deleted on save.
+  type SubFindingForm = { id: string; fitur: string; description: string; images: Array<{ image_url: string; description: string }> };
+  const [subFindings, setSubFindings] = useState<SubFindingForm[]>([]);
+  const [origSubFindingIds, setOrigSubFindingIds] = useState<string[]>([]);
+  const [subImageError, setSubImageError] = useState<string | null>(null);
+  const subImageInputRef = useRef<HTMLInputElement>(null);
+  const pendingSubIdxRef = useRef<number>(0);
+  const newSubFinding = (): SubFindingForm => ({ id: `new_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, fitur: "", description: "", images: [] });
+  const updateSubFinding = (idx: number, patch: Partial<SubFindingForm>) =>
+    setSubFindings((rows) => rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  const addSubFindingImage = async (idx: number, file: File) => {
+    setSubImageError(null);
+    try {
+      const dataUrl = await downscaleImageFile(file);
+      setSubFindings((rows) =>
+        rows.map((r, i) =>
+          i === idx ? { ...r, images: [...r.images, { image_url: dataUrl, description: "" }] } : r
+        )
+      );
+    } catch (err: any) {
+      setSubImageError(err?.message || "Could not read that image — please try another file.");
+    }
+  };
   // Image evidence upload: drag-over highlight, validation error, and
   // the hidden file input the drop zone / browse action triggers.
   const [imageError, setImageError] = useState<string | null>(null);
@@ -772,69 +799,88 @@ export default function AdminDashboard() {
     setEditingIdeaId(null);
     setIdeaForm({ title: "", description: "", sumber: [], imageUrl: null });
     setImageError(null);
+    setSubFindings([]);
+    setOrigSubFindingIds([]);
+    setSubImageError(null);
     setIdeaFindingIds([]);
     setIdeaFindingSearch("");
     setIdeaModalOpen(true);
   };
 
-  const openEditIdea = (idea: any) => {
+  const openEditIdea = async (idea: any) => {
     setEditingIdeaId(idea.id);
     setIdeaForm({ title: idea.title || "", description: idea.description || "", sumber: Array.isArray(idea.sumber) ? [...idea.sumber] : [], imageUrl: idea.imageUrl || null });
     setImageError(null);
+    setSubImageError(null);
     setIdeaFindingIds(Array.isArray(idea.findingIds) ? [...idea.findingIds] : []);
     setIdeaFindingSearch("");
+    // Load this finding's sub findings (empty when the table has none
+    // yet — the GET tolerates a missing table).
+    try {
+      const data = await apiCall(`/api/global/ideas/${idea.id}/subfindings`);
+      const rows = (data?.subFindings || []).map((s: any) => ({
+        id: s.id,
+        fitur: s.fitur || "",
+        description: s.description || "",
+        images: Array.isArray(s.images) ? s.images : [],
+      }));
+      setSubFindings(rows);
+      setOrigSubFindingIds(rows.map((r: any) => r.id));
+    } catch {
+      setSubFindings([]);
+      setOrigSubFindingIds([]);
+    }
     setIdeaModalOpen(true);
   };
 
   // Image evidence: validate (JPEG/JPG/PNG, max 5 MB), then downscale
   // to max 1200px on the longest side so the stored data URL stays
   // small (a 5 MB phone photo would otherwise bloat every project
-  // page load). JPEG stays JPEG, PNG stays PNG.
-  const handleImageFile = async (file: File) => {
+  // page load). JPEG stays JPEG, PNG stays PNG. Shared by the
+  // finding's own image and by sub-finding image evidences.
+  const downscaleImageFile = async (file: File): Promise<string> => {
     const okType = file.type === "image/jpeg" || file.type === "image/png" || /\.(jpe?g|png)$/i.test(file.name);
-    if (!okType) {
-      setImageError("Please choose a JPEG, JPG or PNG image.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setImageError("Image must be under 5 MB.");
-      return;
-    }
+    if (!okType) throw new Error("Please choose a JPEG, JPG or PNG image.");
+    if (file.size > 5 * 1024 * 1024) throw new Error("Image must be under 5 MB.");
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Could not read the image file."));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("Could not load the image."));
+        img.onload = () => {
+          const MAX = 1200;
+          let width = img.naturalWidth;
+          let height = img.naturalHeight;
+          if (width > MAX || height > MAX) {
+            const scale = MAX / Math.max(width, height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            reject(new Error("Could not process the image."));
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL(file.type === "image/png" ? "image/png" : "image/jpeg", 0.85));
+        };
+        img.src = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageFile = async (file: File) => {
     setImageError(null);
     try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onerror = () => reject(new Error("Could not read the image file."));
-        reader.onload = () => {
-          const img = new Image();
-          img.onerror = () => reject(new Error("Could not load the image."));
-          img.onload = () => {
-            const MAX = 1200;
-            let width = img.naturalWidth;
-            let height = img.naturalHeight;
-            if (width > MAX || height > MAX) {
-              const scale = MAX / Math.max(width, height);
-              width = Math.round(width * scale);
-              height = Math.round(height * scale);
-            }
-            const canvas = document.createElement("canvas");
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext("2d");
-            if (!ctx) {
-              reject(new Error("Could not process the image."));
-              return;
-            }
-            ctx.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL(file.type === "image/png" ? "image/png" : "image/jpeg", 0.85));
-          };
-          img.src = reader.result as string;
-        };
-        reader.readAsDataURL(file);
-      });
+      const dataUrl = await downscaleImageFile(file);
       setIdeaForm((f) => ({ ...f, imageUrl: dataUrl }));
-    } catch {
-      setImageError("Could not read that image — please try another file.");
+    } catch (err: any) {
+      setImageError(err?.message || "Could not read that image — please try another file.");
     }
   };
 
@@ -852,6 +898,7 @@ export default function AdminDashboard() {
       setError(null);
       const body = JSON.stringify({ ...ideaForm, findingIds: ideaFindingIds });
       let saved: any = null;
+      let ideaId = editingIdeaId;
       if (editingIdeaId) {
         saved = await apiCall(`/api/global/ideas/${editingIdeaId}`, {
           method: "PUT",
@@ -876,10 +923,41 @@ export default function AdminDashboard() {
         });
         const idea = saved?.idea;
         if (idea) {
+          ideaId = idea.id;
           setIdeas((rows: any[]) => [
             ...rows,
             { id: idea.id, title: idea.title, description: idea.description || "", imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? null, findingIds: ideaFindingIds },
           ]);
+        }
+      }
+      // Sync sub findings (only when the finding itself saved): rows
+      // removed in the modal are deleted, new rows are created, the
+      // rest are updated. A sub finding with no Fitur and no
+      // description and no images is skipped (an empty row).
+      if (ideaId) {
+        const currentIds = new Set(subFindings.map((s) => s.id));
+        const removed = origSubFindingIds.filter((id) => !currentIds.has(id));
+        for (const id of removed) {
+          await apiCall(`/api/global/ideas/${ideaId}/subfindings/${id}`, { method: "DELETE" });
+        }
+        for (const s of subFindings) {
+          const hasContent =
+            (s.fitur && s.fitur.trim() !== "") || (s.description && s.description.trim() !== "") || s.images.length > 0;
+          if (!hasContent) continue;
+          const payload = JSON.stringify({ fitur: s.fitur, description: s.description, images: s.images });
+          if (s.id.startsWith("new_")) {
+            await apiCall(`/api/global/ideas/${ideaId}/subfindings`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: payload,
+            });
+          } else {
+            await apiCall(`/api/global/ideas/${ideaId}/subfindings/${s.id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: payload,
+            });
+          }
         }
       }
       setIdeaModalOpen(false);
@@ -1612,7 +1690,7 @@ export default function AdminDashboard() {
             <section aria-labelledby="groups-heading" className="space-y-6">
               <div>
                 <h2 id="groups-heading" className="section-title">Groups &amp; Participants</h2>
-                <p className="section-sub">Create groups, and edit or remove participants. Participants are added by creating a user in Users &amp; Roles and assigning them a group.</p>
+                <p className="section-sub">{isAdmin ? "Create groups, and edit or remove participants. Participants are added by creating a user in Users & Roles and assigning them a group." : "The groups and participants of your project."}</p>
               </div>
               <div className="card space-y-5 p-5">
                 {isAdmin && (
@@ -1677,7 +1755,7 @@ export default function AdminDashboard() {
               <div className="card space-y-5 p-6">
                 <div>
                   <h2 id="aspects-heading" className="text-base font-semibold text-slate-900">Viability Aspects (Aspek)</h2>
-                  <p className="mt-0.5 text-sm text-slate-600">Define aspects for the participant validation voting matrix, and link each one to the framework its votes feed — Desirability, Viability, or Feasibility.</p>
+                  <p className="mt-0.5 text-sm text-slate-600">{isAdmin ? "Define aspects for the participant validation voting matrix, and link each one to the framework its votes feed — Desirability, Viability, or Feasibility." : "The aspects of your project, and the framework each one's votes feed — Desirability, Viability, or Feasibility."}</p>
                 </div>
                 {isAdmin && (
                 <form onSubmit={handleCreateAspect} className="space-y-3">
@@ -2036,6 +2114,132 @@ export default function AdminDashboard() {
                 />
               </div>
               {imageError && <p className="mt-2 text-xs font-medium text-rose-600">{imageError}</p>}
+            </fieldset>
+            <fieldset>
+              <legend className="field-label">Sub Findings</legend>
+              <p className="mb-2 text-xs text-slate-500">Break this finding into smaller pieces. Each sub finding has a Fitur, a Description, and its own image evidences (multiple images, each with a description).</p>
+              {subFindings.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-slate-200 px-3 py-3 text-sm italic text-slate-500">No sub findings yet — add one below.</p>
+              ) : (
+                <div className="space-y-3">
+                  {subFindings.map((sf, idx) => (
+                    <div key={sf.id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Sub Finding {idx + 1}</span>
+                        <button
+                          type="button"
+                          onClick={() => setSubFindings((rows) => rows.filter((_, i) => i !== idx))}
+                          aria-label={`Remove sub finding ${idx + 1}`}
+                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                        >
+                          <X className="h-3.5 w-3.5" /> Remove
+                        </button>
+                      </div>
+                      <div className="mt-2">
+                        <label htmlFor={`sub-fitur-${sf.id}`} className="field-label">Fitur</label>
+                        <input
+                          id={`sub-fitur-${sf.id}`}
+                          type="text"
+                          placeholder="e.g. Bulk Payment"
+                          value={sf.fitur}
+                          onChange={(e) => updateSubFinding(idx, { fitur: e.target.value })}
+                          className="input w-full"
+                        />
+                      </div>
+                      <div className="mt-2">
+                        <label htmlFor={`sub-desc-${sf.id}`} className="field-label">Description</label>
+                        <textarea
+                          id={`sub-desc-${sf.id}`}
+                          rows={2}
+                          placeholder="What is the sub finding?"
+                          value={sf.description}
+                          onChange={(e) => updateSubFinding(idx, { description: e.target.value })}
+                          className="input w-full"
+                        />
+                      </div>
+                      <div className="mt-2">
+                        <span className="field-label">Image evidences</span>
+                        {sf.images.length > 0 && (
+                          <div className="mb-2 space-y-2">
+                            {sf.images.map((im, imIdx) => (
+                              <div key={imIdx} className="flex items-start gap-2 rounded-lg border border-slate-200 bg-white p-2">
+                                <img src={im.image_url} alt={`Sub finding ${idx + 1} evidence ${imIdx + 1}`} className="h-14 w-14 shrink-0 rounded-md object-cover" />
+                                <input
+                                  type="text"
+                                  placeholder="Image description…"
+                                  value={im.description || ""}
+                                  onChange={(e) =>
+                                    updateSubFinding(idx, {
+                                      images: sf.images.map((x, j) => (j === imIdx ? { ...x, description: e.target.value } : x)),
+                                    })
+                                  }
+                                  className="input min-w-0 flex-1 !py-1.5 !text-xs"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateSubFinding(idx, { images: sf.images.filter((_, j) => j !== imIdx) })
+                                  }
+                                  aria-label={`Remove image ${imIdx + 1} from sub finding ${idx + 1}`}
+                                  className="btn-icon-danger shrink-0"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Add image evidence to sub finding ${idx + 1}`}
+                          onClick={() => {
+                            pendingSubIdxRef.current = idx;
+                            subImageInputRef.current?.click();
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              pendingSubIdxRef.current = idx;
+                              subImageInputRef.current?.click();
+                            }
+                          }}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            const f = e.dataTransfer.files?.[0];
+                            if (f) void addSubFindingImage(idx, f);
+                          }}
+                          className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white px-4 py-3 text-center transition hover:border-emerald-400 hover:bg-emerald-50/50"
+                        >
+                          <ImagePlus className="h-6 w-6 text-slate-400" />
+                          <p className="mt-1 text-xs font-semibold text-slate-700">Add image evidence</p>
+                          <p className="mt-0.5 text-[11px] text-slate-500">Drag &amp; drop or click to browse · JPEG, JPG, PNG · max 5 MB</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {subImageError && <p className="mt-2 text-xs font-medium text-rose-600">{subImageError}</p>}
+              <button
+                type="button"
+                onClick={() => setSubFindings((rows) => [...rows, newSubFinding()])}
+                className="btn-secondary mt-2"
+              >
+                + Add sub finding
+              </button>
+              <input
+                ref={subImageInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,.jpeg,.jpg,.png"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void addSubFindingImage(pendingSubIdxRef.current, f);
+                  e.target.value = "";
+                }}
+              />
             </fieldset>
             <fieldset>
               <legend className="field-label">Sumber</legend>

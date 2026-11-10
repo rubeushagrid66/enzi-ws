@@ -194,9 +194,10 @@ export async function GET(
     // carries the findings linked to it, so the card shows them
     // without opening the detail page. One extra read (all ideas +
     // their finding ids), then a local join — no per-finding query.
-    let relatedByFinding: Record<string, Array<{ id: string; title: string; description: string; imageUrl: string | null }>> = {};
+    let relatedByFinding: Record<string, Array<{ id: string; title: string; description: string; imageUrl: string | null; subFindings: any[] }>> = {};
     try {
       const allIdeas = await dbService.getIdeas();
+      const subMap = await dbService.getSubFindingsForIdeas(allIdeas.map((i: any) => i.id));
       for (const idea of allIdeas) {
         for (const fid of idea.findingIds || []) {
           (relatedByFinding[fid] ||= []).push({
@@ -204,6 +205,7 @@ export async function GET(
             title: idea.title,
             description: idea.description || "",
             imageUrl: idea.imageUrl || null,
+            subFindings: subMap[idea.id] || [],
           });
         }
       }
