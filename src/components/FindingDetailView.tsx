@@ -246,63 +246,63 @@ export default function FindingDetailView({
   const scoreSummary = (
     <div className="mt-5 grid auto-rows-fr grid-cols-2 gap-2.5 sm:grid-cols-4">
       <div className="rounded-xl border border-gold-200 bg-gold-50 px-3.5 py-3">
-        <div className="text-[11px] font-bold uppercase tracking-wider text-gold-700">
+        <div className="text-xs font-bold uppercase tracking-wider text-gold-700">
           DVF Score
         </div>
         <div className="mt-0.5 text-2xl font-extrabold leading-none text-gold-800">
           {groupDVF != null ? groupDVF.toFixed(2) : "N/A"}
         </div>
-        <p className="mt-1 text-[11px] leading-tight text-gold-700/80">
+        <p className="mt-1 text-xs leading-relaxed text-gold-700">
           Weighted composite
         </p>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
-        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+        <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
           Desirability
         </div>
         <div className="mt-0.5 text-2xl font-bold leading-none text-slate-900">
           {groupD != null ? (
             <>
               {groupD}
-              <span className="text-sm font-medium text-slate-500"> / 3</span>
+              <span className="text-sm font-medium text-slate-600"> / 3</span>
             </>
           ) : (
             "N/A"
           )}
         </div>
-        <p className="mt-1 text-[11px] leading-tight text-slate-500">
+        <p className="mt-1 text-xs leading-relaxed text-slate-600">
           From research mentions
         </p>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
-        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+        <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
           Viability
         </div>
         <div className="mt-0.5 text-2xl font-bold leading-none text-slate-900">
           {groupV != null ? (
             <>
               {groupV}
-              <span className="text-sm font-medium text-slate-500"> / 3</span>
+              <span className="text-sm font-medium text-slate-600"> / 3</span>
             </>
           ) : (
             "N/A"
           )}
         </div>
-        <p className="mt-1 text-[11px] leading-tight text-slate-500">
+        <p className="mt-1 text-xs leading-relaxed text-slate-600">
           All roles&apos; average
         </p>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
-        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+        <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
           Position
         </div>
         <div className="mt-0.5 text-2xl font-bold leading-none text-slate-900">
           {groupQuadrant ? QUADRANT_LABEL[groupQuadrant].title : "N/A"}
         </div>
-        <p className="mt-1 text-[11px] leading-tight text-slate-500">
+        <p className="mt-1 text-xs leading-relaxed text-slate-600">
           {groupQuadrant
             ? QUADRANT_LABEL[groupQuadrant].detail
             : "Not placed yet"}
@@ -477,7 +477,7 @@ export default function FindingDetailView({
                   key={idx}
                   className="chip chip-neutral"
                 >
-                  <span className="text-slate-500 font-normal">{tag.category}:</span>
+                  <span className="text-slate-600 font-normal">{tag.category}:</span>
                   <span className="font-semibold">{tag.value}</span>
                 </span>
               ))}
@@ -491,7 +491,7 @@ export default function FindingDetailView({
               is in the tooltip. */}
           {relatedIdeas.length > 0 && (
             <div className="mt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-600">
                 Related Findings ({relatedIdeas.length})
               </h3>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -528,10 +528,10 @@ export default function FindingDetailView({
             className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-bsi-500 sm:px-7"
           >
             <span className="text-sm font-bold text-slate-900">About this idea</span>
-            <span className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-500">
+            <span className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-slate-600">
               {aboutOpen ? "Hide" : "Show"}
               <ChevronDown
-                className={`h-4 w-4 text-slate-500 transition-transform ${aboutOpen ? "rotate-180" : ""}`}
+                className={`h-4 w-4 text-slate-600 transition-transform ${aboutOpen ? "rotate-180" : ""}`}
               />
             </span>
           </button>
@@ -541,16 +541,16 @@ export default function FindingDetailView({
 
             {localFinding.tujuan && String(localFinding.tujuan).trim() && (
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Tujuan</h4>
+                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-600">Tujuan</h4>
                 <p className="mt-1 text-sm leading-relaxed text-slate-700">{localFinding.tujuan}</p>
               </div>
             )}
 
             {scopeRows.length > 0 && (
               <div className="mt-5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Scope</h4>
+                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-600">Scope</h4>
                 <div className="mt-2 overflow-hidden rounded-xl border border-slate-200">
-                  <div className="hidden sm:grid sm:grid-cols-[7rem_1fr_1fr] bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  <div className="hidden sm:grid sm:grid-cols-[7rem_1fr_1fr] bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-600">
                     <div className="px-3 py-2" />
                     <div className="px-3 py-2 text-bsi-700">Termasuk</div>
                     <div className="px-3 py-2 border-l border-slate-200 text-gold-700">Tidak Termasuk</div>
@@ -559,14 +559,14 @@ export default function FindingDetailView({
                     <div key={row.label} className="grid border-t border-slate-200 first:border-t-0 sm:grid-cols-[7rem_1fr_1fr]">
                       <div className="px-3 pt-2.5 sm:py-3">
                         <p className="text-sm font-semibold text-slate-800">{row.label}</p>
-                        <p className="text-xs text-slate-500">{row.hint}</p>
+                        <p className="text-sm leading-relaxed text-slate-600">{row.hint}</p>
                       </div>
                       <div className="px-3 pt-1 pb-2.5 sm:py-3">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-bsi-700 sm:hidden">Termasuk</p>
+                        <p className="text-xs font-bold uppercase tracking-wider text-bsi-700 sm:hidden">Termasuk</p>
                         <p className="text-sm leading-relaxed text-slate-700">{row.termasuk || "—"}</p>
                       </div>
                       <div className="px-3 pb-2.5 sm:py-3 sm:border-l sm:border-slate-200">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-gold-700 sm:hidden">Tidak Termasuk</p>
+                        <p className="text-xs font-bold uppercase tracking-wider text-gold-700 sm:hidden">Tidak Termasuk</p>
                         <p className="text-sm leading-relaxed text-slate-700">{row.tidak || "—"}</p>
                       </div>
                     </div>
@@ -577,14 +577,14 @@ export default function FindingDetailView({
 
             {localFinding.outputKeberhasilan && String(localFinding.outputKeberhasilan).trim() && (
               <div className="mt-5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Output Keberhasilan</h4>
+                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-600">Output Keberhasilan</h4>
                 <p className="mt-1 text-sm leading-relaxed text-slate-700">{localFinding.outputKeberhasilan}</p>
               </div>
             )}
 
             {localFinding.tujuanBisnis && String(localFinding.tujuanBisnis).trim() && (
               <div className="mt-5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Tujuan Bisnis</h4>
+                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-600">Tujuan Bisnis</h4>
                 <p className="mt-1 text-sm leading-relaxed text-slate-700">{localFinding.tujuanBisnis}</p>
               </div>
             )}
@@ -605,11 +605,11 @@ export default function FindingDetailView({
               role="tab"
               aria-selected={activeTab === "desirability"}
               onClick={() => setActiveTab("desirability")}
-              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-semibold transition sm:text-sm ${activeTab === "desirability" ? "bg-white text-bsi-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-sm font-semibold transition ${activeTab === "desirability" ? "bg-white text-bsi-700 shadow-sm" : "text-slate-600 hover:text-slate-700"}`}
             >
               <Target className="hidden h-4 w-4 shrink-0 sm:block" />
               <span className="truncate">Desirability</span>
-              <span className="shrink-0 rounded-full bg-bsi-100 px-1.5 py-0.5 text-[11px] font-bold text-bsi-800">
+              <span className="shrink-0 rounded-full bg-bsi-100 px-1.5 py-0.5 text-xs font-bold text-bsi-800">
                 {groupD != null ? groupD : "N/A"}
               </span>
             </button>
@@ -619,11 +619,11 @@ export default function FindingDetailView({
               role="tab"
               aria-selected={activeTab === "viability"}
               onClick={() => setActiveTab("viability")}
-              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-semibold transition sm:text-sm ${activeTab === "viability" ? "bg-white text-bsi-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-sm font-semibold transition ${activeTab === "viability" ? "bg-white text-bsi-700 shadow-sm" : "text-slate-600 hover:text-slate-700"}`}
             >
               <Users2 className="hidden h-4 w-4 shrink-0 sm:block" />
               <span className="truncate">Viability &amp; Feasibility</span>
-              <span className="shrink-0 rounded-full bg-bsi-100 px-1.5 py-0.5 text-[11px] font-bold text-bsi-800">
+              <span className="shrink-0 rounded-full bg-bsi-100 px-1.5 py-0.5 text-xs font-bold text-bsi-800">
                 {groupV != null ? `${groupV} / 3` : "N/A"}
               </span>
             </button>
@@ -633,11 +633,11 @@ export default function FindingDetailView({
               role="tab"
               aria-selected={activeTab === "feasibility"}
               onClick={() => setActiveTab("feasibility")}
-              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-semibold transition sm:text-sm ${activeTab === "feasibility" ? "bg-white text-bsi-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-sm font-semibold transition ${activeTab === "feasibility" ? "bg-white text-bsi-700 shadow-sm" : "text-slate-600 hover:text-slate-700"}`}
             >
               <Compass className="hidden h-4 w-4 shrink-0 sm:block" />
               <span className="truncate">Matrix</span>
-              <span className="shrink-0 rounded-full bg-bsi-100 px-1.5 py-0.5 text-[11px] font-bold text-bsi-800">
+              <span className="shrink-0 rounded-full bg-bsi-100 px-1.5 py-0.5 text-xs font-bold text-bsi-800">
                 {groupQuadrant ? QUADRANT_LABEL[groupQuadrant].title : "N/A"}
               </span>
             </button>
@@ -654,7 +654,7 @@ export default function FindingDetailView({
                   <HelpCircle className="h-4 w-4 text-bsi-600" />
                   <span>Research mentions — how many users mentioned this idea</span>
                 </div>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-sm leading-relaxed text-slate-600">
                   D comes from research numbers only. A mention is a user mentioning this finding in that source. Internal is not counted. A source with no count entered does not score D. Both numbers are typed by hand — the mentions for this finding, and the totals for the whole project (changing a total here updates every finding in this project). The system only does the calculation.
                 </p>
 
@@ -662,7 +662,7 @@ export default function FindingDetailView({
                 <div className="mt-4 rounded-lg border border-slate-200 p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="text-sm font-semibold text-slate-800">Wawancara</span>
-                    <span className="text-xs text-slate-500">&ge; 66% &rarr; 3 &middot; &ge; 33% &rarr; 2 &middot; below 33% &rarr; 1</span>
+                    <span className="text-sm text-slate-600">&ge; 66% &rarr; 3 &middot; &ge; 33% &rarr; 2 &middot; below 33% &rarr; 1</span>
                   </div>
                   <div className="mt-3 flex flex-wrap items-end gap-2">
                     <label className="block">
@@ -725,7 +725,7 @@ export default function FindingDetailView({
                 <div className="mt-4 rounded-lg border border-slate-200 p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="text-sm font-semibold text-slate-800">Survey</span>
-                    <span className="text-xs text-slate-500">&ge; 30% &rarr; 3 &middot; &ge; 15% &rarr; 2 &middot; below 15% &rarr; 1</span>
+                    <span className="text-sm text-slate-600">&ge; 30% &rarr; 3 &middot; &ge; 15% &rarr; 2 &middot; below 15% &rarr; 1</span>
                   </div>
                   <div className="mt-3 flex flex-wrap items-end gap-2">
                     <label className="block">
@@ -857,7 +857,7 @@ export default function FindingDetailView({
       </section>
 
       {/* Footer note */}
-      <p className="px-1 text-xs leading-relaxed text-slate-500">
+      <p className="px-1 text-sm leading-relaxed text-slate-600">
         D, V and F are all on the 1–3 scale. D = research mentions (Wawancara + Survey, rounded-up average); V = average of your Viability aspect scores; F = 4 − average of your Effort aspect scores. There is no composite score.
       </p>
 

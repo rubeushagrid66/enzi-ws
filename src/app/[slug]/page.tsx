@@ -90,7 +90,7 @@ function FindingCard({
   // with the other two boxes.
   const scoreBox = (label: string, value: string | null) => (
     <div className="rounded-xl border border-slate-100 bg-slate-50 px-2 py-2.5">
-      <div className="flex min-h-8 items-center justify-center text-[11px] font-semibold leading-tight text-slate-500">
+      <div className="flex min-h-8 items-center justify-center text-xs font-semibold leading-relaxed text-slate-600">
         {label}
       </div>
       <div className="mt-0.5 text-base font-bold tabular-nums text-slate-900">
@@ -206,12 +206,12 @@ function GroupsView({
           <h2 className="mt-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
             {selectedGroup.name}
             {selectedGroup.label && selectedGroup.label.toLowerCase() !== selectedGroup.name.toLowerCase() && (
-              <span className="rounded-full bg-bsi-100 px-2 py-0.5 text-[10px] font-extrabold normal-case tracking-normal text-bsi-800">
+              <span className="rounded-full bg-bsi-100 px-2 py-0.5 text-xs font-extrabold normal-case tracking-normal text-bsi-800">
                 {selectedGroup.label}
               </span>
             )}
             {meId != null && (selectedGroup.participants || []).some((p: any) => p.id === meId) && (
-              <span className="rounded-full bg-bsi-100 px-2 py-0.5 text-[10px] font-extrabold normal-case tracking-normal text-bsi-800">
+              <span className="rounded-full bg-bsi-100 px-2 py-0.5 text-xs font-extrabold normal-case tracking-normal text-bsi-800">
                 Me
               </span>
             )}
@@ -289,12 +289,12 @@ function GroupsView({
                     <span className="flex items-center gap-2">
                       <span className="truncate text-base font-bold text-slate-900">{g.name}</span>
                       {g.label && g.label.toLowerCase() !== g.name.toLowerCase() && (
-                        <span className="shrink-0 rounded-full bg-bsi-100 px-2 py-0.5 text-[10px] font-extrabold text-bsi-800">
+                        <span className="shrink-0 rounded-full bg-bsi-100 px-2 py-0.5 text-xs font-extrabold text-bsi-800">
                           {g.label}
                         </span>
                       )}
                       {isMyGroup && (
-                        <span className="shrink-0 rounded-full bg-bsi-100 px-2 py-0.5 text-[10px] font-extrabold text-bsi-800">
+                        <span className="shrink-0 rounded-full bg-bsi-100 px-2 py-0.5 text-xs font-extrabold text-bsi-800">
                           Me
                         </span>
                       )}
@@ -315,13 +315,13 @@ function GroupsView({
                         <span
                           key={p.id}
                           title={p.name}
-                          className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-bsi-100 text-[10px] font-bold text-bsi-800"
+                          className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-bsi-100 text-xs font-bold text-bsi-800"
                         >
                           {initials(p.name)}
                         </span>
                       ))}
                       {participants.length > 5 && (
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-slate-100 text-[10px] font-bold text-slate-600">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-slate-100 text-xs font-bold text-slate-600">
                           +{participants.length - 5}
                         </span>
                       )}
@@ -448,7 +448,7 @@ function RoadmapView({
                     </span>
                   </span>
                   <span className="flex shrink-0 items-center gap-2">
-                    <span className="rounded-full border border-gold-200 bg-gold-50 px-2.5 py-0.5 text-[11px] font-bold text-gold-800">
+                    <span className="rounded-full border border-gold-200 bg-gold-50 px-2.5 py-0.5 text-xs font-bold text-gold-800">
                       DVF {dvf != null ? dvf.toFixed(2) : "N/A"}
                     </span>
                     <ArrowRight className="h-4 w-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-bsi-600" />
@@ -1166,7 +1166,7 @@ export default function ProjectResultViewer({
               <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-600">
                       <th scope="col" className="px-4 py-3">Ideas</th>
                       <th scope="col" className="px-4 py-3">Related Findings</th>
                       <th scope="col" className="px-4 py-3">Platform</th>
@@ -1227,7 +1227,7 @@ export default function ProjectResultViewer({
       </main>
 
       {/* Credit footer — same text as the homepage, styled for the white page */}
-      <footer className="mx-auto flex w-full max-w-7xl items-center justify-between border-t border-slate-100 px-4 py-6 text-[11px] font-medium uppercase tracking-[0.2em] text-slate-500 sm:px-6 lg:px-10">
+      <footer className="mx-auto flex w-full max-w-7xl items-center justify-between border-t border-slate-100 px-4 py-6 text-xs font-medium uppercase tracking-[0.2em] text-slate-600 sm:px-6 lg:px-10">
         <span>Bank BSI &times; Aleph</span>
         <span>&copy; Enzi 2026</span>
       </footer>

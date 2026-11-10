@@ -237,33 +237,33 @@ export default function ViabilityVoteMatrix({
   // the 1/2/3 buttons and the reason (no separate "Your score" row).
   const renderAspectTitle = (aspect: any, fw: string) => (
     <>
-      <div className="font-bold text-slate-900 text-[13px]">{aspect.name}</div>
+      <div className="font-bold text-slate-900 text-sm">{aspect.name}</div>
       <div className="mt-1 flex flex-wrap gap-1">
-        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold ${FRAMEWORK_BADGE_CLASS[fw]}`}>
+        <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-bold ${FRAMEWORK_BADGE_CLASS[fw]}`}>
           {fw === "Feasibility" ? "F" : "V"} · {fw}
         </span>
         {aspect.label ? (
-          <span className="inline-flex rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+          <span className="inline-flex rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700">
             {aspect.label}
           </span>
         ) : (
-          <span className="inline-flex rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+          <span className="inline-flex rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-xs font-medium text-slate-600">
             No label
           </span>
         )}
         {!isMyGroup && currentUser && !isAdmin && (
-          <span className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-500">
+          <span className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-600">
             View only
           </span>
         )}
         {isMyGroup && currentUser && !isAdmin && !isFacilitator && aspect.label && myGroupLabel && aspect.label !== myGroupLabel && (
-          <span className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-500">
+          <span className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-medium text-slate-600">
             Not your role
           </span>
         )}
       </div>
       {aspect.description && (
-        <div className="mt-1 text-[11px] text-slate-500">{aspect.description}</div>
+        <div className="mt-1 text-sm leading-relaxed text-slate-600">{aspect.description}</div>
       )}
     </>
   );
@@ -375,7 +375,7 @@ export default function ViabilityVoteMatrix({
   };
 
   const renderVote = (vote: any) => {
-    if (!vote) return <span className="text-slate-500 italic">Not scored yet</span>;
+    if (!vote) return <span className="text-slate-600 italic">Not scored yet</span>;
     return (
       <>
         {vote.score != null ? (
@@ -395,7 +395,7 @@ export default function ViabilityVoteMatrix({
             <Users2 className="h-4 w-4 text-bsi-600" />
             <span>Viability Scoring</span>
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-sm leading-relaxed text-slate-600 mt-0.5">
             Score each aspect 1–3 for your own group (marked Me). Other
             groups are view-only. V = average of your Viability aspect
             scores; F = 4 − average of your Effort aspect scores. Unscored
@@ -429,7 +429,7 @@ export default function ViabilityVoteMatrix({
 
       {allAspects.length > 0 ? (
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[680px] text-left border-collapse text-xs">
+          <table className="w-full min-w-[680px] text-left border-collapse text-sm">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70">
                 <th scope="col" className="py-2.5 px-3 font-bold text-slate-700">Aspect</th>
@@ -441,7 +441,7 @@ export default function ViabilityVoteMatrix({
               {groupedAspects.map((g) => (
                 <React.Fragment key={g.framework}>
                   <tr className={`${FRAMEWORK_HEADER_CLASS[g.framework]}`}>
-                    <td colSpan={3} className="py-1.5 px-3 text-[10px] font-bold uppercase tracking-wider">
+                    <td colSpan={3} className="py-1.5 px-3 text-xs font-bold uppercase tracking-wider">
                       {g.framework} aspects
                     </td>
                   </tr>
@@ -470,7 +470,7 @@ export default function ViabilityVoteMatrix({
                                       type="button"
                                       disabled
                                       aria-label={`Score ${n} for ${aspect.name}`}
-                                      className="h-8 w-8 rounded-lg border border-slate-200 bg-slate-50 text-sm font-bold text-slate-500"
+                                      className="h-8 w-8 rounded-lg border border-slate-200 bg-slate-50 text-sm font-bold text-slate-600"
                                     >
                                       {n}
                                     </button>
@@ -478,7 +478,7 @@ export default function ViabilityVoteMatrix({
                                 </span>
                               </td>
                               <td className="py-2.5 px-3 min-w-[180px]">
-                                <span className="text-xs text-slate-500 italic">Loading…</span>
+                                <span className="text-sm text-slate-600 italic">Loading…</span>
                               </td>
                             </tr>
                           ) : (
@@ -493,14 +493,14 @@ export default function ViabilityVoteMatrix({
                                 {groupAvg != null ? (
                                   <span className="font-bold text-bsi-700">Score {groupAvg}</span>
                                 ) : (
-                                  <span className="text-slate-500">N/A</span>
+                                  <span className="text-slate-600">N/A</span>
                                 )}
                               </td>
                               <td className="py-2.5 px-3 min-w-[180px]">
                                 {groupReasons.length > 0 ? (
                                   <span className="text-slate-600">{groupReasons.join(" · ")}</span>
                                 ) : (
-                                  <span className="text-slate-500">N/A</span>
+                                  <span className="text-slate-600">N/A</span>
                                 )}
                               </td>
                             </tr>
@@ -548,7 +548,7 @@ export default function ViabilityVoteMatrix({
                                         disabled={saving[key]}
                                         aria-label={`Clear score for ${aspect.name}`}
                                         onClick={() => handleScoreClick(aspect.id, p.id, rowScore)}
-                                        className="ml-1 text-[11px] font-semibold text-slate-500 hover:text-rose-600 disabled:opacity-60"
+                                        className="ml-1 text-xs font-semibold text-slate-600 hover:text-rose-600 disabled:opacity-60"
                                       >
                                         Clear
                                       </button>
@@ -575,7 +575,7 @@ export default function ViabilityVoteMatrix({
                                     aria-label={`Alasan for ${aspect.name}`}
                                     onChange={(e) => handleReasonChange(aspect.id, p.id, e.target.value)}
                                     onBlur={() => handleReasonBlur(aspect.id, p.id)}
-                                    className="input w-full !py-1.5 !text-xs"
+                                    className="input w-full !py-1.5 !text-sm"
                                   />
                                 ) : groupReasons.length > 0 ? (
                                   <span className="text-slate-600">{groupReasons.join(" · ")}</span>
@@ -598,7 +598,7 @@ export default function ViabilityVoteMatrix({
           </table>
         </div>
       ) : (
-        <p className="text-xs text-slate-500 italic py-4">
+        <p className="text-sm leading-relaxed text-slate-600 italic py-4">
           No aspects configured for this project.
         </p>
       )}

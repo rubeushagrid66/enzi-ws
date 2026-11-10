@@ -1543,9 +1543,9 @@ export default function AdminDashboard() {
                     </colgroup>
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Idea Title</th>
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Tags</th>
-                        <th scope="col" className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+                        <th scope="col" className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Idea Title</th>
+                        <th scope="col" className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Tags</th>
+                        <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -1638,11 +1638,11 @@ export default function AdminDashboard() {
                     </colgroup>
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Finding</th>
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Description</th>
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Category</th>
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Linked Ideas</th>
-                        <th scope="col" className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+                        <th scope="col" className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Finding</th>
+                        <th scope="col" className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Description</th>
+                        <th scope="col" className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Category</th>
+                        <th scope="col" className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-600">Linked Ideas</th>
+                        <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -2519,7 +2519,7 @@ export default function AdminDashboard() {
                         >
                           <ImagePlus className="h-6 w-6 text-slate-500" />
                           <p className="mt-1 text-xs font-semibold text-slate-700">Add image evidence</p>
-                          <p className="mt-0.5 text-[11px] text-slate-500">Drag &amp; drop or click to browse · JPEG, JPG, PNG · max 5 MB</p>
+                          <p className="mt-0.5 text-xs leading-relaxed text-slate-600">Drag &amp; drop or click to browse · JPEG, JPG, PNG · max 5 MB</p>
                         </div>
                       </div>
                     </div>

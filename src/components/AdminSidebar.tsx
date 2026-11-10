@@ -95,7 +95,7 @@ export default function AdminSidebar({
           to the assigned one.) */}
       {!isLabelUser && (
       <div className="px-4 pb-4">
-        <label htmlFor="admin-project-switcher" className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        <label htmlFor="admin-project-switcher" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-600">
           Active project
         </label>
         <select
@@ -129,7 +129,7 @@ export default function AdminSidebar({
           (g) =>
             g.items.length > 0 && (
               <div key={g.label}>
-                <p className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                <p className="px-2 pb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600">
                   {g.label}
                 </p>
                 <ul className="space-y-0.5">
@@ -152,7 +152,7 @@ export default function AdminSidebar({
                           <Icon className={`h-4 w-4 shrink-0 ${active ? "text-bsi-700" : "text-slate-500"}`} />
                           <span className="min-w-0 flex-1 truncate">{item.label}</span>
                           {item.badge && (
-                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${active ? "bg-bsi-100 text-bsi-800" : "bg-slate-100 text-slate-500"}`}>
+                            <span className={`rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide ${active ? "bg-bsi-100 text-bsi-800" : "bg-slate-100 text-slate-600"}`}>
                               {item.badge}
                             </span>
                           )}

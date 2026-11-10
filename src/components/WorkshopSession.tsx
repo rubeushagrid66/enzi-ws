@@ -30,7 +30,7 @@ const STEPS: Array<{ id: Step; label: string; hint: string }> = [
 function StatusChip({ scored, label }: { scored: boolean; label: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold ${
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-bold ${
         scored
           ? "border-bsi-200 bg-bsi-50 text-bsi-800"
           : "border-gold-200 bg-gold-50 text-gold-800"

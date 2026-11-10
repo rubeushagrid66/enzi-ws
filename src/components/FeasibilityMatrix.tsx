@@ -313,7 +313,7 @@ export default function FeasibilityMatrix({
               </span>
               {isPinned ? (
                 <>
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold border border-slate-300 bg-white text-slate-600">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold border border-slate-300 bg-white text-slate-600">
                     Manual position
                   </span>
                   {isAdmin && (
@@ -321,14 +321,14 @@ export default function FeasibilityMatrix({
                       type="button"
                       onClick={resetToComputed}
                       disabled={isSaving}
-                      className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition disabled:opacity-60"
+                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 transition disabled:opacity-60"
                     >
                       Reset to computed
                     </button>
                   )}
                 </>
               ) : (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold border border-bsi-200 bg-bsi-50 text-bsi-700">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold border border-bsi-200 bg-bsi-50 text-bsi-700">
                   Computed from your scores
                 </span>
               )}
@@ -411,7 +411,7 @@ export default function FeasibilityMatrix({
               <span className="text-xs font-bold uppercase tracking-wider text-bsi-800/80">
                 Quick Wins
               </span>
-              <span className="hidden sm:inline text-[10px] font-medium text-bsi-600 bg-bsi-100/60 px-2 py-0.5 rounded-full">
+              <span className="hidden sm:inline text-xs font-medium text-bsi-600 bg-bsi-100/60 px-2 py-0.5 rounded-full">
                 High Impact • Low Effort
               </span>
             </div>
@@ -423,7 +423,7 @@ export default function FeasibilityMatrix({
               <span className="text-xs font-bold uppercase tracking-wider text-rose-800/80">
                 Avoid
               </span>
-              <span className="hidden sm:inline text-[10px] font-medium text-rose-600 bg-rose-100/60 px-2 py-0.5 rounded-full">
+              <span className="hidden sm:inline text-xs font-medium text-rose-600 bg-rose-100/60 px-2 py-0.5 rounded-full">
                 Low Impact • High Effort
               </span>
             </div>
@@ -435,7 +435,7 @@ export default function FeasibilityMatrix({
               <span className="text-xs font-bold uppercase tracking-wider text-deep-800/80">
                 Fill-ins
               </span>
-              <span className="hidden sm:inline text-[10px] font-medium text-deep-600 bg-deep-100/60 px-2 py-0.5 rounded-full">
+              <span className="hidden sm:inline text-xs font-medium text-deep-600 bg-deep-100/60 px-2 py-0.5 rounded-full">
                 Low Impact • Low Effort
               </span>
             </div>
@@ -496,12 +496,12 @@ export default function FeasibilityMatrix({
             <div className="flex items-center justify-between pb-1.5 border-b border-black/10">
               <div className="flex items-center gap-1.5">
                 <div className="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-xs border border-white" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-black/70">
+                <span className="text-xs font-bold uppercase tracking-wider text-black/70">
                   {isPlaced ? currentInfo.title : "Unplaced"}
                 </span>
               </div>
               {isAdmin && (
-                <div className="flex items-center gap-1 text-[10px] font-semibold text-black/60 bg-white/50 px-1.5 py-0.5 rounded">
+                <div className="flex items-center gap-1 text-xs font-semibold text-black/60 bg-white/50 px-1.5 py-0.5 rounded">
                   <Move className="h-2.5 w-2.5" />
                   <span>Drag me</span>
                 </div>
@@ -514,7 +514,7 @@ export default function FeasibilityMatrix({
             </p>
 
             {/* Coordinates Footer */}
-            <div className="mt-2 pt-1.5 border-t border-black/10 flex items-center justify-between text-[10px] text-black/60 font-mono">
+            <div className="mt-2 pt-1.5 border-t border-black/10 flex items-center justify-between text-xs text-black/60 font-mono">
               <span>Imp: {posY.toFixed(0)}%</span>
               <span>Eff: {(100 - posX).toFixed(0)}%</span>
             </div>
