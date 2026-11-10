@@ -227,9 +227,21 @@ export default function ViabilityVoteMatrix({
   };
 
   const canVote = Boolean(currentUser) && meId !== null;
-  // Editable only in my own group, on any aspect. ADMIN additionally
-  // edits any participant's row in any group.
-  const canEditAspect = (_aspect: any) => canVote && isMyGroup;
+  // The viewer's group's assigned role (label): Product, Tech, or
+  // Business & Ops. A group user may only score aspects whose label
+  // matches their group's role. ADMIN / FACILITATOR are exempt (they
+  // score every aspect). An aspect or group without a label stays open
+  // (backward compatible until labels are assigned).
+  const myGroupLabel =
+    (groups.find((g: any) => g.id === meGroupId) || null)?.label || null;
+  // Editable only in my own group, on aspects my group's role may
+  // score. ADMIN additionally edits any participant's row in any group.
+  const canEditAspect = (aspect: any) => {
+    if (!canVote || !isMyGroup) return false;
+    if (isAdmin || isFacilitator) return true;
+    if (!aspect.label || !myGroupLabel) return true;
+    return aspect.label === myGroupLabel;
+  };
 
   // Aspect title block (name + framework/label badges + description),
   // shared by the admin/facilitator header row and the regular user's
@@ -254,6 +266,11 @@ export default function ViabilityVoteMatrix({
         {!isMyGroup && currentUser && !isAdmin && (
           <span className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-400">
             View only
+          </span>
+        )}
+        {isMyGroup && currentUser && !isAdmin && !isFacilitator && aspect.label && myGroupLabel && aspect.label !== myGroupLabel && (
+          <span className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-400">
+            Not your role
           </span>
         )}
       </div>

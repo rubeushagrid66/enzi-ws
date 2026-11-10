@@ -9,12 +9,14 @@ const JWT_SECRET =
 const COOKIE_NAME = "enzi_auth_token";
 
 /** All login roles. "Group" and "Participant" are per-group scorer
- *  accounts (one login per group) — they score every aspect in their
- *  assigned group. A login is identified by its role + group
- *  assignment, not by a participant name: the participant names in a
- *  group are informational only. The three label roles also score
- *  every aspect now (the label gate was removed); ADMIN and
- *  FACILITATOR see everything. */
+ *  accounts (one login per group). A login is identified by its role +
+ *  group assignment, not by a participant name: the participant names
+ *  in a group are informational only. Each group is assigned one of
+ *  the three label roles (Product / Tech / Business & Ops), and a
+ *  group user may only score the aspects whose label matches their
+ *  group's role (the label gate, enforced in the vote API and the
+ *  V&F table). ADMIN and FACILITATOR see everything and score every
+ *  aspect. */
 export const USER_ROLES = ["ADMIN", "FACILITATOR", "Group", "Participant", "Business & Ops", "Product", "Tech"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 /** The roles that are also aspect labels (role === aspect label). */

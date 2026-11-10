@@ -2011,13 +2011,21 @@ export const dbService = {
     return prisma.parameterL3.create({ data: { l2Id, name } });
   },
 
-  async updateGroup(id: string, name: string) {
+  async updateGroup(id: string, name: string, label?: string | null) {
+    const cleanLabel =
+      label === undefined ? undefined : normalizeAspectLabel(label);
     if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase.from("groups").update({ name, updated_at: new Date().toISOString() }).eq("id", id).select().single();
+      const { data, error } = await supabase.from("groups").update({
+        name,
+        // The label column is added by docs/group-label-sql.md; until
+        // it exists, updating a group without a label still works.
+        ...(cleanLabel !== undefined && { label: cleanLabel }),
+        updated_at: new Date().toISOString(),
+      }).eq("id", id).select().single();
       if (error) throw error;
       return data;
     }
-    return prisma.group.update({ where: { id }, data: { name } });
+    return prisma.group.update({ where: { id }, data: { name, ...(cleanLabel !== undefined ? { label: cleanLabel } : {}) } });
   },
 
   async updateParticipant(id: string, data: { name?: string; roleTitle?: string; groupId?: string }) {

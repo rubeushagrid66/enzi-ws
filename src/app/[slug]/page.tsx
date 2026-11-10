@@ -39,11 +39,13 @@ const QUADRANT_META: Record<FeasibilityQuadrant, { title: string; detail: string
 
 /** A finding's D/V/F FOR one group. D is the finding's research score
  *  (same for every group in the project); V/F are this group's
- *  participant averages. All null when the finding isn't assigned to
- *  (or open to) this group, or the group has no complete score. */
+ *  participant averages. Ideas are no longer assigned to groups —
+ *  every group scores every idea — so there is no assignment gate
+ *  here. A group's V/F only reflects the aspects its members may
+ *  score (their group's assigned role), because the vote API only
+ *  lets them vote on those aspects. All null when the group has no
+ *  complete score. */
 function groupScoresFor(finding: any, group: any, extraParticipantIds: string[] = []): { d: number | null; v: number | null; f: number | null } {
-  const assigned: string[] = finding.groupIds || [];
-  if (assigned.length > 0 && !assigned.includes(group.id)) return { d: null, v: null, f: null };
   const participantIds: string[] = [
     ...(group.participants || [])
       .filter((p: any) => p.isActive !== false && p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR")
@@ -58,15 +60,10 @@ function groupScoresFor(finding: any, group: any, extraParticipantIds: string[] 
 }
 
 /** A finding's quadrant FOR one group (null when it has none there).
- *  Assignment gates the quadrant: a finding only has a quadrant for
- *  the groups it is assigned to (or every group when unassigned).
- *  This check must come first — a manual pin would otherwise give the
- *  finding a quadrant for every group, even ones it isn't assigned
- *  to. A manual pin wins over the computed position, same as the
- *  board. */
+ *  Ideas are no longer assigned to groups, so there is no assignment
+ *  gate — a finding has a quadrant for every group that scores it.
+ *  A manual pin wins over the computed position, same as the board. */
 function quadrantForGroup(finding: any, group: any, extraParticipantIds: string[] = []): FeasibilityQuadrant | null {
-  const assigned: string[] = finding.groupIds || [];
-  if (assigned.length > 0 && !assigned.includes(group.id)) return null;
   const { d, v, f } = groupScoresFor(finding, group, extraParticipantIds);
   return findingBoardPositionForScores(finding, d, v, f).quadrant;
 }
@@ -160,9 +157,11 @@ function FindingCard({
 }
 
 /** Groups view — separate from the global findings list. Lists the
- *  project's groups; opening a group shows its assigned findings as the
- *  same cards with D/V/F. A finding assigned to this group shows here
- *  even when its home project is the other one. */
+ *  project's groups; opening a group shows every idea in the project
+ *  as the same cards with D/V/F (ideas are no longer assigned to
+ *  groups — each group is a label team: Product, Tech, or
+ *  Business & Ops — and scores every idea on its own label's
+ *  aspects). */
 // Initials for a participant's avatar circle: first letter of the first
 // two words ("Biz CMS 1" -> "BC", "John Doe" -> "JD", "Naimy" -> "N").
 function initials(name: string): string {
@@ -212,6 +211,11 @@ function GroupsView({
           </button>
           <h2 className="mt-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
             {selectedGroup.name}
+            {selectedGroup.label && (
+              <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-extrabold normal-case tracking-normal text-violet-800">
+                {selectedGroup.label}
+              </span>
+            )}
             {meId != null && (selectedGroup.participants || []).some((p: any) => p.id === meId) && (
               <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold normal-case tracking-normal text-emerald-800">
                 Me
@@ -248,7 +252,7 @@ function GroupsView({
             <Users className="h-10 w-10 text-slate-300 mx-auto" />
             <h3 className="mt-3 text-base font-bold text-slate-800">No ideas in this group yet</h3>
             <p className="mt-1 text-xs text-slate-500">
-              An admin or facilitator assigns findings to this group from the dashboard (Findings &amp; Tags).
+              Ideas are added to the project from the dashboard (Ideas &amp; Tags).
             </p>
           </div>
         )}
@@ -261,7 +265,7 @@ function GroupsView({
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">Groups</h2>
         <p className="mt-0.5 text-xs text-slate-500">
-          Each group holds the ideas assigned to it, with their D, V and F. Open a group to see its ideas.
+          Each group is a label team — Product, Tech, or Business &amp; Ops — and scores every idea in the project on its own label&apos;s aspects. Open a group to see its ideas.
         </p>
       </div>
       {groups.length > 0 ? (
@@ -290,6 +294,11 @@ function GroupsView({
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
                       <span className="truncate text-base font-bold text-slate-900">{g.name}</span>
+                      {g.label && (
+                        <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-extrabold text-violet-800">
+                          {g.label}
+                        </span>
+                      )}
                       {isMyGroup && (
                         <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
                           Me
@@ -500,10 +509,10 @@ export default function ProjectResultViewer({
   }, [imagePopup]);
 
   // Groups view — separate from the global findings list. A group shows
-  // the findings assigned to it (admin + facilitator assign them in the
-  // dashboard), as the same cards with D/V/F. `groupFindings` is loaded
-  // per group from the group-findings endpoint, so a finding from the
-  // other project assigned to this group shows here too.
+  // every idea in the project (ideas are no longer assigned to groups),
+  // as the same cards with D/V/F. `groupFindings` is loaded per group
+  // from the group-findings endpoint, which returns the project's
+  // findings by Platform tag.
   const [view, setView] = useState<"findings" | "groups" | "roadmap">("findings");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [groupFindings, setGroupFindings] = useState<Record<string, any[]>>({});
@@ -562,8 +571,6 @@ export default function ProjectResultViewer({
 
   // When the Groups view opens, load every group's findings in parallel
   // so the tiles show accurate counts and opening a group is instant.
-  // (The endpoint includes findings from the other project assigned to
-  // this group, which the project's own findings list would miss.)
   useEffect(() => {
     if (view !== "groups" || !project) return;
     for (const g of project.groups || []) {

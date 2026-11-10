@@ -9,14 +9,14 @@ import {
 } from "@/lib/scoring";
 
 /**
- * Findings assigned to one group, with D/V/F computed in this project's
+ * Findings for one group, with D/V/F computed in this project's
  * context (this project's aspects + research basis N).
  * GET /api/projects/[slug]/groups/[id]/findings
  * Any logged-in user can read it — the group view on the project page
- * is for everyone. A finding assigned to this group shows here even
- * when its home project is the other one (assignment is cross-project);
- * its D/V/F are computed from this project's aspects, the same way the
- * project page computes them for its own findings.
+ * is for everyone. Ideas are no longer assigned to groups: every
+ * group scores every idea in the project, so this returns all of the
+ * project's findings (by Platform tag, same as the project page),
+ * not just the ones once assigned to the group.
  */
 export async function GET(
   _request: Request,
@@ -36,9 +36,6 @@ export async function GET(
     if (!group) {
       return NextResponse.json({ error: "Group not found in this project" }, { status: 404 });
     }
-
-    const findingIds = await dbService.getGroupFindingIds(params.id);
-    const findings = await dbService.getFindingsByIds(findingIds);
 
     const researchN = {
       interviewN:
@@ -94,6 +91,25 @@ export async function GET(
       platform.forEach((p) => tagsList.push({ category: "Platform", value: p }));
       return { sumber, fitur, platform, tagsList };
     };
+
+    // Every group scores every idea in the project (no assignment), so
+    // the group shows all of the project's findings, by Platform tag
+    // — the same rule as the project page's Ideas tab.
+    const projectPlatform = (project.name || "")
+      .split(/\s+/)
+      .map((w: string) => (w[0] || "").toUpperCase())
+      .join("");
+    const platformMatches = (platforms: string[]) => {
+      const normalized = (platforms || []).map((p) =>
+        (p === "CMS Portal" ? "CMS" : p).toUpperCase()
+      );
+      if (normalized.length === 0) return true;
+      return normalized.includes(projectPlatform);
+    };
+    const findings = (project.findings || []).filter((f: any) => {
+      const { platform } = parseFindingMeta(f.tags);
+      return platformMatches(platform || []);
+    });
 
     const findingsWithScores = findings.map((f: any) => {
       const { sumber, fitur, platform, tagsList } = parseFindingMeta(f.tags);

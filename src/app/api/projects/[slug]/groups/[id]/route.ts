@@ -11,9 +11,9 @@ export async function PUT(
     const session = await getSession();
     const forbidden = requireAdmin(session);
     if (forbidden) return forbidden;
-    const { name } = await request.json();
+    const { name, label } = await request.json();
     if (!name) return NextResponse.json({ error: "Group name is required" }, { status: 400 });
-    const group = await dbService.updateGroup(params.id, name);
+    const group = await dbService.updateGroup(params.id, name, label);
     revalidateProjectPages(params.slug);
     return NextResponse.json({ success: true, group });
   } catch (error) {

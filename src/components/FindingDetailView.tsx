@@ -89,28 +89,24 @@ export default function FindingDetailView({
       .map((p: any) => p.id),
     ...(meId ? [meId] : []),
   ];
-  // Is this finding assigned to the selected group? A finding assigned
-  // to no group is open to every group; a finding assigned to ≥1 group
-  // only counts for those groups.
-  const assignedGroupIds: string[] = localFinding.groupIds || [];
-  const isGroupAssigned =
-    assignedGroupIds.length === 0 || assignedGroupIds.includes(activeGroupId);
   // The selected group's values for this finding. V/F are the average
   // of the group's participants who scored that dimension (1 decimal);
   // a dimension nobody in the group scored is null. D is the finding's
   // research score — it comes from the research mentions and the
   // project's basis N, NOT from any group's votes, so it is the same
-  // for every group in this project and is NOT gated by group
-  // assignment (a non-assigned group still sees the D the admin just
-  // saved). Only V/F are group scores, so only they are N/A when the
-  // group is not assigned to (or has not scored) this finding.
+  // for every group in this project. Ideas are no longer assigned to
+  // groups, so there is no assignment gate: every group scores every
+  // idea, and V/F are never N/A just because a finding is not
+  // "assigned" to the group. A group's V/F only reflects the aspects
+  // its members may score (their group's assigned role), because the
+  // vote API only lets them vote on those aspects.
   const groupVF = groupAverageScores(
     localFinding.scores?.participantScores,
     groupParticipantIds
   );
   const groupD = localFinding.scores?.desirability ?? null;
-  const groupV = isGroupAssigned ? groupVF.viability : null;
-  const groupF = isGroupAssigned ? groupVF.feasibility : null;
+  const groupV = groupVF.viability;
+  const groupF = groupVF.feasibility;
   // The quadrant this group lands in on the board (from its D/V/F —
   // a manual pin wins, same as the board). This is what the Matrix
   // score box shows: the quadrant name, not the F number.
@@ -450,6 +446,15 @@ export default function FindingDetailView({
                     className={`tab-pill ${selected ? "tab-pill-active" : ""}`}
                   >
                     {g.name}
+                    {g.label && (
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${
+                          selected ? "bg-white/25 text-white" : "bg-violet-100 text-violet-800"
+                        }`}
+                      >
+                        {g.label}
+                      </span>
+                    )}
                     {isMe && (
                       <span
                         className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${

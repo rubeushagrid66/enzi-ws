@@ -40,6 +40,11 @@ CREATE TABLE IF NOT EXISTS groups (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  -- The label role assigned to this group (Product / Tech /
+  -- Business & Ops). A group only scores the aspects whose label
+  -- matches its role (the label gate). Added by
+  -- docs/group-label-sql.md; NULL = no role assigned yet.
+  label TEXT,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()

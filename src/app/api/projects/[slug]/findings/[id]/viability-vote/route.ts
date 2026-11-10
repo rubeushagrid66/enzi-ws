@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { dbService } from "@/lib/db-service";
+import { dbService, normalizeAspectLabel } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
 
@@ -14,8 +14,13 @@ import { revalidateProjectPages } from "@/lib/revalidate";
  *   as themselves — naming their own participant is allowed, naming
  *   anyone else is rejected.
  * - ADMIN / FACILITATOR may vote as themselves or as a participant
- *   they name. There is no label restriction: any participant may be
- *   scored on any aspect.
+ *   they name.
+ * - LABEL GATE: ideas are no longer assigned to groups — every group
+ *   scores every idea — but a voter may only score aspects whose label
+ *   matches the role assigned to their group (Product / Tech /
+ *   Business & Ops). ADMIN / FACILITATOR voting as themselves are
+ *   exempt and score every aspect. An aspect or group without a label
+ *   stays open (backward compatible until labels are assigned).
  * `isValidated` stays in sync with the score (true exactly when a score
  * is set), so the current Viability formula keeps working unchanged.
  */
@@ -79,8 +84,9 @@ export async function POST(
     // other user (label roles, Group and Participant accounts) records
     // only their own scores — voting as themselves (participantId ===
     // their own "me" row) or omitting participantId (defaults to me)
-    // is allowed; voting for anyone else is not. There is no label
-    // restriction on which aspects a participant may score.
+    // is allowed; voting for anyone else is not. The label gate below
+    // then restricts which aspects they may score, by their group's
+    // assigned role.
     const isPrivileged = session.role === "ADMIN" || session.role === "FACILITATOR";
     if (participantId && participantId !== me.id && !isPrivileged) {
       return NextResponse.json({ error: "You can only record your own scores" }, { status: 400 });
@@ -97,19 +103,18 @@ export async function POST(
       }
     }
 
-    // Group-scoped scoring: a finding assigned to one or more groups
-    // may only be scored by participants in those groups. The check is
-    // on the voter (the participant being scored for), so an admin
-    // editing another participant's score is judged by that
-    // participant's group, not the admin's own. A finding with no group
-    // assignment yet stays open to anyone in the project, as before.
-    // ADMIN / FACILITATOR scoring as themselves are exempt: they are
-    // real scorers in any group they open, and their vote counts in
-    // the V/F of the groups the finding is assigned to. (Their
-    // participant row lives in only one group, so gating on it would
-    // wrongly block them from scoring a finding assigned elsewhere.)
-    const assignedGroupIds = await dbService.getFindingGroupIds(findingId);
-    if (assignedGroupIds.length > 0 && !(isPrivileged && voterId === me.id)) {
+    // LABEL GATE: ideas are no longer assigned to groups, so there is
+    // no assignment check anymore — every group scores every idea. But
+    // a voter may only score aspects whose label matches the role
+    // assigned to their group (Product / Tech / Business & Ops). The
+    // check is on the voter (the participant being scored for), so an
+    // admin editing another participant's score is judged by that
+    // participant's group, not the admin's own. ADMIN / FACILITATOR
+    // scoring as themselves are exempt: they score every aspect.
+    // An aspect or group without a label stays open (backward
+    // compatible until labels are assigned).
+    const aspectLabel = normalizeAspectLabel((aspect as any).label);
+    if (aspectLabel && !(isPrivileged && voterId === me.id)) {
       let voterGroupId: string | null = null;
       if (voterId === me.id) {
         voterGroupId = (me as any).groupId ?? null;
@@ -121,9 +126,11 @@ export async function POST(
           }
         }
       }
-      if (!voterGroupId || !assignedGroupIds.includes(voterGroupId)) {
+      const voterGroup = (project.groups || []).find((g: any) => g.id === voterGroupId);
+      const voterLabel = normalizeAspectLabel((voterGroup as any)?.label);
+      if (voterLabel && voterLabel !== aspectLabel) {
         return NextResponse.json(
-          { error: "This finding is assigned to other groups — only participants in its assigned groups can score it" },
+          { error: `This aspect is for ${aspectLabel} — your group is assigned ${voterLabel}` },
           { status: 403 }
         );
       }

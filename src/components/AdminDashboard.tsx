@@ -148,9 +148,6 @@ export default function AdminDashboard() {
   // Access rule: only ADMIN edits config. Everyone else can edit
   // Findings only; everything else in the admin area is view-only.
   const isAdmin = currentUser?.role === "ADMIN";
-  // Finding → group assignment is admin + facilitator (not the
-  // participants scoring in the workshop).
-  const canAssignGroups = isAdmin || currentUser?.role === "FACILITATOR";
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -234,9 +231,6 @@ export default function AdminDashboard() {
   // All groups across all projects — assignment is cross-project, so
   // the picker lists every group with its project.
   const [allGroups, setAllGroups] = useState<any[]>([]);
-  const [assignFinding, setAssignFinding] = useState<any | null>(null);
-  const [assignSelected, setAssignSelected] = useState<string[]>([]);
-  const [assignSaving, setAssignSaving] = useState(false);
 
   // Finding form (create + edit)
   const [findingModalOpen, setFindingModalOpen] = useState(false);
@@ -274,7 +268,7 @@ export default function AdminDashboard() {
 
   // Groups and Participants
   const [newGroupName, setNewGroupName] = useState("");
-  const [editingGroup, setEditingGroup] = useState<{ id: string; name: string } | null>(null);
+  const [editingGroup, setEditingGroup] = useState<{ id: string; name: string; label?: string | null } | null>(null);
   const [editingParticipant, setEditingParticipant] = useState<{ id: string; name: string; roleTitle: string; groupId: string } | null>(null);
 
   // Aspects
@@ -744,43 +738,6 @@ export default function AdminDashboard() {
     });
   };
 
-  /** Finding → group assignment (admin + facilitator, dashboard only).
-   *  Opens the picker with the finding's current groups checked. The
-   *  finding is loaded by id, so a pool finding or a finding from the
-   *  other project can be assigned from any project's dashboard. */
-  const openAssignGroups = (f: any) => {
-    setAssignFinding(f);
-    setAssignSelected(Array.isArray(f.groupIds) ? [...f.groupIds] : []);
-  };
-  const toggleAssignGroup = (groupId: string) => {
-    setAssignSelected((prev) =>
-      prev.includes(groupId) ? prev.filter((g) => g !== groupId) : [...prev, groupId]
-    );
-  };
-  const saveAssignGroups = async () => {
-    if (!assignFinding) return;
-    setAssignSaving(true);
-    try {
-      setError(null);
-      const slug = assignFinding.projectSlug || selectedProjectSlug;
-      if (!slug) {
-        setError("Select a project in the sidebar first, then assign this idea.");
-        return;
-      }
-      await apiCall(`/api/projects/${slug}/findings/${assignFinding.id}/groups`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ groupIds: assignSelected }),
-      });
-      setAssignFinding(null);
-      await loadGlobalData();
-    } catch (err: any) {
-      setError(err.message || "Failed to assign idea to groups");
-    } finally {
-      setAssignSaving(false);
-    }
-  };
-
   // ── Ideas ───────────────────────────────────────────────────────────────────
   // An idea is created here and linked to 1 or many findings (the
   // checklist lives in the idea modal). A finding shows its linked
@@ -993,7 +950,7 @@ export default function AdminDashboard() {
       await apiCall(`/api/projects/${selectedProjectSlug}/groups/${editingGroup.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editingGroup.name.trim() }),
+        body: JSON.stringify({ name: editingGroup.name.trim(), label: editingGroup.label ?? null }),
       });
       setEditingGroup(null);
       await loadProjectDetails(selectedProjectSlug);
@@ -1329,16 +1286,14 @@ export default function AdminDashboard() {
                   <table className="w-full min-w-[760px] border-collapse text-left text-sm">
                     <caption className="sr-only">All ideas: the shared pool and every project&apos;s ideas</caption>
                     <colgroup>
-                      <col className="w-[32%]" />
+                      <col className="w-[38%]" />
+                      <col className="w-[34%]" />
                       <col className="w-[28%]" />
-                      <col className="w-[22%]" />
-                      <col className="w-[18%]" />
                     </colgroup>
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
                         <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Idea Title</th>
                         <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tags</th>
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Groups</th>
                         <th scope="col" className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Actions</th>
                       </tr>
                     </thead>
@@ -1362,42 +1317,8 @@ export default function AdminDashboard() {
                                   ))}
                                 </div>
                               </td>
-                              <td className="px-4 py-3">
-                                <div className="flex flex-wrap gap-1">
-                                  {Array.isArray(f.groupIds) && f.groupIds.length > 0 ? (
-                                    f.groupIds.map((gid: string) => {
-                                      const g = allGroups.find((x: any) => x.id === gid);
-                                      const short =
-                                        g?.projectSlug === "cash-management-system"
-                                          ? "CMS"
-                                          : g?.projectSlug === "digital-value-chain"
-                                            ? "DVC"
-                                            : g?.projectName || "";
-                                      return (
-                                        <span key={gid} className="whitespace-nowrap rounded-md bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-700">
-                                          {short ? `${short} · ` : ""}
-                                          {g?.name || gid}
-                                        </span>
-                                      );
-                                    })
-                                  ) : (
-                                    <span className="text-xs font-medium text-slate-400">—</span>
-                                  )}
-                                </div>
-                              </td>
                               <td className="whitespace-nowrap px-4 py-3 text-right">
                                 <div className="flex items-center justify-end gap-1">
-                                  {canAssignGroups && (
-                                    <button
-                                      type="button"
-                                      onClick={() => openAssignGroups(f)}
-                                      aria-label={`Assign ${f.title} to groups`}
-                                      title="Assign to groups"
-                                      className="btn-icon"
-                                    >
-                                      <Users className="h-4 w-4" />
-                                    </button>
-                                  )}
                                   {isPool ? (
                                     <button
                                       type="button"
@@ -1689,10 +1610,10 @@ export default function AdminDashboard() {
                       {activeProject.groups.map((group: any) => (
                         <div key={group.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
                           <div className="mb-2 flex items-center justify-between gap-2">
-                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{group.name} ({(group.participants || []).filter((p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR").length} participants)</span>
+                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{group.name}{group.label ? ` · ${group.label}` : ""} ({(group.participants || []).filter((p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR").length} participants)</span>
                             {isAdmin && (
                             <span className="flex items-center gap-1">
-                              <button type="button" onClick={() => setEditingGroup({ id: group.id, name: group.name })} aria-label={`Edit group ${group.name}`} className="btn-icon"><Edit2 className="h-4 w-4" /></button>
+                              <button type="button" onClick={() => setEditingGroup({ id: group.id, name: group.name, label: group.label || null })} aria-label={`Edit group ${group.name}`} className="btn-icon"><Edit2 className="h-4 w-4" /></button>
                               <button type="button" onClick={() => handleDeleteGroup(group)} aria-label={`Delete group ${group.name}`} className="btn-icon-danger"><Trash2 className="h-4 w-4" /></button>
                             </span>
                             )}
@@ -2154,55 +2075,6 @@ export default function AdminDashboard() {
         </Modal>
       )}
 
-      {/* ASSIGN FINDING TO GROUPS (admin + facilitator) */}
-      {assignFinding && (
-        <Modal title={`Assign to groups — ${assignFinding.title}`} onClose={() => setAssignFinding(null)}>
-          <div className="space-y-3">
-            <p className="text-sm text-slate-600">
-              Tick the groups this idea belongs to. It will show inside those groups on the project page, and only
-              participants in those groups can score it. A finding with no group ticked stays visible in the global
-              findings and can be scored by anyone in its project, as before.
-            </p>
-            {(() => {
-              // Groups grouped by project (assignment is cross-project).
-              const byProject = new Map<string, any[]>();
-              for (const g of allGroups) {
-                const key = g.projectName || g.projectSlug || "Project";
-                if (!byProject.has(key)) byProject.set(key, []);
-                byProject.get(key)!.push(g);
-              }
-              if (byProject.size === 0) {
-                return <p className="text-sm italic text-slate-500">No groups yet — create a group first (Groups &amp; Participants tab).</p>;
-              }
-              return Array.from(byProject.entries()).map(([projectName, groups]) => (
-                <fieldset key={projectName} className="rounded-xl border border-slate-200 px-3 py-2">
-                  <legend className="px-1 text-xs font-semibold uppercase tracking-wider text-slate-400">{projectName}</legend>
-                  <div className="space-y-1.5 py-1">
-                    {groups.map((g: any) => (
-                      <label key={g.id} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-                        <input
-                          type="checkbox"
-                          checked={assignSelected.includes(g.id)}
-                          onChange={() => toggleAssignGroup(g.id)}
-                          className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
-                        />
-                        {g.name}
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-              ));
-            })()}
-            <div className="flex items-center justify-end gap-2 pt-3">
-              <button type="button" onClick={() => setAssignFinding(null)} className="btn-secondary">Cancel</button>
-              <button type="button" onClick={saveAssignGroups} disabled={assignSaving} className="btn-primary disabled:opacity-60">
-                {assignSaving ? "Saving…" : "Save assignment"}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
       {/* USER MODAL (create + edit) */}
       {userModalOpen && (
         <Modal title={editingUser ? `Edit User — ${editingUser.name}` : "Create User"} onClose={() => setUserModalOpen(false)}>
@@ -2278,6 +2150,15 @@ export default function AdminDashboard() {
             <div>
               <label htmlFor="edit-group-name" className="field-label">Group name</label>
               <input id="edit-group-name" type="text" required value={editingGroup.name} onChange={(e) => setEditingGroup({ ...editingGroup, name: e.target.value })} className="input w-full" />
+            </div>
+            <div>
+              <label htmlFor="edit-group-label" className="field-label">Assigned role — this group only scores aspects with this label</label>
+              <select id="edit-group-label" value={editingGroup.label || ""} onChange={(e) => setEditingGroup({ ...editingGroup, label: e.target.value || null })} className="input w-full">
+                <option value="">No role assigned</option>
+                <option value="Product">Product</option>
+                <option value="Tech">Tech</option>
+                <option value="Business & Ops">Business &amp; Ops</option>
+              </select>
             </div>
             <div className="flex items-center justify-end gap-2 pt-2">
               <button type="button" onClick={() => setEditingGroup(null)} className="btn-secondary">Cancel</button>
