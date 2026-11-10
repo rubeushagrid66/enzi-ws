@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import React, { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Target,
   Users2,
@@ -9,9 +9,9 @@ import {
   HelpCircle,
   ChevronDown,
 } from "lucide-react";
-import { slugify } from "@/lib/slugify";
 import FeasibilityMatrix from "./FeasibilityMatrix";
 import ViabilityVoteMatrix from "./ViabilityVoteMatrix";
+import FindingPopup from "./FindingPopup";
 import { groupAverageScores, normalizeFramework, findingBoardPositionForScores, calculateDVFScore, type FeasibilityQuadrant, type WeightInput } from "@/lib/scoring";
 
 // Quadrant display names + what they mean, shared by the Matrix score
@@ -71,6 +71,46 @@ export default function FindingDetailView({
       .catch(() => {});
     return () => { cancelled = true; };
   }, [finding.id, project.slug]);
+
+  // ── Related-finding popup ────────────────────────────────────────
+  // Clicking a Related Finding opens the SAME finding popup the
+  // Findings tab shows (title, category, image, description, sub
+  // findings, linked ideas) as a modal over this detail page — it
+  // does not navigate away. The full finding (with sub findings and
+  // linked ideas, plus its category name from the group) comes from
+  // project.findingsByCategory, which this page already receives;
+  // a finding from another project falls back to the light row data
+  // (Uncategorized, linked to this idea only).
+  const router = useRouter();
+  const [popupFinding, setPopupFinding] = useState<any | null>(null);
+  const findingById = useMemo(() => {
+    const map: Record<string, any> = {};
+    for (const g of project?.findingsByCategory || []) {
+      for (const f of g.findings || []) {
+        map[f.id] = { ...f, categoryName: g.categoryName };
+      }
+    }
+    return map;
+  }, [project?.findingsByCategory]);
+  const openRelatedFinding = (idea: any) => {
+    const full = findingById[idea.id];
+    setPopupFinding(
+      full || {
+        ...idea,
+        categoryName: "Uncategorized",
+        subFindings: [],
+        linkedIdeas: [{ id: finding.id, title: finding.title }],
+      }
+    );
+  };
+  useEffect(() => {
+    if (!popupFinding) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPopupFinding(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [popupFinding]);
 
   // ── Idea scope: role-based, not group-based ──────────────────────
   // Ideas are assigned to ROLES, not groups: every role scores the
@@ -456,9 +496,10 @@ export default function FindingDetailView({
               </h3>
               <div className="mt-2 flex flex-wrap gap-2">
                 {relatedIdeas.map((idea: any) => (
-                  <Link
+                  <button
                     key={idea.id}
-                    href={`/${project.slug}/findings/${slugify(idea.title || "")}`}
+                    type="button"
+                    onClick={() => openRelatedFinding(idea)}
                     title={idea.description ? `${idea.title} — ${idea.description}` : idea.title}
                     className="chip chip-bsi transition hover:border-bsi-300 hover:bg-bsi-100"
                   >
@@ -466,7 +507,7 @@ export default function FindingDetailView({
                     {idea.description && (
                       <span className="max-w-48 truncate text-xs text-bsi-700">· {idea.description}</span>
                     )}
-                  </Link>
+                  </button>
                 ))}
               </div>
             </div>
@@ -514,8 +555,8 @@ export default function FindingDetailView({
                 <div className="mt-2 overflow-hidden rounded-xl border border-slate-200">
                   <div className="hidden sm:grid sm:grid-cols-[7rem_1fr_1fr] bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                     <div className="px-3 py-2" />
-                    <div className="px-3 py-2">Termasuk</div>
-                    <div className="px-3 py-2 border-l border-slate-200">Tidak Termasuk</div>
+                    <div className="px-3 py-2 text-bsi-700">Termasuk</div>
+                    <div className="px-3 py-2 border-l border-slate-200 text-gold-700">Tidak Termasuk</div>
                   </div>
                   {scopeRows.map((row) => (
                     <div key={row.label} className="grid border-t border-slate-200 first:border-t-0 sm:grid-cols-[7rem_1fr_1fr]">
@@ -528,7 +569,7 @@ export default function FindingDetailView({
                         <p className="text-sm leading-relaxed text-slate-700">{row.termasuk || "—"}</p>
                       </div>
                       <div className="px-3 pb-2.5 sm:py-3 sm:border-l sm:border-slate-200">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-rose-700 sm:hidden">Tidak Termasuk</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-gold-700 sm:hidden">Tidak Termasuk</p>
                         <p className="text-sm leading-relaxed text-slate-700">{row.tidak || "—"}</p>
                       </div>
                     </div>
@@ -822,6 +863,17 @@ export default function FindingDetailView({
       <p className="px-1 text-xs leading-relaxed text-slate-400">
         D, V and F are all on the 1–3 scale. D = research mentions (Wawancara + Survey, rounded-up average); V = average of your Viability aspect scores; F = 4 − average of your Effort aspect scores. There is no composite score.
       </p>
+
+      {/* ── Related-finding popup: the same modal the Findings tab
+          shows, over this detail page. A linked idea goes to that
+          idea's own detail page. ── */}
+      {popupFinding && (
+        <FindingPopup
+          finding={popupFinding}
+          onClose={() => setPopupFinding(null)}
+          onOpenIdea={(li: any) => router.push(`/${project.slug}/ideas/${li.id}`)}
+        />
+      )}
     </div>
   );
 }

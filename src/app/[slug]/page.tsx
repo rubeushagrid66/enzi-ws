@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import FindingPopup from "@/components/FindingPopup";
 import {
   Search,
   Target,
@@ -1370,111 +1371,12 @@ export default function ProjectResultViewer({
         </div>
       )}
       {findingDetail && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Finding detail — ${findingDetail.title}`}
-          className={`fixed inset-0 ${topPopup === "finding" ? "z-[110]" : "z-[100]"} flex items-center justify-center p-4`}
-        >
-          <button
-            aria-label="Close"
-            onClick={closeFindingPopup}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          />
-          <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
-              <div className="min-w-0">
-                <h2 className="text-base font-bold leading-snug text-slate-900 sm:text-lg">{findingDetail.title}</h2>
-                <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                  <span className="rounded-full bg-bsi-50 px-2.5 py-0.5 font-bold text-bsi-700">
-                    {findingDetail.categoryName || "Uncategorized"}
-                  </span>
-                  {(findingDetail.linkedIdeas || []).length > 0 && (
-                    <span>Linked to {(findingDetail.linkedIdeas || []).length} {(findingDetail.linkedIdeas || []).length === 1 ? "idea" : "ideas"}</span>
-                  )}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeFindingPopup}
-                aria-label="Close dialog"
-                className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="space-y-5 overflow-y-auto px-5 py-4">
-              {findingDetail.imageUrl && (
-                <img src={findingDetail.imageUrl} alt={`Image evidence for ${findingDetail.title}`} className="h-auto w-full rounded-xl border border-slate-200 object-contain" />
-              )}
-              {findingDetail.description && String(findingDetail.description).trim() !== "" ? (
-                <p className="text-sm leading-relaxed text-slate-700">{findingDetail.description}</p>
-              ) : (
-                <p className="text-sm text-slate-400">No description yet.</p>
-              )}
-              {(findingDetail.subFindings || []).filter((s: any) =>
-                (s.fitur && String(s.fitur).trim() !== "") ||
-                (s.description && String(s.description).trim() !== "") ||
-                (s.images || []).length > 0
-              ).length > 0 && (
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Sub findings</p>
-                  <div className="mt-2 space-y-3">
-                    {(findingDetail.subFindings || []).filter((s: any) =>
-                      (s.fitur && String(s.fitur).trim() !== "") ||
-                      (s.description && String(s.description).trim() !== "") ||
-                      (s.images || []).length > 0
-                    ).map((s: any, si: number) => (
-                      <div key={s.id || si} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                          Sub Finding {si + 1}{s.fitur ? ` — ${s.fitur}` : ""}
-                        </p>
-                        {s.description && String(s.description).trim() !== "" && (
-                          <p className="mt-1 text-sm leading-relaxed text-slate-700">{s.description}</p>
-                        )}
-                        {(s.images || []).map((im: any, ii: number) => (
-                          <figure key={ii} className="mt-2">
-                            <img src={im.image_url} alt={`Sub finding ${si + 1} evidence ${ii + 1}`} className="h-auto w-full rounded-lg border border-slate-200 object-contain" />
-                            {im.description && String(im.description).trim() !== "" && (
-                              <figcaption className="mt-1 text-xs text-slate-500">{im.description}</figcaption>
-                            )}
-                          </figure>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {(findingDetail.linkedIdeas || []).length > 0 && (
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Linked ideas</p>
-                  <ul className="mt-2 space-y-1.5">
-                    {(findingDetail.linkedIdeas || []).map((li: any) => {
-                      // Open the idea's own detail popup on top of
-                      // this one (drill-down); closing it returns here.
-                      // Fall back to the row's own data if the idea is
-                      // not in this project's list.
-                      const full = ideaById[li.id];
-                      const target = full || li;
-                      return (
-                        <li key={li.id}>
-                          <button
-                            type="button"
-                            onClick={() => openIdeaPopup(target)}
-                            className="group flex w-full items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:border-bsi-300 hover:bg-bsi-50/60 hover:text-bsi-700"
-                          >
-                            <span className="min-w-0">{li.title}</span>
-                            <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-bsi-600" />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <FindingPopup
+          finding={findingDetail}
+          onClose={closeFindingPopup}
+          onOpenIdea={(li: any) => openIdeaPopup(ideaById[li.id] || li)}
+          zIndexClass={topPopup === "finding" ? "z-[110]" : "z-[100]"}
+        />
       )}
     </div>
   );
