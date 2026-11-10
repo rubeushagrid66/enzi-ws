@@ -298,17 +298,25 @@ export default function ViabilityVoteMatrix({
     };
   }, []);
 
-  const refreshFinding = useCallback(async () => {
-    try {
-      const projRes = await fetch(`/api/projects/${project.slug}`);
-      if (!projRes.ok) return;
-      const freshData = await projRes.json();
-      const updatedF = freshData.project.findings.find((f: any) => f.id === finding.id);
-      if (updatedF && onVotesChanged) onVotesChanged(updatedF);
-    } catch {
-      // The save already succeeded; a stale list is a cosmetic miss.
-    }
-  }, [project.slug, finding.id, onVotesChanged]);
+  // The vote POST returns the finding's current votes + recomputed
+  // participant scores. Apply those to the parent's finding directly —
+  // no re-fetch of the whole project (5-7s) just to read back the vote
+  // that was just saved. The response is authoritative (read from the
+  // database after the upsert), so a vote is never lost when two saves
+  // land close together. Only the votes and scores come from the
+  // response; the rest of the finding (title, description, ...) never
+  // changes on a vote.
+  const applySavedVote = useCallback(
+    (data: any) => {
+      if (!data?.viabilityVotes || !data?.participantScores || !onVotesChanged) return;
+      onVotesChanged({
+        ...finding,
+        viabilityVotes: data.viabilityVotes,
+        scores: { ...(finding.scores || {}), participantScores: data.participantScores },
+      });
+    },
+    [finding, onVotesChanged]
+  );
 
   const postVote = useCallback(
     async (aspectId: string, participantId: string, score: number | null, reason: string) => {
@@ -328,7 +336,8 @@ export default function ViabilityVoteMatrix({
           const data = await res.json().catch(() => ({}));
           throw new Error(data.error || `Saving failed (${res.status})`);
         }
-        await refreshFinding();
+        const data = await res.json().catch(() => ({}));
+        applySavedVote(data);
       } catch (e: any) {
         setSaveError(e.message || "Failed to save score");
         // Revert the optimistic local state from the finding prop.
@@ -341,7 +350,7 @@ export default function ViabilityVoteMatrix({
         setSaving((s) => ({ ...s, [key]: false }));
       }
     },
-    [project.slug, finding, refreshFinding]
+    [project.slug, finding, applySavedVote]
   );
 
   const handleScoreClick = (aspectId: string, participantId: string, score: number) => {

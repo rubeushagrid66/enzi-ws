@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dbService, normalizeAspectLabel } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
+import { calculateAllParticipantScores, normalizeFramework } from "@/lib/scoring";
 
 /**
  * Save a viability vote: a 1-3 score + an Alasan (reason) per aspect.
@@ -153,6 +154,26 @@ export async function POST(
       reason
     );
 
+    // Return the finding's current votes + recomputed participant scores,
+    // so the client can update the display from this save response
+    // instead of re-fetching the whole project (5-7s) just to read back
+    // the vote that was just saved. This is the authoritative state
+    // (read from the database after the upsert), so no vote is lost
+    // when two saves land close together. Desirability does not change
+    // on a vote (it comes from research mentions), so only the
+    // participant scores are recomputed here.
+    const aspectIdsFor = (dim: string) =>
+      (project.viabilityAspects || [])
+        .filter((a: any) => normalizeFramework(a.framework) === dim)
+        .map((a: any) => a.id);
+    const refreshed = await dbService.getFindingsByIds([findingId]);
+    const refreshedVotes = refreshed[0]?.viabilityVotes || [];
+    const participantScores = calculateAllParticipantScores(
+      refreshedVotes,
+      aspectIdsFor("Viability"),
+      aspectIdsFor("Feasibility")
+    );
+
     revalidateProjectPages(params.slug);
     return NextResponse.json({
       success: true,
@@ -165,6 +186,8 @@ export async function POST(
         score: vote.score != null ? Number(vote.score) : null,
         reason: vote.reason ?? null,
       },
+      viabilityVotes: refreshedVotes,
+      participantScores,
     });
   } catch (error) {
     console.error("Error saving viability vote:", error);

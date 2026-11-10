@@ -26,7 +26,30 @@ export async function GET(
   try {
     const { slug } = params;
 
-    const project = await dbService.getProjectBySlug(slug);
+    // Fetch the independent reads concurrently instead of one after
+    // another. The project itself is required; the linked-findings
+    // reads (all ideas, their sub-findings, and the categories) are
+    // best-effort — a failure in any of them still leaves the listing
+    // working, exactly as before. The sub-findings read starts as soon
+    // as the ideas arrive, in parallel with the project read. No
+    // caching is added here: every read still hits the database fresh,
+    // so an edit reflects immediately (the stale-data bug stays fixed).
+    const projectP = dbService.getProjectBySlug(slug);
+    const ideasP = dbService.getIdeas().catch(() => null);
+    const subMapP: Promise<Record<string, any[]>> = ideasP.then((ideas) =>
+      ideas && ideas.length > 0
+        ? dbService
+            .getSubFindingsForIdeas(ideas.map((i: any) => i.id))
+            .catch(() => ({} as Record<string, any[]>))
+        : {}
+    );
+    const categoriesP = dbService.getFindingCategories().catch(() => []);
+    const [project, allIdeas, subMap, categories] = await Promise.all([
+      projectP,
+      ideasP,
+      subMapP,
+      categoriesP,
+    ]);
 
     if (!project) {
       return NextResponse.json(
@@ -197,9 +220,11 @@ export async function GET(
     let relatedByFinding: Record<string, Array<{ id: string; title: string; description: string; imageUrl: string | null; subFindings: any[] }>> = {};
     let findingsByCategory: Array<{ categoryId: string | null; categoryName: string; findings: any[] }> = [];
     try {
-      const allIdeas = await dbService.getIdeas();
-      const subMap = await dbService.getSubFindingsForIdeas(allIdeas.map((i: any) => i.id));
-      for (const idea of allIdeas) {
+      // allIdeas / subMap / categories were already fetched concurrently
+      // with the project above; a failed ideas read is null here, which
+      // reads as "no linked findings", exactly as before.
+      const ideas = allIdeas || [];
+      for (const idea of ideas) {
         for (const fid of idea.findingIds || []) {
           (relatedByFinding[fid] ||= []).push({
             id: idea.id,
@@ -216,10 +241,9 @@ export async function GET(
       // projects — the same rule as the Ideas tab.
       const projectFindingIds = new Set(findingsWithScores.map((f: any) => f.id));
       const poolTitleById = new Map(findingsWithScores.map((f: any) => [f.id, f.title]));
-      const categories = await dbService.getFindingCategories().catch(() => []);
       const categoryNameById = new Map((categories || []).map((c: any) => [c.id, c.name]));
       const byCategory = new Map<string | null, any[]>();
-      for (const idea of allIdeas) {
+      for (const idea of ideas) {
         const linkedIds = (idea.findingIds || []).filter((fid: string) => projectFindingIds.has(fid));
         if (linkedIds.length === 0) continue;
         const groupKey = idea.categoryId ?? null;
