@@ -202,7 +202,7 @@ function GroupsView({
           </button>
           <h2 className="mt-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
             {selectedGroup.name}
-            {selectedGroup.label && (
+            {selectedGroup.label && selectedGroup.label.toLowerCase() !== selectedGroup.name.toLowerCase() && (
               <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-extrabold normal-case tracking-normal text-violet-800">
                 {selectedGroup.label}
               </span>
@@ -285,7 +285,7 @@ function GroupsView({
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
                       <span className="truncate text-base font-bold text-slate-900">{g.name}</span>
-                      {g.label && (
+                      {g.label && g.label.toLowerCase() !== g.name.toLowerCase() && (
                         <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-extrabold text-violet-800">
                           {g.label}
                         </span>

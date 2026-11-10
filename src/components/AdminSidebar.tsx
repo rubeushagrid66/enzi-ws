@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { X, ExternalLink, FolderGit2, Users2, Sliders, Tag, Shield, ListChecks, LogOut, Lightbulb } from "lucide-react";
+import { X, ExternalLink, FolderGit2, Users2, Sliders, Tag, Shield, ListChecks, LogOut, Lightbulb, Layers } from "lucide-react";
 import { ADMIN_NAV, type AdminTab } from "@/lib/admin-nav";
 
 // Icons live here (client-side); the nav data (id/label/href/badge/group)
@@ -9,6 +9,7 @@ import { ADMIN_NAV, type AdminTab } from "@/lib/admin-nav";
 const NAV_ICONS: Record<AdminTab, React.ComponentType<{ className?: string }>> = {
   findings: Tag,
   ideas: Lightbulb,
+  categories: Layers,
   weights: Sliders,
   groups: Users2,
   aspects: ListChecks,
@@ -57,6 +58,7 @@ export default function AdminSidebar({
   const isLabelUser = ["Tech", "Product", "Business & Ops"].includes(currentUser?.role ?? "");
   const items = ADMIN_NAV.filter((i) => {
     if (i.id === "users") return isAdmin;
+    if (i.id === "categories") return isAdmin;
     if (isLabelUser) return i.id === "groups" || i.id === "aspects";
     return true;
   });

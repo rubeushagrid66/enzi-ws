@@ -104,6 +104,15 @@ CREATE TABLE IF NOT EXISTS findings (
   title TEXT NOT NULL,
   description TEXT,
   tags JSONB DEFAULT '[]'::jsonb,
+  -- Idea detail fields (Create/Edit Idea form): all optional text.
+  tujuan TEXT,
+  scope_termasuk TEXT,
+  scope_tidak_termasuk TEXT,
+  role_users TEXT,
+  step_feature_screen TEXT,
+  apa_yang_berubah TEXT,
+  output_keberhasilan TEXT,
+  tujuan_bisnis TEXT,
   feasibility_x NUMERIC DEFAULT 50.0,
   feasibility_y NUMERIC DEFAULT 50.0,
   feasibility_quadrant TEXT DEFAULT 'QUICK_WINS',
@@ -112,6 +121,15 @@ CREATE TABLE IF NOT EXISTS findings (
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Finding categories (global, shared by both projects). A Finding
+-- belongs to at most one category; deleting a category clears the link.
+CREATE TABLE IF NOT EXISTS finding_categories (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS finding_parameter_values (
@@ -156,9 +174,16 @@ CREATE TABLE IF NOT EXISTS ideas (
   title TEXT NOT NULL,
   description TEXT DEFAULT '',
   sumber JSONB NOT NULL DEFAULT '[]',
+  category_id TEXT REFERENCES finding_categories(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+-- Finding categories 2026-11-10: admin creates categories (e.g. "Input
+-- & Bulk Transfer"); a Finding is assigned to at most one, from the
+-- Create/Edit Finding form. See docs/findings-category-and-idea-fields-
+-- sql.md. Added with:
+--   CREATE TABLE IF NOT EXISTS finding_categories (id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text, name TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
+--   ALTER TABLE ideas ADD COLUMN IF NOT EXISTS category_id TEXT REFERENCES finding_categories(id) ON DELETE SET NULL;
 -- Sumber moved to Findings (the linked items) 2026-11-09: each finding
 -- records which research source(s) it came from (Wawancara/Survey/
 -- Internal). Added to existing tables with:

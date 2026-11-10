@@ -200,10 +200,11 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<AdminTab>(urlTab);
   useEffect(() => {
     // Users & Roles is admin-only: a non-admin landing on /dashboard/user
-    // (e.g. via a pasted URL) falls back to Ideas & Tags.
-    // Label-role users only have Groups & Participants and Viability
-    // Aspects: any other tab (e.g. via a pasted URL) falls back to Groups.
-    if (!loading && urlTab === "users" && !isAdmin) {
+    // (e.g. via a pasted URL) falls back to Ideas & Tags. Findings
+    // Category is admin-only too. Label-role users only have Groups &
+    // Participants and Viability Aspects: any other tab (e.g. via a
+    // pasted URL) falls back to Groups.
+    if (!loading && (urlTab === "users" || urlTab === "categories") && !isAdmin) {
       setActiveTab("findings");
     } else if (!loading && isLabelUser && urlTab !== "groups" && urlTab !== "aspects") {
       setActiveTab("groups");
@@ -263,7 +264,7 @@ export default function AdminDashboard() {
   const [editingFindingId, setEditingFindingId] = useState<string | null>(null);
   // Where a new finding goes: the shared pool, or the selected project.
   const [findingTarget, setFindingTarget] = useState<"pool" | "project">("pool");
-  const [findingForm, setFindingForm] = useState({ title: "", description: "", sumber: [] as string[], fitur: "", platform: [] as string[] });
+  const [findingForm, setFindingForm] = useState({ title: "", description: "", sumber: [] as string[], fitur: "", platform: [] as string[], tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", stepFeatureScreen: "", apaYangBerubah: "", outputKeberhasilan: "", tujuanBisnis: "" });
   // Finding ids (the linked "Findings" tab items) ticked for this pool
   // idea in its modal — the reverse of an idea's Linked Ideas list.
   const [findingIdeaIds, setFindingIdeaIds] = useState<string[]>([]);
@@ -280,7 +281,14 @@ export default function AdminDashboard() {
   const [ideas, setIdeas] = useState<any[]>([]);
   const [ideaModalOpen, setIdeaModalOpen] = useState(false);
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
-  const [ideaForm, setIdeaForm] = useState({ title: "", description: "", sumber: [] as string[], imageUrl: null as string | null });
+  const [ideaForm, setIdeaForm] = useState({ title: "", description: "", sumber: [] as string[], imageUrl: null as string | null, categoryId: null as string | null });
+  // Finding categories (global): admin creates them; a Finding is
+  // assigned to at most one. `editingCategory` is the row being
+  // renamed inline, or null.
+  const [categories, setCategories] = useState<any[]>([]);
+  const [categoryName, setCategoryName] = useState("");
+  const [editingCategory, setEditingCategory] = useState<{ id: string; name: string } | null>(null);
+  const [savingCategory, setSavingCategory] = useState(false);
   // Sub findings (inside a Finding): each has a Fitur, a Description,
   // and multiple image evidences — each image + its own description.
   // `id` is the DB id once saved, or a `new_…` temp id for a row added
@@ -379,11 +387,12 @@ export default function AdminDashboard() {
   // by all projects and do not depend on the selected project.
   const loadGlobalData = async () => {
     try {
-      const [w, f, g, ideasRes] = await Promise.all([
+      const [w, f, g, ideasRes, catsRes] = await Promise.all([
         apiCall("/api/global/weights"),
         apiCall("/api/global/findings"),
         apiCall("/api/global/groups"),
         apiCall("/api/global/ideas"),
+        apiCall("/api/global/finding-categories").catch(() => ({ categories: [] })),
       ]);
       if (w.weights) {
         setWeightInputs(w.weights.map((x: any) => ({ name: x.name, weight: x.weight })));
@@ -392,6 +401,7 @@ export default function AdminDashboard() {
       setPoolFindings(f.findings || []);
       setAllGroups(g.groups || []);
       setIdeas(ideasRes.ideas || []);
+      setCategories(catsRes.categories || []);
       // Surface the "run the SQL" note once, from whichever endpoint
       // reported it.
       setGlobalSetupNote(w.note || null);
@@ -482,6 +492,7 @@ export default function AdminDashboard() {
   // return, after the modal openers it calls are defined.
   const groupNameInputRef = useRef<HTMLInputElement>(null);
   const aspectNameInputRef = useRef<HTMLInputElement>(null);
+  const categoryNameInputRef = useRef<HTMLInputElement>(null);
   const focusInlineForm = (ref: React.RefObject<HTMLInputElement>) => {
     ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     ref.current?.focus({ preventScroll: true });
@@ -629,7 +640,7 @@ export default function AdminDashboard() {
   const openCreateFinding = () => {
     setEditingFindingId(null);
     setFindingTarget("pool");
-    setFindingForm({ title: "", description: "", sumber: [], fitur: "", platform: [] });
+    setFindingForm({ title: "", description: "", sumber: [], fitur: "", platform: [], tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", stepFeatureScreen: "", apaYangBerubah: "", outputKeberhasilan: "", tujuanBisnis: "" });
     setFindingIdeaIds([]);
     setFindingIdeaSearch("");
     setFindingModalOpen(true);
@@ -645,6 +656,14 @@ export default function AdminDashboard() {
       sumber: meta.sumber,
       fitur: meta.fitur,
       platform: meta.platform,
+      tujuan: f.tujuan || "",
+      scopeTermasuk: f.scopeTermasuk || "",
+      scopeTidakTermasuk: f.scopeTidakTermasuk || "",
+      roleUsers: f.roleUsers || "",
+      stepFeatureScreen: f.stepFeatureScreen || "",
+      apaYangBerubah: f.apaYangBerubah || "",
+      outputKeberhasilan: f.outputKeberhasilan || "",
+      tujuanBisnis: f.tujuanBisnis || "",
     });
     // Pre-tick the findings already linked to this idea.
     setFindingIdeaIds([]);
@@ -701,7 +720,20 @@ export default function AdminDashboard() {
           setPoolFindings((rows: any[]) =>
             rows.map((x: any) =>
               x.id === editingFindingId
-                ? { ...x, title: f.title ?? x.title, description: f.description ?? x.description, tags: f.tags ?? x.tags }
+                ? {
+                    ...x,
+                    title: f.title ?? x.title,
+                    description: f.description ?? x.description,
+                    tags: f.tags ?? x.tags,
+                    tujuan: f.tujuan ?? x.tujuan ?? "",
+                    scopeTermasuk: f.scope_termasuk ?? x.scopeTermasuk ?? "",
+                    scopeTidakTermasuk: f.scope_tidak_termasuk ?? x.scopeTidakTermasuk ?? "",
+                    roleUsers: f.role_users ?? x.roleUsers ?? "",
+                    stepFeatureScreen: f.step_feature_screen ?? x.stepFeatureScreen ?? "",
+                    apaYangBerubah: f.apa_yang_berubah ?? x.apaYangBerubah ?? "",
+                    outputKeberhasilan: f.output_keberhasilan ?? x.outputKeberhasilan ?? "",
+                    tujuanBisnis: f.tujuan_bisnis ?? x.tujuanBisnis ?? "",
+                  }
                 : x
             )
           );
@@ -721,6 +753,15 @@ export default function AdminDashboard() {
               title: f.title,
               description: f.description,
               tags: typeof f.tags === "string" ? f.tags : JSON.stringify(f.tags || {}),
+              createdAt: f.created_at ?? new Date().toISOString(),
+              tujuan: f.tujuan ?? "",
+              scopeTermasuk: f.scope_termasuk ?? "",
+              scopeTidakTermasuk: f.scope_tidak_termasuk ?? "",
+              roleUsers: f.role_users ?? "",
+              stepFeatureScreen: f.step_feature_screen ?? "",
+              apaYangBerubah: f.apa_yang_berubah ?? "",
+              outputKeberhasilan: f.output_keberhasilan ?? "",
+              tujuanBisnis: f.tujuan_bisnis ?? "",
               feasibilityX: null,
               feasibilityY: null,
               feasibilityQuadrant: null,
@@ -746,6 +787,15 @@ export default function AdminDashboard() {
               title: f.title,
               description: f.description,
               tags: typeof f.tags === "string" ? f.tags : JSON.stringify(f.tags || {}),
+              createdAt: f.created_at ?? new Date().toISOString(),
+              tujuan: f.tujuan ?? "",
+              scopeTermasuk: f.scope_termasuk ?? "",
+              scopeTidakTermasuk: f.scope_tidak_termasuk ?? "",
+              roleUsers: f.role_users ?? "",
+              stepFeatureScreen: f.step_feature_screen ?? "",
+              apaYangBerubah: f.apa_yang_berubah ?? "",
+              outputKeberhasilan: f.output_keberhasilan ?? "",
+              tujuanBisnis: f.tujuan_bisnis ?? "",
               feasibilityX: null,
               feasibilityY: null,
               feasibilityQuadrant: null,
@@ -809,7 +859,7 @@ export default function AdminDashboard() {
   // ideas on its detail page.
   const openCreateIdea = () => {
     setEditingIdeaId(null);
-    setIdeaForm({ title: "", description: "", sumber: [], imageUrl: null });
+    setIdeaForm({ title: "", description: "", sumber: [], imageUrl: null, categoryId: null });
     setImageError(null);
     setSubFindings([]);
     setOrigSubFindingIds([]);
@@ -821,7 +871,7 @@ export default function AdminDashboard() {
 
   const openEditIdea = async (idea: any) => {
     setEditingIdeaId(idea.id);
-    setIdeaForm({ title: idea.title || "", description: idea.description || "", sumber: Array.isArray(idea.sumber) ? [...idea.sumber] : [], imageUrl: idea.imageUrl || null });
+    setIdeaForm({ title: idea.title || "", description: idea.description || "", sumber: Array.isArray(idea.sumber) ? [...idea.sumber] : [], imageUrl: idea.imageUrl || null, categoryId: idea.categoryId ?? null });
     setImageError(null);
     setSubImageError(null);
     setIdeaFindingIds(Array.isArray(idea.findingIds) ? [...idea.findingIds] : []);
@@ -922,7 +972,7 @@ export default function AdminDashboard() {
           setIdeas((rows: any[]) =>
             rows.map((x: any) =>
               x.id === editingIdeaId
-                ? { ...x, title: idea.title ?? x.title, description: idea.description ?? x.description, imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? x.imageUrl ?? null, findingIds: ideaFindingIds }
+                ? { ...x, title: idea.title ?? x.title, description: idea.description ?? x.description, imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? x.imageUrl ?? null, categoryId: (idea as any).category_id ?? ideaForm.categoryId ?? x.categoryId ?? null, findingIds: ideaFindingIds }
                 : x
             )
           );
@@ -938,7 +988,7 @@ export default function AdminDashboard() {
           ideaId = idea.id;
           setIdeas((rows: any[]) => [
             ...rows,
-            { id: idea.id, title: idea.title, description: idea.description || "", imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? null, findingIds: ideaFindingIds },
+            { id: idea.id, title: idea.title, description: idea.description || "", imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? null, categoryId: (idea as any).category_id ?? ideaForm.categoryId ?? null, createdAt: (idea as any).created_at ?? new Date().toISOString(), findingIds: ideaFindingIds },
           ]);
         }
       }
@@ -1087,6 +1137,74 @@ export default function AdminDashboard() {
           await loadProjectDetails(selectedProjectSlug);
         } catch (err: any) {
           setError(err.message || "Failed to delete group");
+        }
+      }
+    );
+  };
+
+  // ── Finding Categories (admin only, global) ─────────────────────────
+  const handleCreateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!categoryName.trim() || savingCategory) return;
+    setSavingCategory(true);
+    try {
+      setError(null);
+      const saved = await apiCall("/api/global/finding-categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: categoryName.trim() }),
+      });
+      if (saved?.category) setCategories((rows: any[]) => [saved.category, ...rows]);
+      setCategoryName("");
+    } catch (err: any) {
+      setError(err.message || "Failed to create category");
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  const handleSaveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategory || !editingCategory.name.trim() || savingCategory) return;
+    setSavingCategory(true);
+    try {
+      setError(null);
+      const saved = await apiCall(`/api/global/finding-categories/${editingCategory.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editingCategory.name.trim() }),
+      });
+      if (saved?.category) {
+        setCategories((rows: any[]) =>
+          rows.map((c: any) => (c.id === editingCategory.id ? { ...c, name: saved.category.name } : c))
+        );
+      }
+      setEditingCategory(null);
+    } catch (err: any) {
+      setError(err.message || "Failed to update category");
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = (c: any) => {
+    const usedBy = ideas.filter((i: any) => i.categoryId === c.id).length;
+    askConfirm(
+      "Delete category?",
+      usedBy > 0
+        ? `“${c.name}” will be deleted. ${usedBy} finding${usedBy === 1 ? "" : "s"} in this category will keep existing, with no category assigned.`
+        : `“${c.name}” will be permanently deleted.`,
+      "Delete category",
+      async () => {
+        try {
+          await apiCall(`/api/global/finding-categories/${c.id}`, { method: "DELETE" });
+          setConfirm(null);
+          setCategories((rows: any[]) => rows.filter((x: any) => x.id !== c.id));
+          setIdeas((rows: any[]) =>
+            rows.map((i: any) => (i.categoryId === c.id ? { ...i, categoryId: null } : i))
+          );
+        } catch (err: any) {
+          setError(err.message || "Failed to delete category");
         }
       }
     );
@@ -1283,6 +1401,7 @@ export default function AdminDashboard() {
     // not just the selected project's slice.
     findings: poolFindings.length,
     ideas: ideas.length,
+    categories: categories.length,
     groups: activeProject?.groups?.length,
     aspects: activeProject?.viabilityAspects?.length,
     projects: projects.length,
@@ -1298,15 +1417,17 @@ export default function AdminDashboard() {
       ? { label: "Add Idea", onClick: openCreateFinding }
       : activeTab === "ideas"
         ? { label: "Add Finding", onClick: openCreateIdea }
-        : activeTab === "groups" && isAdmin
-        ? { label: "Add Group", onClick: () => focusInlineForm(groupNameInputRef) }
-        : activeTab === "aspects" && isAdmin
-          ? { label: "Add Aspect", onClick: () => focusInlineForm(aspectNameInputRef) }
-          : activeTab === "projects" && isAdmin
-            ? { label: "New Project", onClick: openCreateProject }
-            : activeTab === "users" && isAdmin
-              ? { label: "Add User", onClick: openCreateUser }
-              : null;
+        : activeTab === "categories" && isAdmin
+          ? { label: "Add Category", onClick: () => focusInlineForm(categoryNameInputRef) }
+          : activeTab === "groups" && isAdmin
+            ? { label: "Add Group", onClick: () => focusInlineForm(groupNameInputRef) }
+            : activeTab === "aspects" && isAdmin
+              ? { label: "Add Aspect", onClick: () => focusInlineForm(aspectNameInputRef) }
+              : activeTab === "projects" && isAdmin
+                ? { label: "New Project", onClick: openCreateProject }
+                : activeTab === "users" && isAdmin
+                  ? { label: "Add User", onClick: openCreateUser }
+                  : null;
   const activeNavItem = ADMIN_NAV.find((i) => i.id === activeTab);
 
   if (loading) {
@@ -1497,15 +1618,17 @@ export default function AdminDashboard() {
                   <table className="w-full min-w-[760px] border-collapse text-left text-sm">
                     <caption className="sr-only">All findings and the ideas they are linked to</caption>
                     <colgroup>
-                      <col className="w-[30%]" />
-                      <col className="w-[30%]" />
-                      <col className="w-[24%]" />
-                      <col className="w-[16%]" />
+                      <col className="w-[26%]" />
+                      <col className="w-[26%]" />
+                      <col className="w-[14%]" />
+                      <col className="w-[20%]" />
+                      <col className="w-[14%]" />
                     </colgroup>
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
                         <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Finding</th>
                         <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Description</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Category</th>
                         <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Linked Ideas</th>
                         <th scope="col" className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Actions</th>
                       </tr>
@@ -1516,6 +1639,7 @@ export default function AdminDashboard() {
                           const linked = (idea.findingIds || [])
                             .map((fid: string) => poolFindings.find((f: any) => f.id === fid))
                             .filter(Boolean);
+                          const categoryName = categories.find((c: any) => c.id === idea.categoryId)?.name || null;
                           return (
                             <tr key={idea.id} className="transition hover:bg-slate-50">
                               <td className="px-4 py-3">
@@ -1523,6 +1647,13 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-4 py-3">
                                 <div className="line-clamp-2 text-xs text-slate-500">{idea.description || "—"}</div>
+                              </td>
+                              <td className="px-4 py-3">
+                                {categoryName ? (
+                                  <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">{categoryName}</span>
+                                ) : (
+                                  <span className="text-xs font-medium text-slate-400">—</span>
+                                )}
                               </td>
                               <td className="px-4 py-3">
                                 <div className="flex flex-wrap gap-1">
@@ -1552,12 +1683,73 @@ export default function AdminDashboard() {
                         })
                       ) : (
                         <tr>
-                          <td colSpan={4} className="py-8 text-center italic text-slate-600">No findings yet. Click “Add Finding” above.</td>
+                          <td colSpan={5} className="py-8 text-center italic text-slate-600">No findings yet. Click “Add Finding” above.</td>
                         </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
+              </div>
+            </section>
+          )}
+
+          {/* TAB: FINDING CATEGORIES */}
+          {activeTab === "categories" && (
+            <section aria-labelledby="categories-heading" className="max-w-3xl space-y-6">
+              <div>
+                <h2 id="categories-heading" className="section-title">Findings Category</h2>
+                <p className="section-sub">Categories group findings — create one here, then assign a finding to it from the Create/Edit Finding form. Categories are shared by both projects.</p>
+              </div>
+
+              <div className="card space-y-5 p-5">
+                <form onSubmit={handleCreateCategory} className="flex flex-col gap-2 sm:flex-row">
+                  <input ref={categoryNameInputRef} id="new-category-name" type="text" required placeholder="e.g. Input & Bulk Transfer" value={categoryName} onChange={(e) => setCategoryName(e.target.value)} className="input flex-1" />
+                  <button type="submit" disabled={!categoryName.trim() || savingCategory} className="btn-primary">
+                    {savingCategory ? "Saving…" : "Add Category"}
+                  </button>
+                </form>
+
+                {categories.length > 0 ? (
+                  <ul className="divide-y divide-slate-100">
+                    {newestFirst(categories).map((c: any) => {
+                      const usedBy = ideas.filter((i: any) => i.categoryId === c.id).length;
+                      const isEditing = editingCategory?.id === c.id;
+                      const editing = isEditing ? editingCategory : null;
+                      return (
+                        <li key={c.id} className="flex items-center justify-between gap-2 py-3">
+                          {isEditing && editing ? (
+                            <form onSubmit={handleSaveCategory} className="flex flex-1 items-center gap-2">
+                              <input type="text" required autoFocus value={editing.name} onChange={(e) => setEditingCategory({ ...editing, name: e.target.value })} className="input flex-1" />
+                              <button type="submit" disabled={!editing.name.trim() || savingCategory} className="btn-primary">
+                                {savingCategory ? "Saving…" : "Save"}
+                              </button>
+                              <button type="button" onClick={() => setEditingCategory(null)} className="btn-secondary">Cancel</button>
+                            </form>
+                          ) : (
+                            <>
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium text-slate-700">{c.name}</div>
+                                <div className="text-xs text-slate-500">
+                                  {usedBy > 0 ? `${usedBy} finding${usedBy === 1 ? "" : "s"}` : "No findings yet"}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button type="button" onClick={() => setEditingCategory({ id: c.id, name: c.name })} aria-label={`Rename category ${c.name}`} className="btn-icon">
+                                  <Edit2 className="h-4 w-4" />
+                                </button>
+                                <button type="button" onClick={() => handleDeleteCategory(c)} aria-label={`Delete category ${c.name}`} className="btn-icon-danger">
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="text-sm italic text-slate-500">No categories yet. Add one above — for example “Input &amp; Bulk Transfer”.</p>
+                )}
               </div>
             </section>
           )}
@@ -1728,7 +1920,7 @@ export default function AdminDashboard() {
                       {newestFirst(activeProject.groups).map((group: any) => (
                         <div key={group.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
                           <div className="mb-2 flex items-center justify-between gap-2">
-                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{group.name}{group.label ? ` · ${group.label}` : ""} ({(group.participants || []).filter((p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR").length} participants)</span>
+                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{group.name}{group.label && group.label.toLowerCase() !== group.name.toLowerCase() ? ` · ${group.label}` : ""} ({(group.participants || []).filter((p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR").length} participants)</span>
                             {isAdmin && (
                             <span className="flex items-center gap-1">
                               <button type="button" onClick={() => setEditingGroup({ id: group.id, name: group.name, label: group.label || null })} aria-label={`Edit group ${group.name}`} className="btn-icon"><Edit2 className="h-4 w-4" /></button>
@@ -1979,6 +2171,45 @@ export default function AdminDashboard() {
               <textarea id="finding-desc" rows={2} placeholder="Elaborate on participant feedback..." value={findingForm.description} onChange={(e) => setFindingForm((f) => ({ ...f, description: e.target.value }))} className="input w-full" />
             </div>
             <div>
+              <label htmlFor="finding-tujuan" className="field-label">Tujuan</label>
+              <textarea id="finding-tujuan" rows={2} placeholder="What is this idea trying to achieve?" value={findingForm.tujuan} onChange={(e) => setFindingForm((f) => ({ ...f, tujuan: e.target.value }))} className="input w-full" />
+            </div>
+            <fieldset className="rounded-xl border border-slate-200 p-3">
+              <legend className="field-label px-1">Scope</legend>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="finding-scope-termasuk" className="mb-1 block text-xs font-semibold text-slate-600">Termasuk <span className="font-normal text-slate-400">(optional)</span></label>
+                  <textarea id="finding-scope-termasuk" rows={2} placeholder="What is in scope..." value={findingForm.scopeTermasuk} onChange={(e) => setFindingForm((f) => ({ ...f, scopeTermasuk: e.target.value }))} className="input w-full" />
+                </div>
+                <div>
+                  <label htmlFor="finding-scope-tidak-termasuk" className="mb-1 block text-xs font-semibold text-slate-600">Tidak Termasuk <span className="font-normal text-slate-400">(optional)</span></label>
+                  <textarea id="finding-scope-tidak-termasuk" rows={2} placeholder="What is out of scope..." value={findingForm.scopeTidakTermasuk} onChange={(e) => setFindingForm((f) => ({ ...f, scopeTidakTermasuk: e.target.value }))} className="input w-full" />
+                </div>
+              </div>
+            </fieldset>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label htmlFor="finding-role-users" className="field-label">Role / Users</label>
+                <input id="finding-role-users" type="text" placeholder="e.g. Teller, Nasabah" value={findingForm.roleUsers} onChange={(e) => setFindingForm((f) => ({ ...f, roleUsers: e.target.value }))} className="input w-full" />
+              </div>
+              <div>
+                <label htmlFor="finding-step-feature-screen" className="field-label">Step / Feature / Screen</label>
+                <input id="finding-step-feature-screen" type="text" placeholder="e.g. Bulk Payment upload screen" value={findingForm.stepFeatureScreen} onChange={(e) => setFindingForm((f) => ({ ...f, stepFeatureScreen: e.target.value }))} className="input w-full" />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="finding-apa-yang-berubah" className="field-label">Apa Yang Berubah</label>
+              <textarea id="finding-apa-yang-berubah" rows={2} placeholder="What changes for the user?" value={findingForm.apaYangBerubah} onChange={(e) => setFindingForm((f) => ({ ...f, apaYangBerubah: e.target.value }))} className="input w-full" />
+            </div>
+            <div>
+              <label htmlFor="finding-output-keberhasilan" className="field-label">Output Keberhasilan</label>
+              <textarea id="finding-output-keberhasilan" rows={2} placeholder="What does success look like?" value={findingForm.outputKeberhasilan} onChange={(e) => setFindingForm((f) => ({ ...f, outputKeberhasilan: e.target.value }))} className="input w-full" />
+            </div>
+            <div>
+              <label htmlFor="finding-tujuan-bisnis" className="field-label">Tujuan Bisnis</label>
+              <input id="finding-tujuan-bisnis" type="text" placeholder="e.g. Reduce failed bulk uploads" value={findingForm.tujuanBisnis} onChange={(e) => setFindingForm((f) => ({ ...f, tujuanBisnis: e.target.value }))} className="input w-full" />
+            </div>
+            <div>
               <label htmlFor="finding-fitur" className="field-label">Fitur</label>
               <input id="finding-fitur" type="text" placeholder="e.g. Bulk Payment" value={findingForm.fitur} onChange={(e) => setFindingForm((f) => ({ ...f, fitur: e.target.value }))} className="input w-full" />
             </div>
@@ -2060,6 +2291,28 @@ export default function AdminDashboard() {
             <div>
               <label htmlFor="idea-desc" className="field-label">Description</label>
               <textarea id="idea-desc" rows={3} placeholder="What is the finding?" value={ideaForm.description} onChange={(e) => setIdeaForm((f) => ({ ...f, description: e.target.value }))} className="input w-full" />
+            </div>
+            <div>
+              <label htmlFor="idea-category" className="field-label">Category</label>
+              <select
+                id="idea-category"
+                value={ideaForm.categoryId || ""}
+                onChange={(e) => setIdeaForm((f) => ({ ...f, categoryId: e.target.value || null }))}
+                disabled={!isAdmin}
+                className="input w-full disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
+              >
+                <option value="">No category</option>
+                {categories.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                {isAdmin
+                  ? categories.length > 0
+                    ? "Assign this finding to a category, or leave it uncategorised."
+                    : "No categories yet — create one in the Findings Category menu first."
+                  : "Only an admin can change the category."}
+              </p>
             </div>
             <fieldset>
               <legend className="field-label">Image evidence</legend>

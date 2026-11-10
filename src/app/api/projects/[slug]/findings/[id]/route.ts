@@ -130,7 +130,7 @@ export async function PUT(
 
     const { id } = params;
     const body = await request.json();
-    const { title, description, sumber, fitur, platform } = body;
+    const { title, description, sumber, fitur, platform, tujuan, scopeTermasuk, scopeTidakTermasuk, roleUsers, stepFeatureScreen, apaYangBerubah, outputKeberhasilan, tujuanBisnis } = body;
 
     const finding = await dbService.updateFinding(id, {
       title,
@@ -138,6 +138,14 @@ export async function PUT(
       sumber,
       fitur,
       platform,
+      tujuan,
+      scopeTermasuk,
+      scopeTidakTermasuk,
+      roleUsers,
+      stepFeatureScreen,
+      apaYangBerubah,
+      outputKeberhasilan,
+      tujuanBisnis,
     });
 
     revalidateProjectPages(params.slug);

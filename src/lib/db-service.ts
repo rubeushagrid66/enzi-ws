@@ -498,6 +498,16 @@ export const dbService = {
           title: f.title,
           description: f.description,
           createdAt: f.created_at ?? null,
+          // Idea detail fields (docs/findings-category-and-idea-fields-
+          // sql.md adds the columns; missing means not entered yet).
+          tujuan: f.tujuan ?? "",
+          scopeTermasuk: f.scope_termasuk ?? "",
+          scopeTidakTermasuk: f.scope_tidak_termasuk ?? "",
+          roleUsers: f.role_users ?? "",
+          stepFeatureScreen: f.step_feature_screen ?? "",
+          apaYangBerubah: f.apa_yang_berubah ?? "",
+          outputKeberhasilan: f.output_keberhasilan ?? "",
+          tujuanBisnis: f.tujuan_bisnis ?? "",
           tags: typeof f.tags === "string" ? f.tags : JSON.stringify(f.tags || []),
           feasibilityX: f.feasibility_x != null ? Number(f.feasibility_x) : null,
           feasibilityY: f.feasibility_y != null ? Number(f.feasibility_y) : null,
@@ -687,6 +697,7 @@ export const dbService = {
         description: i.description || "",
         sumber: Array.isArray(i.sumber) ? i.sumber : [],
         imageUrl: i.image_url || null,
+        categoryId: i.category_id ?? null,
         findingIds: linkMap[i.id] || [],
         createdAt: i.created_at,
       }));
@@ -712,13 +723,14 @@ export const dbService = {
     }
   },
 
-  async createIdea(data: { title: string; description?: string; sumber?: string[]; imageUrl?: string | null }) {
+  async createIdea(data: { title: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null }) {
     if (isSupabaseConfigured && supabase) {
       // image_url is only sent when an image was uploaded — so a
       // create never fails on a production table that doesn't have the
       // column yet (the SQL adds it; see supabase-schema.sql).
       const row: any = { title: data.title, description: data.description || "", sumber: data.sumber || [] };
       if (data.imageUrl) row.image_url = data.imageUrl;
+      if (data.categoryId) row.category_id = data.categoryId;
       const { data: idea, error } = await supabase
         .from("ideas")
         .insert(row)
@@ -734,12 +746,17 @@ export const dbService = {
     return { id, title: data.title, description: data.description || "", sumber: data.sumber || [] };
   },
 
-  async updateIdea(id: string, data: { title?: string; description?: string; sumber?: string[]; imageUrl?: string | null }) {
+  async updateIdea(id: string, data: { title?: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null }) {
     if (isSupabaseConfigured && supabase) {
       const patch: any = {};
       if (data.title !== undefined) patch.title = data.title;
       if (data.description !== undefined) patch.description = data.description;
       if (data.sumber !== undefined) patch.sumber = data.sumber;
+      // categoryId undefined = leave it alone; null = clear it; a
+      // string = assign it. Only sent when the form actually carries
+      // the field, so an edit from an older client never fails on a
+      // production table that doesn't have the column yet.
+      if (data.categoryId !== undefined) patch.category_id = data.categoryId;
       // imageUrl undefined = leave the image alone; null = remove it;
       // a string = replace it. Only sent when the image actually
       // changed, so an edit that doesn't touch the image never fails
@@ -779,6 +796,59 @@ export const dbService = {
     }
     await prisma.$executeRaw`DELETE FROM idea_findings WHERE idea_id = ${id}`;
     await prisma.$executeRaw`DELETE FROM ideas WHERE id = ${id}`;
+  },
+
+  // ── Finding Categories ──────────────────────────────────────────────────
+  // Categories are global (like Findings): one list shared by both
+  // projects. A Finding belongs to at most one category; deleting a
+  // category clears the link (ON DELETE SET NULL) instead of deleting
+  // the Finding. The table is created by docs/findings-category-and-
+  // idea-fields-sql.md; a missing table reads as an empty list.
+  /** All finding categories, newest first. */
+  async getFindingCategories(): Promise<any[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("finding_categories")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) return [];
+      return (data || []).map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        createdAt: c.created_at,
+      }));
+    }
+    return [];
+  },
+
+  async createFindingCategory(name: string) {
+    if (!isSupabaseConfigured || !supabase) throw new Error("Finding categories need Supabase");
+    const { data, error } = await supabase
+      .from("finding_categories")
+      .insert({ name })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateFindingCategory(id: string, name: string) {
+    if (!isSupabaseConfigured || !supabase) throw new Error("Finding categories need Supabase");
+    const { data, error } = await supabase
+      .from("finding_categories")
+      .update({ name, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteFindingCategory(id: string) {
+    if (!isSupabaseConfigured || !supabase) throw new Error("Finding categories need Supabase");
+    const { error } = await supabase.from("finding_categories").delete().eq("id", id);
+    if (error) throw error;
+    return { success: true };
   },
 
   /** Finding ids an idea is linked to (empty when unlinked). */
@@ -1732,6 +1802,14 @@ export const dbService = {
     sumber?: string[];
     fitur?: string;
     platform?: string[];
+    tujuan?: string;
+    scopeTermasuk?: string;
+    scopeTidakTermasuk?: string;
+    roleUsers?: string;
+    stepFeatureScreen?: string;
+    apaYangBerubah?: string;
+    outputKeberhasilan?: string;
+    tujuanBisnis?: string;
   }) {
     const tagsJson = JSON.stringify({
       sumber: data.sumber || [],
@@ -1749,6 +1827,14 @@ export const dbService = {
           title: data.title,
           description: data.description || "",
           tags: tagsJson,
+          tujuan: data.tujuan || null,
+          scope_termasuk: data.scopeTermasuk || null,
+          scope_tidak_termasuk: data.scopeTidakTermasuk || null,
+          role_users: data.roleUsers || null,
+          step_feature_screen: data.stepFeatureScreen || null,
+          apa_yang_berubah: data.apaYangBerubah || null,
+          output_keberhasilan: data.outputKeberhasilan || null,
+          tujuan_bisnis: data.tujuanBisnis || null,
           feasibility_x: null,
           feasibility_y: null,
           feasibility_quadrant: null,
@@ -1787,6 +1873,14 @@ export const dbService = {
     sumber?: string[];
     fitur?: string;
     platform?: string[];
+    tujuan?: string;
+    scopeTermasuk?: string;
+    scopeTidakTermasuk?: string;
+    roleUsers?: string;
+    stepFeatureScreen?: string;
+    apaYangBerubah?: string;
+    outputKeberhasilan?: string;
+    tujuanBisnis?: string;
   }) {
     const tagsJson = JSON.stringify({
       sumber: data.sumber || [],
@@ -1800,6 +1894,14 @@ export const dbService = {
         .update({
           ...(data.title !== undefined && { title: data.title }),
           ...(data.description !== undefined && { description: data.description }),
+          ...(data.tujuan !== undefined && { tujuan: data.tujuan || null }),
+          ...(data.scopeTermasuk !== undefined && { scope_termasuk: data.scopeTermasuk || null }),
+          ...(data.scopeTidakTermasuk !== undefined && { scope_tidak_termasuk: data.scopeTidakTermasuk || null }),
+          ...(data.roleUsers !== undefined && { role_users: data.roleUsers || null }),
+          ...(data.stepFeatureScreen !== undefined && { step_feature_screen: data.stepFeatureScreen || null }),
+          ...(data.apaYangBerubah !== undefined && { apa_yang_berubah: data.apaYangBerubah || null }),
+          ...(data.outputKeberhasilan !== undefined && { output_keberhasilan: data.outputKeberhasilan || null }),
+          ...(data.tujuanBisnis !== undefined && { tujuan_bisnis: data.tujuanBisnis || null }),
           tags: tagsJson,
           updated_at: new Date().toISOString(),
         })

@@ -21,6 +21,14 @@ export async function PUT(
       sumber: body.sumber,
       fitur: body.fitur,
       platform: body.platform,
+      tujuan: body.tujuan,
+      scopeTermasuk: body.scopeTermasuk,
+      scopeTidakTermasuk: body.scopeTidakTermasuk,
+      roleUsers: body.roleUsers,
+      stepFeatureScreen: body.stepFeatureScreen,
+      apaYangBerubah: body.apaYangBerubah,
+      outputKeberhasilan: body.outputKeberhasilan,
+      tujuanBisnis: body.tujuanBisnis,
     });
     revalidateProjectPages();
     return NextResponse.json({ success: true, finding });
