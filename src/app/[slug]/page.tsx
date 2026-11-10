@@ -589,6 +589,13 @@ export default function ProjectResultViewer({
   // tab.
   const [ideaDetail, setIdeaDetail] = useState<any | null>(null);
   const [findingDetail, setFindingDetail] = useState<any | null>(null);
+  // Which popup is on top. Both popups can be open at once (drill-down
+  // in either direction: idea → related finding, or finding → linked
+  // idea), and the most recently opened one paints above the other.
+  // Set alongside every setIdeaDetail / setFindingDetail that OPENS a
+  // popup; closing the top one leaves the other as the only popup, so
+  // a stale value here is harmless.
+  const [topPopup, setTopPopup] = useState<"idea" | "finding" | null>(null);
   // Lookup for opening a finding's detail from anywhere on the page
   // (e.g. a related finding inside the idea popup): the full finding
   // record — category name + linked ideas — keyed by id.
@@ -601,19 +608,29 @@ export default function ProjectResultViewer({
     }
     return map;
   }, [project?.findingsByCategory]);
+  // Reverse lookup: the full idea record (detail fields, related
+  // findings) keyed by id, for opening an idea from a finding's
+  // Linked Ideas list.
+  const ideaById = useMemo(() => {
+    const map: Record<string, any> = {};
+    for (const f of project?.findings || []) {
+      map[f.id] = f;
+    }
+    return map;
+  }, [project?.findings]);
   useEffect(() => {
     if (!ideaDetail && !findingDetail) return;
     const onKey = (e: KeyboardEvent) => {
-      // Escape closes the topmost popup first (finding detail over
-      // idea detail), then the one beneath it.
+      // Escape closes the topmost popup first, then the one beneath it.
       if (e.key === "Escape") {
-        if (findingDetail) setFindingDetail(null);
+        if (topPopup === "idea" && ideaDetail) setIdeaDetail(null);
+        else if (findingDetail) setFindingDetail(null);
         else setIdeaDetail(null);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [ideaDetail, findingDetail]);
+  }, [ideaDetail, findingDetail, topPopup]);
 
   // Groups view — separate from the global findings list. A group shows
   // every idea in the project (ideas are no longer assigned to groups),
@@ -978,7 +995,7 @@ export default function ProjectResultViewer({
         ) : view === "categories" ? (
           <FindingsByCategoryView
             findingsByCategory={project?.findingsByCategory || []}
-            onSelectFinding={(f: any) => setFindingDetail(f)}
+            onSelectFinding={(f: any) => { setFindingDetail(f); setTopPopup("finding"); }}
           />
         ) : (
         <>
@@ -1025,7 +1042,7 @@ export default function ProjectResultViewer({
                     {filteredFindings.map((finding) => (
                       <tr
                         key={finding.id}
-                        onClick={() => setIdeaDetail(finding)}
+                        onClick={() => { setIdeaDetail(finding); setTopPopup("idea"); }}
                         className="cursor-pointer border-b border-slate-100 transition hover:bg-emerald-50/50 last:border-b-0"
                       >
                         <td className="px-4 py-3.5 align-top">
@@ -1093,7 +1110,7 @@ export default function ProjectResultViewer({
           role="dialog"
           aria-modal="true"
           aria-label={`Idea detail — ${ideaDetail.title}`}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          className={`fixed inset-0 ${topPopup === "idea" ? "z-[110]" : "z-[100]"} flex items-center justify-center p-4`}
         >
           <button
             aria-label="Close"
@@ -1203,7 +1220,7 @@ export default function ProjectResultViewer({
                         <li key={r.id}>
                           <button
                             type="button"
-                            onClick={() => setFindingDetail(target)}
+                            onClick={() => { setFindingDetail(target); setTopPopup("finding"); }}
                             className="group flex w-full items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-emerald-700"
                           >
                             <span className="min-w-0">{r.title}</span>
@@ -1224,7 +1241,7 @@ export default function ProjectResultViewer({
           role="dialog"
           aria-modal="true"
           aria-label={`Finding detail — ${findingDetail.title}`}
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          className={`fixed inset-0 ${topPopup === "finding" ? "z-[110]" : "z-[100]"} flex items-center justify-center p-4`}
         >
           <button
             aria-label="Close"
@@ -1299,11 +1316,26 @@ export default function ProjectResultViewer({
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Linked ideas</p>
                   <ul className="mt-2 space-y-1.5">
-                    {(findingDetail.linkedIdeas || []).map((li: any) => (
-                      <li key={li.id} className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-sm font-medium text-slate-700">
-                        {li.title}
-                      </li>
-                    ))}
+                    {(findingDetail.linkedIdeas || []).map((li: any) => {
+                      // Open the idea's own detail popup on top of
+                      // this one (drill-down); closing it returns here.
+                      // Fall back to the row's own data if the idea is
+                      // not in this project's list.
+                      const full = ideaById[li.id];
+                      const target = full || li;
+                      return (
+                        <li key={li.id}>
+                          <button
+                            type="button"
+                            onClick={() => { setIdeaDetail(target); setTopPopup("idea"); }}
+                            className="group flex w-full items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-emerald-700"
+                          >
+                            <span className="min-w-0">{li.title}</span>
+                            <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
