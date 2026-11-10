@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, description, sumber, fitur, platform } = body;
+    const { title, description, sumber, fitur, platform, tujuan, scopeTermasuk, scopeTidakTermasuk, roleUsers, stepFeatureScreen, apaYangBerubah, outputKeberhasilan, tujuanBisnis } = body;
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -38,6 +38,14 @@ export async function POST(request: Request) {
       sumber,
       fitur,
       platform,
+      tujuan,
+      scopeTermasuk,
+      scopeTidakTermasuk,
+      roleUsers,
+      stepFeatureScreen,
+      apaYangBerubah,
+      outputKeberhasilan,
+      tujuanBisnis,
     });
 
     revalidateProjectPages();
