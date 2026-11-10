@@ -14,7 +14,6 @@ import {
   ChevronRight,
   Check,
   X,
-  ImageOff,
   Lightbulb,
   Layers,
 } from "lucide-react";
@@ -582,18 +581,22 @@ export default function ProjectResultViewer({
   const [searchQuery, setSearchQuery] = useState("");
 
   // Image-evidence popup for the Ideas table: the clicked idea (pool
-  // item). Its related findings' uploaded images show here — the row
-  // no longer opens the detail page (that lives under each group).
-  const [imagePopup, setImagePopup] = useState<any | null>(null);
+  // Clicking an Ideas row opens the IDEA's own detail in a popup —
+  // the same fields the admin dashboard Idea form holds (Tujuan,
+  // Scope, Role/Users, Step, Apa Yang Berubah, Output, Tujuan Bisnis,
+  // Fitur, Platform, linked findings). It used to show the related
+  // findings' images instead; that detail now lives on the Findings
+  // tab.
+  const [ideaDetail, setIdeaDetail] = useState<any | null>(null);
   const [findingDetail, setFindingDetail] = useState<any | null>(null);
   useEffect(() => {
-    if (!imagePopup) return;
+    if (!ideaDetail && !findingDetail) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setImagePopup(null);
+      if (e.key === "Escape") { setIdeaDetail(null); setFindingDetail(null); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [imagePopup]);
+  }, [ideaDetail, findingDetail]);
 
   // Groups view — separate from the global findings list. A group shows
   // every idea in the project (ideas are no longer assigned to groups),
@@ -1005,7 +1008,7 @@ export default function ProjectResultViewer({
                     {filteredFindings.map((finding) => (
                       <tr
                         key={finding.id}
-                        onClick={() => setImagePopup(finding)}
+                        onClick={() => setIdeaDetail(finding)}
                         className="cursor-pointer border-b border-slate-100 transition hover:bg-emerald-50/50 last:border-b-0"
                       >
                         <td className="px-4 py-3.5 align-top">
@@ -1061,104 +1064,126 @@ export default function ProjectResultViewer({
         <span>&copy; Enzi 2026</span>
       </footer>
 
-      {/* Image-evidence popup for the Ideas table. Shows the images
-          uploaded on this idea's related findings; "No image
-          reference" when none of them has one. Responsive: full-width
-          with margins on phones, capped at 2xl on desktop, scrolls
-          when the content is taller than the viewport. */}
-      {imagePopup && (
+      {/* Idea-detail popup for the Ideas table. Shows the idea's own
+          fields — the same ones the admin dashboard Idea form holds
+          (Tujuan, Scope, Role/Users, Step, Apa Yang Berubah, Output,
+          Tujuan Bisnis, Fitur, Platform, linked findings). Fields left
+          empty are hidden. Responsive: full-width with margins on
+          phones, capped at 2xl on desktop, scrolls when taller than
+          the viewport. */}
+      {ideaDetail && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={`Image evidence — ${imagePopup.title}`}
+          aria-label={`Idea detail — ${ideaDetail.title}`}
           className="fixed inset-0 z-[100] flex items-center justify-center p-4"
         >
           <button
             aria-label="Close"
-            onClick={() => setImagePopup(null)}
+            onClick={() => setIdeaDetail(null)}
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           />
           <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
               <div className="min-w-0">
-                <h2 className="text-base font-bold leading-snug text-slate-900 sm:text-lg">{imagePopup.title}</h2>
-                <p className="mt-0.5 text-xs text-slate-500">Image, description and sub findings from related findings</p>
+                <h2 className="text-base font-bold leading-snug text-slate-900 sm:text-lg">{ideaDetail.title}</h2>
+                <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                  {(ideaDetail.platform || []).map((p: string) => (
+                    <span key={p} className="rounded-full bg-slate-100 px-2.5 py-0.5 font-bold text-slate-600">{p}</span>
+                  ))}
+                  {ideaDetail.fitur && String(ideaDetail.fitur).trim() !== "" && (
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 font-bold text-emerald-700">{ideaDetail.fitur}</span>
+                  )}
+                </p>
               </div>
               <button
                 type="button"
-                onClick={() => setImagePopup(null)}
+                onClick={() => setIdeaDetail(null)}
                 aria-label="Close dialog"
                 className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="overflow-y-auto px-5 py-4">
-              {(() => {
-                // Show every related finding that has something to show —
-                // an image, a description, or sub findings (each with a
-                // Fitur, a description, and/or image evidences). A
-                // finding with none of those is skipped. The description
-                // comes from the finding's Description field (set when
-                // the finding is created).
-                const hasSubContent = (r: any) =>
-                  (r.subFindings || []).some(
-                    (s: any) =>
-                      (s.fitur && String(s.fitur).trim() !== "") ||
-                      (s.description && String(s.description).trim() !== "") ||
-                      (s.images || []).length > 0
-                  );
-                const withContent = (imagePopup.relatedIdeas || []).filter(
-                  (r: any) =>
-                    r.imageUrl || (r.description && String(r.description).trim() !== "") || hasSubContent(r)
-                );
-                if (withContent.length === 0) {
-                  return (
-                    <div className="flex flex-col items-center justify-center py-10 text-center">
-                      <ImageOff className="h-10 w-10 text-slate-300" />
-                      <p className="mt-3 text-sm font-semibold text-slate-500">No image, description or sub findings</p>
-                      <p className="mt-1 text-xs text-slate-400">None of this idea&apos;s related findings has an uploaded image, a description, or sub findings yet.</p>
+            <div className="space-y-5 overflow-y-auto px-5 py-4">
+              {ideaDetail.description && String(ideaDetail.description).trim() !== "" ? (
+                <p className="text-sm leading-relaxed text-slate-700">{ideaDetail.description}</p>
+              ) : (
+                <p className="text-sm text-slate-400">No description yet.</p>
+              )}
+              {ideaDetail.tujuan && String(ideaDetail.tujuan).trim() !== "" && (
+                <section>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Tujuan</p>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.tujuan}</p>
+                </section>
+              )}
+              {((ideaDetail.scopeTermasuk && String(ideaDetail.scopeTermasuk).trim() !== "") ||
+                (ideaDetail.scopeTidakTermasuk && String(ideaDetail.scopeTidakTermasuk).trim() !== "")) && (
+                <section>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Scope</p>
+                  <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                      <p className="text-xs font-bold text-slate-500">Termasuk</p>
+                      <p className="mt-1 text-sm leading-relaxed text-slate-700">
+                        {ideaDetail.scopeTermasuk && String(ideaDetail.scopeTermasuk).trim() !== "" ? ideaDetail.scopeTermasuk : "—"}
+                      </p>
                     </div>
-                  );
-                }
-                return (
-                  <div className="space-y-6">
-                    {withContent.map((r: any) => (
-                      <figure key={r.id}>
-                        {r.imageUrl && (
-                          <img src={r.imageUrl} alt={`Image evidence for ${r.title}`} className="h-auto w-full rounded-xl border border-slate-200 object-contain" />
-                        )}
-                        <figcaption className="mt-2 text-xs font-medium text-slate-500">{r.title}</figcaption>
-                        {r.description && String(r.description).trim() !== "" && (
-                          <p className="mt-1 text-sm leading-relaxed text-slate-700">{r.description}</p>
-                        )}
-                        {(r.subFindings || []).filter((s: any) =>
-                          (s.fitur && String(s.fitur).trim() !== "") ||
-                          (s.description && String(s.description).trim() !== "") ||
-                          (s.images || []).length > 0
-                        ).map((s: any, si: number) => (
-                          <div key={s.id || si} className="mt-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-                            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                              Sub Finding {si + 1}{s.fitur ? ` — ${s.fitur}` : ""}
-                            </p>
-                            {s.description && String(s.description).trim() !== "" && (
-                              <p className="mt-1 text-sm leading-relaxed text-slate-700">{s.description}</p>
-                            )}
-                            {(s.images || []).map((im: any, ii: number) => (
-                              <figure key={ii} className="mt-2">
-                                <img src={im.image_url} alt={`Sub finding ${si + 1} evidence ${ii + 1}`} className="h-auto w-full rounded-lg border border-slate-200 object-contain" />
-                                {im.description && String(im.description).trim() !== "" && (
-                                  <figcaption className="mt-1 text-xs text-slate-500">{im.description}</figcaption>
-                                )}
-                              </figure>
-                            ))}
-                          </div>
-                        ))}
-                      </figure>
-                    ))}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                      <p className="text-xs font-bold text-slate-500">Tidak Termasuk</p>
+                      <p className="mt-1 text-sm leading-relaxed text-slate-700">
+                        {ideaDetail.scopeTidakTermasuk && String(ideaDetail.scopeTidakTermasuk).trim() !== "" ? ideaDetail.scopeTidakTermasuk : "—"}
+                      </p>
+                    </div>
                   </div>
-                );
-              })()}
+                </section>
+              )}
+              {((ideaDetail.roleUsers && String(ideaDetail.roleUsers).trim() !== "") ||
+                (ideaDetail.stepFeatureScreen && String(ideaDetail.stepFeatureScreen).trim() !== "")) && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {ideaDetail.roleUsers && String(ideaDetail.roleUsers).trim() !== "" && (
+                    <section>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Role / Users</p>
+                      <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.roleUsers}</p>
+                    </section>
+                  )}
+                  {ideaDetail.stepFeatureScreen && String(ideaDetail.stepFeatureScreen).trim() !== "" && (
+                    <section>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Step / Feature / Screen</p>
+                      <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.stepFeatureScreen}</p>
+                    </section>
+                  )}
+                </div>
+              )}
+              {ideaDetail.apaYangBerubah && String(ideaDetail.apaYangBerubah).trim() !== "" && (
+                <section>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Apa Yang Berubah</p>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.apaYangBerubah}</p>
+                </section>
+              )}
+              {ideaDetail.outputKeberhasilan && String(ideaDetail.outputKeberhasilan).trim() !== "" && (
+                <section>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Output Keberhasilan</p>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.outputKeberhasilan}</p>
+                </section>
+              )}
+              {ideaDetail.tujuanBisnis && String(ideaDetail.tujuanBisnis).trim() !== "" && (
+                <section>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Tujuan Bisnis</p>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.tujuanBisnis}</p>
+                </section>
+              )}
+              {(ideaDetail.relatedIdeas || []).length > 0 && (
+                <section>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Related findings</p>
+                  <ul className="mt-2 space-y-1.5">
+                    {(ideaDetail.relatedIdeas || []).map((r: any) => (
+                      <li key={r.id} className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-sm font-medium text-slate-700">
+                        {r.title}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
             </div>
           </div>
         </div>
