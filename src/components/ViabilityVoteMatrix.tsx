@@ -247,17 +247,17 @@ export default function ViabilityVoteMatrix({
             {aspect.label}
           </span>
         ) : (
-          <span className="inline-flex rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+          <span className="inline-flex rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-[10px] font-medium text-slate-500">
             No label
           </span>
         )}
         {!isMyGroup && currentUser && !isAdmin && (
-          <span className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-400">
+          <span className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-500">
             View only
           </span>
         )}
         {isMyGroup && currentUser && !isAdmin && !isFacilitator && aspect.label && myGroupLabel && aspect.label !== myGroupLabel && (
-          <span className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-400">
+          <span className="inline-flex rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-500">
             Not your role
           </span>
         )}
@@ -375,7 +375,7 @@ export default function ViabilityVoteMatrix({
   };
 
   const renderVote = (vote: any) => {
-    if (!vote) return <span className="text-slate-400 italic">Not scored yet</span>;
+    if (!vote) return <span className="text-slate-500 italic">Not scored yet</span>;
     return (
       <>
         {vote.score != null ? (
@@ -470,7 +470,7 @@ export default function ViabilityVoteMatrix({
                                       type="button"
                                       disabled
                                       aria-label={`Score ${n} for ${aspect.name}`}
-                                      className="h-8 w-8 rounded-lg border border-slate-200 bg-slate-50 text-sm font-bold text-slate-400"
+                                      className="h-8 w-8 rounded-lg border border-slate-200 bg-slate-50 text-sm font-bold text-slate-500"
                                     >
                                       {n}
                                     </button>
@@ -478,7 +478,7 @@ export default function ViabilityVoteMatrix({
                                 </span>
                               </td>
                               <td className="py-2.5 px-3 min-w-[180px]">
-                                <span className="text-xs text-slate-400 italic">Loading…</span>
+                                <span className="text-xs text-slate-500 italic">Loading…</span>
                               </td>
                             </tr>
                           ) : (
@@ -598,7 +598,7 @@ export default function ViabilityVoteMatrix({
           </table>
         </div>
       ) : (
-        <p className="text-xs text-slate-400 italic py-4">
+        <p className="text-xs text-slate-500 italic py-4">
           No aspects configured for this project.
         </p>
       )}

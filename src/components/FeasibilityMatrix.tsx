@@ -358,13 +358,13 @@ export default function FeasibilityMatrix({
                   <AlertCircle className="h-3.5 w-3.5" /> {saveError}
                 </span>
               )}
-              <span className="text-slate-400 font-mono">
+              <span className="text-slate-500 font-mono">
                 X: {posX.toFixed(0)}% | Y: {posY.toFixed(0)}%
               </span>
             </div>
           ) : (
             <div className="inline-flex items-center gap-1 text-xs text-slate-500">
-              <ShieldAlert className="h-3.5 w-3.5 text-slate-400" />
+              <ShieldAlert className="h-3.5 w-3.5 text-slate-500" />
               <span>Login as Admin to reposition Post-it</span>
             </div>
           )}

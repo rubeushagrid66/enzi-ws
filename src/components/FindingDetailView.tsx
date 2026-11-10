@@ -265,7 +265,7 @@ export default function FindingDetailView({
           {groupD != null ? (
             <>
               {groupD}
-              <span className="text-sm font-medium text-slate-400"> / 3</span>
+              <span className="text-sm font-medium text-slate-500"> / 3</span>
             </>
           ) : (
             "N/A"
@@ -284,7 +284,7 @@ export default function FindingDetailView({
           {groupV != null ? (
             <>
               {groupV}
-              <span className="text-sm font-medium text-slate-400"> / 3</span>
+              <span className="text-sm font-medium text-slate-500"> / 3</span>
             </>
           ) : (
             "N/A"
@@ -477,7 +477,7 @@ export default function FindingDetailView({
                   key={idx}
                   className="chip chip-neutral"
                 >
-                  <span className="text-slate-400 font-normal">{tag.category}:</span>
+                  <span className="text-slate-500 font-normal">{tag.category}:</span>
                   <span className="font-semibold">{tag.value}</span>
                 </span>
               ))}
@@ -491,7 +491,7 @@ export default function FindingDetailView({
               is in the tooltip. */}
           {relatedIdeas.length > 0 && (
             <div className="mt-4">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                 Related Findings ({relatedIdeas.length})
               </h3>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -531,7 +531,7 @@ export default function FindingDetailView({
             <span className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-500">
               {aboutOpen ? "Hide" : "Show"}
               <ChevronDown
-                className={`h-4 w-4 text-slate-400 transition-transform ${aboutOpen ? "rotate-180" : ""}`}
+                className={`h-4 w-4 text-slate-500 transition-transform ${aboutOpen ? "rotate-180" : ""}`}
               />
             </span>
           </button>
@@ -541,14 +541,14 @@ export default function FindingDetailView({
 
             {localFinding.tujuan && String(localFinding.tujuan).trim() && (
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Tujuan</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Tujuan</h4>
                 <p className="mt-1 text-sm leading-relaxed text-slate-700">{localFinding.tujuan}</p>
               </div>
             )}
 
             {scopeRows.length > 0 && (
               <div className="mt-5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Scope</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Scope</h4>
                 <div className="mt-2 overflow-hidden rounded-xl border border-slate-200">
                   <div className="hidden sm:grid sm:grid-cols-[7rem_1fr_1fr] bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                     <div className="px-3 py-2" />
@@ -559,7 +559,7 @@ export default function FindingDetailView({
                     <div key={row.label} className="grid border-t border-slate-200 first:border-t-0 sm:grid-cols-[7rem_1fr_1fr]">
                       <div className="px-3 pt-2.5 sm:py-3">
                         <p className="text-sm font-semibold text-slate-800">{row.label}</p>
-                        <p className="text-xs text-slate-400">{row.hint}</p>
+                        <p className="text-xs text-slate-500">{row.hint}</p>
                       </div>
                       <div className="px-3 pt-1 pb-2.5 sm:py-3">
                         <p className="text-[11px] font-bold uppercase tracking-wider text-bsi-700 sm:hidden">Termasuk</p>
@@ -577,14 +577,14 @@ export default function FindingDetailView({
 
             {localFinding.outputKeberhasilan && String(localFinding.outputKeberhasilan).trim() && (
               <div className="mt-5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Output Keberhasilan</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Output Keberhasilan</h4>
                 <p className="mt-1 text-sm leading-relaxed text-slate-700">{localFinding.outputKeberhasilan}</p>
               </div>
             )}
 
             {localFinding.tujuanBisnis && String(localFinding.tujuanBisnis).trim() && (
               <div className="mt-5">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Tujuan Bisnis</h4>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">Tujuan Bisnis</h4>
                 <p className="mt-1 text-sm leading-relaxed text-slate-700">{localFinding.tujuanBisnis}</p>
               </div>
             )}
@@ -857,7 +857,7 @@ export default function FindingDetailView({
       </section>
 
       {/* Footer note */}
-      <p className="px-1 text-xs leading-relaxed text-slate-400">
+      <p className="px-1 text-xs leading-relaxed text-slate-500">
         D, V and F are all on the 1–3 scale. D = research mentions (Wawancara + Survey, rounded-up average); V = average of your Viability aspect scores; F = 4 − average of your Effort aspect scores. There is no composite score.
       </p>
 

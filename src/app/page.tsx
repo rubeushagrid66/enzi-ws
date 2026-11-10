@@ -20,7 +20,7 @@ export default async function HomePage() {
   }));
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
+    <div className="font-poppins min-h-screen bg-black flex flex-col">
       <AutoRefreshOnFocus />
       <Navbar dark />
       <LandingEntry projects={entries} />

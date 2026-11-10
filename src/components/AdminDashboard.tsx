@@ -125,7 +125,7 @@ function AspectFrameworkBadge({ framework }: { framework?: string }) {
 function AspectLabelBadge({ label }: { label?: string | null }) {
   if (!label) {
     return (
-      <span title="No label yet — edit the aspect to set one" className="inline-flex shrink-0 items-center rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-xs font-semibold text-slate-400">
+      <span title="No label yet — edit the aspect to set one" className="inline-flex shrink-0 items-center rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-xs font-semibold text-slate-500">
         No label
       </span>
     );
@@ -1543,9 +1543,9 @@ export default function AdminDashboard() {
                     </colgroup>
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Idea Title</th>
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Tags</th>
-                        <th scope="col" className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Actions</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Idea Title</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Tags</th>
+                        <th scope="col" className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -1638,11 +1638,11 @@ export default function AdminDashboard() {
                     </colgroup>
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Finding</th>
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Description</th>
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Category</th>
-                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Linked Ideas</th>
-                        <th scope="col" className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-400">Actions</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Finding</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Description</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Category</th>
+                        <th scope="col" className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Linked Ideas</th>
+                        <th scope="col" className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -1664,7 +1664,7 @@ export default function AdminDashboard() {
                                 {categoryName ? (
                                   <span className="chip chip-bsi">{categoryName}</span>
                                 ) : (
-                                  <span className="text-xs font-medium text-slate-400">—</span>
+                                  <span className="text-xs font-medium text-slate-500">—</span>
                                 )}
                               </td>
                               <td className="px-4 py-3">
@@ -1676,7 +1676,7 @@ export default function AdminDashboard() {
                                       </span>
                                     ))
                                   ) : (
-                                    <span className="text-xs font-medium text-slate-400">No ideas linked yet</span>
+                                    <span className="text-xs font-medium text-slate-500">No ideas linked yet</span>
                                   )}
                                 </div>
                               </td>
@@ -1771,7 +1771,7 @@ export default function AdminDashboard() {
             <section aria-labelledby="weights-heading" className="max-w-3xl space-y-6">
               <div className="card space-y-6 p-6">
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     <Sparkles className="h-4 w-4" /> Framework Weighting
                   </div>
                   <h2 id="weights-heading" className="mt-1 text-xl font-semibold text-slate-900">DVF Framework Allocation</h2>
@@ -1846,7 +1846,7 @@ export default function AdminDashboard() {
 
               <div className="card space-y-6 p-6">
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     <Sparkles className="h-4 w-4" /> Research Basis
                   </div>
                   <h2 className="mt-1 text-xl font-semibold text-slate-900">Desirability Research Basis</h2>
@@ -2004,7 +2004,7 @@ export default function AdminDashboard() {
                 </form>
                 )}
                 <div className="space-y-2 border-t border-slate-100 pt-4">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Active Aspects ({projectLoading && !activeProject ? "…" : (activeProject?.viabilityAspects?.length || 0)})</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Aspects ({projectLoading && !activeProject ? "…" : (activeProject?.viabilityAspects?.length || 0)})</h3>
                   {projectLoading && !activeProject ? (
                     <div className="flex items-center gap-2 py-2 text-sm text-slate-500">
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-bsi-600 border-t-transparent" aria-hidden />
@@ -2076,7 +2076,7 @@ export default function AdminDashboard() {
                   <p className="mt-0.5 text-sm text-slate-600">Create and manage facilitator and admin credentials. Assign each user to a project (and a group within it) so their scores land in the right workshop — label-role users (Tech, Product, Business &amp; Ops) can only score in their assigned project, while admins and facilitators work across projects. A user with no project assigned can score anywhere.</p>
                 </div>
                 <div className="space-y-2 border-t border-slate-100 pt-4">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Existing Credentials ({usersList.length})</h3>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Existing Credentials ({usersList.length})</h3>
                   {newestFirst(usersList).map((u) => (
                     <div key={u.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <div className="min-w-0">
@@ -2201,7 +2201,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 gap-2 border-t border-slate-100 px-3 py-3 first:border-t-0 sm:grid-cols-[150px_1fr_1fr] sm:gap-0 sm:px-0 sm:py-0">
                 <div className="sm:px-3 sm:py-3">
                   <p className="text-sm font-bold text-slate-800">Siapa</p>
-                  <p className="text-xs text-slate-400">Peran atau pengguna</p>
+                  <p className="text-xs text-slate-500">Peran atau pengguna</p>
                 </div>
                 <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
                   <span className="mb-1 block text-xs font-semibold text-bsi-700 sm:hidden">Termasuk</span>
@@ -2215,7 +2215,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 gap-2 border-t border-slate-100 px-3 py-3 sm:grid-cols-[150px_1fr_1fr] sm:gap-0 sm:px-0 sm:py-0">
                 <div className="sm:px-3 sm:py-3">
                   <p className="text-sm font-bold text-slate-800">Di mana</p>
-                  <p className="text-xs text-slate-400">Langkah, fitur, layar</p>
+                  <p className="text-xs text-slate-500">Langkah, fitur, layar</p>
                 </div>
                 <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
                   <span className="mb-1 block text-xs font-semibold text-bsi-700 sm:hidden">Termasuk</span>
@@ -2229,7 +2229,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 gap-2 border-t border-slate-100 px-3 py-3 sm:grid-cols-[150px_1fr_1fr] sm:gap-0 sm:px-0 sm:py-0">
                 <div className="sm:px-3 sm:py-3">
                   <p className="text-sm font-bold text-slate-800">Apa yang berubah</p>
-                  <p className="text-xs text-slate-400">Tampilan, alur, sistem</p>
+                  <p className="text-xs text-slate-500">Tampilan, alur, sistem</p>
                 </div>
                 <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
                   <span className="mb-1 block text-xs font-semibold text-bsi-700 sm:hidden">Termasuk</span>
@@ -2301,7 +2301,7 @@ export default function AdminDashboard() {
                             />
                             <span className="min-w-0">
                               <span className="block font-medium leading-snug text-slate-900">{i.title}</span>
-                              {i.description && <span className="mt-0.5 block truncate text-xs text-slate-400">{i.description}</span>}
+                              {i.description && <span className="mt-0.5 block truncate text-xs text-slate-500">{i.description}</span>}
                             </span>
                           </label>
                         ))}
@@ -2395,11 +2395,11 @@ export default function AdminDashboard() {
                     >
                       <X className="h-3.5 w-3.5" /> Remove image
                     </button>
-                    <p className="mt-2 text-xs text-slate-400">Click or drop another image to replace it.</p>
+                    <p className="mt-2 text-xs text-slate-500">Click or drop another image to replace it.</p>
                   </div>
                 ) : (
                   <>
-                    <ImagePlus className="h-8 w-8 text-slate-400" />
+                    <ImagePlus className="h-8 w-8 text-slate-500" />
                     <p className="mt-2 text-sm font-semibold text-slate-700">
                       {isDraggingImage ? "Drop the image here" : "Drag & drop an image here"}
                     </p>
@@ -2517,7 +2517,7 @@ export default function AdminDashboard() {
                           }}
                           className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white px-4 py-3 text-center transition hover:border-bsi-400 hover:bg-bsi-50/50"
                         >
-                          <ImagePlus className="h-6 w-6 text-slate-400" />
+                          <ImagePlus className="h-6 w-6 text-slate-500" />
                           <p className="mt-1 text-xs font-semibold text-slate-700">Add image evidence</p>
                           <p className="mt-0.5 text-[11px] text-slate-500">Drag &amp; drop or click to browse · JPEG, JPG, PNG · max 5 MB</p>
                         </div>
@@ -2594,7 +2594,7 @@ export default function AdminDashboard() {
                             />
                             <span className="min-w-0">
                               <span className="block font-medium leading-snug text-slate-900">{f.title}</span>
-                              {f.projectName && <span className="mt-0.5 block text-xs text-slate-400">{f.projectName}</span>}
+                              {f.projectName && <span className="mt-0.5 block text-xs text-slate-500">{f.projectName}</span>}
                             </span>
                           </label>
                         ))}

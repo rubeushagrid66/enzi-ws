@@ -10,33 +10,45 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  /* Helvetica Neue everywhere except the homepage (which sets
+     font-poppins on its own root). System stack: Helvetica Neue on
+     Apple devices, Helvetica/Arial elsewhere. */
+  font-family: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 /* ── Type scale (all pages except the homepage) ────────────────
-   One size per heading level so a page title reads the same
-   everywhere. Explicit text-* utilities on an element still win
-   over these base styles, so the homepage hero (which sets its own
-   sizes) is unaffected. */
+   One clean step per level (36 / 30 / 20 / 16 / 16 / 14 / 12),
+   generous line-heights, and WCAG-AA-or-better text colors
+   (slate-900/700/600 are 16:1 / 9.5:1 / 7:1 on white — AAA).
+   Body copy is 16px with 1.625 line-height (WCAG 1.4.12 wants
+   >= 1.5). Explicit text-* utilities on an element still win
+   over these base styles, so the homepage hero (which sets its
+   own sizes) is unaffected. */
 @layer base {
   h1 {
-    @apply text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl;
+    @apply text-3xl font-bold leading-[1.2] tracking-tight text-slate-900 sm:text-4xl;
   }
   h2 {
-    @apply text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl;
+    @apply text-2xl font-bold leading-[1.25] tracking-tight text-slate-900 sm:text-3xl;
   }
   h3 {
-    @apply text-lg font-semibold text-slate-900;
+    @apply text-xl font-semibold leading-snug text-slate-900;
   }
   h4 {
-    @apply text-sm font-semibold text-slate-900;
+    @apply text-base font-semibold leading-snug text-slate-900;
   }
   p {
+    @apply text-base leading-relaxed text-slate-700;
+  }
+  small {
     @apply text-sm leading-relaxed text-slate-600;
   }
   /* Placeholder text: one readable grey everywhere, at the input's
-     own size (16px — see the iOS rule below). */
+     own size (16px — see the iOS rule below). slate-500 is 4.8:1
+     on white, so it clears WCAG AA (4.5:1). */
   ::placeholder {
     color: #64748b;
     opacity: 1;

@@ -9,8 +9,14 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        // Poppins is the standard app typeface (see layout.tsx).
-        sans: ["var(--font-poppins)", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Helvetica Neue is the standard app typeface (all pages
+        // except the homepage). System stack: Helvetica Neue on
+        // Apple devices, Helvetica/Arial elsewhere — no webfont
+        // download, so it renders instantly and crisply.
+        sans: ["\"Helvetica Neue\"", "Helvetica", "Arial", "ui-sans-serif", "system-ui", "sans-serif"],
+        // Poppins stays for the homepage only (see layout.tsx and
+        // the font-poppins class on the homepage root).
+        poppins: ["var(--font-poppins)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
         background: "var(--background)",

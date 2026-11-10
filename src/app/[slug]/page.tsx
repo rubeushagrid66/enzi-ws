@@ -90,7 +90,7 @@ function FindingCard({
   // with the other two boxes.
   const scoreBox = (label: string, value: string | null) => (
     <div className="rounded-xl border border-slate-100 bg-slate-50 px-2 py-2.5">
-      <div className="flex min-h-8 items-center justify-center text-[11px] font-semibold leading-tight text-slate-400">
+      <div className="flex min-h-8 items-center justify-center text-[11px] font-semibold leading-tight text-slate-500">
         {label}
       </div>
       <div className="mt-0.5 text-base font-bold tabular-nums text-slate-900">
@@ -457,7 +457,7 @@ function RoadmapView({
               ))}
             </div>
           ) : (
-            <p className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-xs text-slate-400">
+            <p className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-xs text-slate-500">
               N/A
             </p>
           )}
@@ -504,7 +504,7 @@ function FindingsByCategoryView({
       <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center">
         <Lightbulb className="mx-auto h-8 w-8 text-slate-300" />
         <p className="mt-3 text-sm font-semibold text-slate-500">No findings yet</p>
-        <p className="mt-1 text-xs text-slate-400">Findings linked to this project&apos;s ideas will appear here, grouped by category.</p>
+        <p className="mt-1 text-xs text-slate-500">Findings linked to this project&apos;s ideas will appear here, grouped by category.</p>
       </div>
     );
   }
@@ -537,7 +537,7 @@ function FindingsByCategoryView({
               <span className="shrink-0 rounded-full bg-bsi-50 px-2.5 py-1 text-xs font-bold text-bsi-700">
                 {group.findings.length}
               </span>
-              <ChevronDown className={`h-5 w-5 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+              <ChevronDown className={`h-5 w-5 shrink-0 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`} />
             </button>
             {open && (
               <ul className="divide-y divide-slate-100 border-t border-slate-100">
@@ -995,7 +995,7 @@ export default function ProjectResultViewer({
                   className="inline-flex items-center gap-2 text-left transition hover:text-bsi-700"
                 >
                   {project.name}
-                  <ChevronDown className={`h-7 w-7 shrink-0 text-slate-400 transition-transform ${switcherOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`h-7 w-7 shrink-0 text-slate-500 transition-transform ${switcherOpen ? "rotate-180" : ""}`} />
                 </button>
               </h1>
               {switcherOpen && projects.length > 1 && (
@@ -1140,7 +1140,7 @@ export default function ProjectResultViewer({
                 result count pins to the right, so nothing dangles. */}
             <div className="flex items-center gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
               <div className="relative min-w-0 flex-1">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <label htmlFor="viewer-search" className="sr-only">Search findings</label>
                 <input
                   id="viewer-search"
@@ -1166,7 +1166,7 @@ export default function ProjectResultViewer({
               <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                       <th scope="col" className="px-4 py-3">Ideas</th>
                       <th scope="col" className="px-4 py-3">Related Findings</th>
                       <th scope="col" className="px-4 py-3">Platform</th>
@@ -1191,7 +1191,7 @@ export default function ProjectResultViewer({
                               {finding.relatedIdeas.map((r: any) => r.title).join(", ")}
                             </div>
                           ) : (
-                            <span className="text-slate-400">—</span>
+                            <span className="text-slate-500">—</span>
                           )}
                         </td>
                         <td className="px-4 py-3.5 align-top whitespace-nowrap text-slate-700">
@@ -1227,7 +1227,7 @@ export default function ProjectResultViewer({
       </main>
 
       {/* Credit footer — same text as the homepage, styled for the white page */}
-      <footer className="mx-auto flex w-full max-w-7xl items-center justify-between border-t border-slate-100 px-4 py-6 text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400 sm:px-6 lg:px-10">
+      <footer className="mx-auto flex w-full max-w-7xl items-center justify-between border-t border-slate-100 px-4 py-6 text-[11px] font-medium uppercase tracking-[0.2em] text-slate-500 sm:px-6 lg:px-10">
         <span>Bank BSI &times; Aleph</span>
         <span>&copy; Enzi 2026</span>
       </footer>
@@ -1268,7 +1268,7 @@ export default function ProjectResultViewer({
                 type="button"
                 onClick={closeIdeaPopup}
                 aria-label="Close dialog"
-                className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                className="shrink-0 rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1277,7 +1277,7 @@ export default function ProjectResultViewer({
               {ideaDetail.description && String(ideaDetail.description).trim() !== "" ? (
                 <p className="text-sm leading-relaxed text-slate-700">{ideaDetail.description}</p>
               ) : (
-                <p className="text-sm text-slate-400">No description yet.</p>
+                <p className="text-sm text-slate-500">No description yet.</p>
               )}
               {ideaDetail.tujuan && String(ideaDetail.tujuan).trim() !== "" && (
                 <section>
@@ -1311,7 +1311,7 @@ export default function ProjectResultViewer({
                         <div key={r.label} className="grid grid-cols-1 gap-1 border-t border-slate-100 px-3 py-3 sm:grid-cols-[140px_1fr_1fr] sm:gap-0 sm:px-0 sm:py-0">
                           <div className="sm:px-3 sm:py-3">
                             <p className="text-sm font-bold text-slate-800">{r.label}</p>
-                            <p className="text-xs text-slate-400">{r.sub}</p>
+                            <p className="text-xs text-slate-500">{r.sub}</p>
                           </div>
                           <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
                             <span className="mb-0.5 block text-xs font-semibold text-bsi-700 sm:hidden">Termasuk</span>

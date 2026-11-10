@@ -51,7 +51,7 @@ export default function FindingPopup({
             type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            className="shrink-0 rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
           >
             <X className="h-5 w-5" />
           </button>
@@ -63,7 +63,7 @@ export default function FindingPopup({
           {finding.description && String(finding.description).trim() !== "" ? (
             <p className="text-sm leading-relaxed text-slate-700">{finding.description}</p>
           ) : (
-            <p className="text-sm text-slate-400">No description yet.</p>
+            <p className="text-sm text-slate-500">No description yet.</p>
           )}
           {(finding.subFindings || []).filter((s: any) =>
             (s.fitur && String(s.fitur).trim() !== "") ||

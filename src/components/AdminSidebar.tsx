@@ -95,7 +95,7 @@ export default function AdminSidebar({
           to the assigned one.) */}
       {!isLabelUser && (
       <div className="px-4 pb-4">
-        <label htmlFor="admin-project-switcher" className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        <label htmlFor="admin-project-switcher" className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
           Active project
         </label>
         <select
@@ -129,7 +129,7 @@ export default function AdminSidebar({
           (g) =>
             g.items.length > 0 && (
               <div key={g.label}>
-                <p className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                <p className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                   {g.label}
                 </p>
                 <ul className="space-y-0.5">
@@ -149,7 +149,7 @@ export default function AdminSidebar({
                               : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                           }`}
                         >
-                          <Icon className={`h-4 w-4 shrink-0 ${active ? "text-bsi-700" : "text-slate-400"}`} />
+                          <Icon className={`h-4 w-4 shrink-0 ${active ? "text-bsi-700" : "text-slate-500"}`} />
                           <span className="min-w-0 flex-1 truncate">{item.label}</span>
                           {item.badge && (
                             <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${active ? "bg-bsi-100 text-bsi-800" : "bg-slate-100 text-slate-500"}`}>
@@ -157,7 +157,7 @@ export default function AdminSidebar({
                             </span>
                           )}
                           {(count !== undefined || (projectLoading && (item.id === "groups" || item.id === "aspects"))) && (
-                            <span className={`text-xs font-medium tabular-nums ${active ? "text-bsi-700" : "text-slate-400"}`}>
+                            <span className={`text-xs font-medium tabular-nums ${active ? "text-bsi-700" : "text-slate-500"}`}>
                               {count !== undefined ? count : "…"}
                             </span>
                           )}
@@ -187,7 +187,7 @@ export default function AdminSidebar({
               onClick={onLogout}
               aria-label="Sign out"
               title="Sign out"
-              className="shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
+              className="shrink-0 rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
             >
               <LogOut className="h-4 w-4" />
             </button>
