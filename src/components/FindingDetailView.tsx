@@ -504,9 +504,6 @@ export default function FindingDetailView({
                     className="chip chip-bsi transition hover:border-bsi-300 hover:bg-bsi-100"
                   >
                     <span className="truncate text-sm font-semibold text-bsi-900">{chipLabel(idea.title || "")}</span>
-                    {idea.description && (
-                      <span className="max-w-48 truncate text-xs text-bsi-700">· {idea.description}</span>
-                    )}
                   </button>
                 ))}
               </div>
