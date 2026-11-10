@@ -72,7 +72,7 @@ export default function AdminSidebar({
       {/* Brand */}
       <div className="flex items-center justify-between px-4 pb-3 pt-4">
         <Link href="/" onClick={onClose} className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-aleph-gradient text-base font-bold text-white shadow-sm">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-bsi-600 text-base font-bold text-white shadow-sm">
             B
           </span>
           <span className="truncate text-[15px] font-bold tracking-tight text-slate-900">
@@ -143,21 +143,21 @@ export default function AdminSidebar({
                           href={item.href}
                           onClick={onClose}
                           aria-current={active ? "page" : undefined}
-                          className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                          className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bsi-500 ${
                             active
-                              ? "bg-emerald-50 font-semibold text-emerald-800"
+                              ? "bg-bsi-50 font-semibold text-bsi-800"
                               : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                           }`}
                         >
-                          <Icon className={`h-4 w-4 shrink-0 ${active ? "text-emerald-700" : "text-slate-400"}`} />
+                          <Icon className={`h-4 w-4 shrink-0 ${active ? "text-bsi-700" : "text-slate-400"}`} />
                           <span className="min-w-0 flex-1 truncate">{item.label}</span>
                           {item.badge && (
-                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"}`}>
+                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${active ? "bg-bsi-100 text-bsi-800" : "bg-slate-100 text-slate-500"}`}>
                               {item.badge}
                             </span>
                           )}
                           {(count !== undefined || (projectLoading && (item.id === "groups" || item.id === "aspects"))) && (
-                            <span className={`text-xs font-medium tabular-nums ${active ? "text-emerald-700" : "text-slate-400"}`}>
+                            <span className={`text-xs font-medium tabular-nums ${active ? "text-bsi-700" : "text-slate-400"}`}>
                               {count !== undefined ? count : "…"}
                             </span>
                           )}

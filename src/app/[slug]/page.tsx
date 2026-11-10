@@ -98,22 +98,22 @@ function FindingCard({
     </div>
   );
   // Tags are colour-coded by kind so a card scans at a glance:
-  // Sumber (research source) emerald, Fitur blue, Platform slate.
+  // Sumber (research source) BSI teal, Fitur deep teal, Platform slate.
   const tagStyle = (category: string) =>
     category === "Sumber"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+      ? "chip-bsi"
       : category === "Fitur"
-      ? "border-blue-200 bg-blue-50 text-blue-800"
-      : "border-slate-200 bg-slate-100 text-slate-600";
+      ? "chip-deep"
+      : "chip-neutral";
   return (
     <div
       onClick={() => onSelect(finding)}
-      className="group flex cursor-pointer flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
+      className="group flex cursor-pointer flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:border-bsi-300 hover:shadow-md"
     >
       <div className="flex-1 space-y-3">
         {/* Fixed two-line height so the tags below always start at the
             same place, whether the title wraps or not. */}
-        <h3 className="min-h-[2.75rem] text-base font-semibold leading-snug text-slate-900 transition group-hover:text-emerald-700 line-clamp-2 sm:min-h-[3.125rem] sm:text-lg">
+        <h3 className="min-h-[2.75rem] text-base font-semibold leading-snug text-slate-900 transition group-hover:text-bsi-700 line-clamp-2 sm:min-h-[3.125rem] sm:text-lg">
           {finding.title}
         </h3>
 
@@ -122,7 +122,7 @@ function FindingCard({
             {finding.tagsList.map((tag: any, i: number) => (
               <span
                 key={i}
-                className={`rounded-md border px-2 py-0.5 text-xs font-medium ${tagStyle(tag.category || "")}`}
+                className={`chip ${tagStyle(tag.category || "")}`}
               >
                 {tag.category ? `${tag.category}: ${tag.value}` : tag.value}
               </span>
@@ -140,7 +140,7 @@ function FindingCard({
           {scoreBox("Matrix", shownF != null ? `${shownF} / 3` : null)}
         </div>
 
-        <div className="flex items-center justify-between pt-1 text-xs font-semibold text-emerald-600">
+        <div className="flex items-center justify-between pt-1 text-xs font-semibold text-bsi-600">
           <span>View details</span>
           <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
         </div>
@@ -198,19 +198,19 @@ function GroupsView({
           <button
             type="button"
             onClick={onBackToGroups}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-emerald-700 transition"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-bsi-700 transition"
           >
             <ArrowLeft className="h-4 w-4" /> All groups
           </button>
           <h2 className="mt-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
             {selectedGroup.name}
             {selectedGroup.label && selectedGroup.label.toLowerCase() !== selectedGroup.name.toLowerCase() && (
-              <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-extrabold normal-case tracking-normal text-violet-800">
+              <span className="rounded-full bg-bsi-100 px-2 py-0.5 text-[10px] font-extrabold normal-case tracking-normal text-bsi-800">
                 {selectedGroup.label}
               </span>
             )}
             {meId != null && (selectedGroup.participants || []).some((p: any) => p.id === meId) && (
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold normal-case tracking-normal text-emerald-800">
+              <span className="rounded-full bg-bsi-100 px-2 py-0.5 text-[10px] font-extrabold normal-case tracking-normal text-bsi-800">
                 Me
               </span>
             )}
@@ -223,7 +223,7 @@ function GroupsView({
         </div>
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-bsi-600 border-t-transparent" />
           </div>
         ) : findings && findings.length > 0 ? (
           // One flat grid — no separation by quadrant, score, or status.
@@ -277,23 +277,23 @@ function GroupsView({
                 key={g.id}
                 type="button"
                 onClick={() => onOpenGroup(g.id)}
-                className="group flex flex-col rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-xs transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
+                className="group flex flex-col rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-xs transition hover:-translate-y-0.5 hover:border-bsi-300 hover:shadow-md"
               >
                 {/* Header: icon + name + participant count + chevron (signals it's clickable) */}
                 <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-bsi-50 text-bsi-700">
                     <Users className="h-5 w-5" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2">
                       <span className="truncate text-base font-bold text-slate-900">{g.name}</span>
                       {g.label && g.label.toLowerCase() !== g.name.toLowerCase() && (
-                        <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-extrabold text-violet-800">
+                        <span className="shrink-0 rounded-full bg-bsi-100 px-2 py-0.5 text-[10px] font-extrabold text-bsi-800">
                           {g.label}
                         </span>
                       )}
                       {isMyGroup && (
-                        <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-extrabold text-emerald-800">
+                        <span className="shrink-0 rounded-full bg-bsi-100 px-2 py-0.5 text-[10px] font-extrabold text-bsi-800">
                           Me
                         </span>
                       )}
@@ -304,7 +304,7 @@ function GroupsView({
                         : "No participants yet"}
                     </span>
                   </span>
-                  <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+                  <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-bsi-600" />
                 </div>
                 {/* Who's in the group: avatar initials + names */}
                 {participants.length > 0 && (
@@ -314,7 +314,7 @@ function GroupsView({
                         <span
                           key={p.id}
                           title={p.name}
-                          className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-violet-100 text-[10px] font-bold text-violet-800"
+                          className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-bsi-100 text-[10px] font-bold text-bsi-800"
                         >
                           {initials(p.name)}
                         </span>
@@ -342,7 +342,7 @@ function GroupsView({
                       <span className="text-slate-500">Loading ideas…</span>
                     )}
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 transition group-hover:bg-emerald-100">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-bsi-50 px-2.5 py-1 text-xs font-semibold text-bsi-700 transition group-hover:bg-bsi-100">
                     View Ideas <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                   </span>
                 </div>
@@ -389,9 +389,9 @@ function RoadmapView({
     subtitle: string;
     banner: string;
   }[] = [
-    { key: "QUICK_WINS", horizon: "Jangka Pendek", subtitle: "High impact, low effort. Do these first.", banner: "bg-teal-700" },
-    { key: "FILL_INS", horizon: "Jangka Menengah", subtitle: "Low impact, low effort. Fit them in next.", banner: "bg-amber-600" },
-    { key: "BIG_BETS", horizon: "Jangka Panjang", subtitle: "High impact, high effort. Plan these for later.", banner: "bg-teal-900" },
+    { key: "QUICK_WINS", horizon: "Jangka Pendek", subtitle: "High impact, low effort. Do these first.", banner: "bg-bsi-700" },
+    { key: "FILL_INS", horizon: "Jangka Menengah", subtitle: "Low impact, low effort. Fit them in next.", banner: "bg-gold-600" },
+    { key: "BIG_BETS", horizon: "Jangka Panjang", subtitle: "High impact, high effort. Plan these for later.", banner: "bg-bsi-900" },
   ];
 
   // For each horizon quadrant, the findings placed there — ordered by
@@ -429,7 +429,7 @@ function RoadmapView({
             <h3 className="text-base font-bold text-white">{section.horizon}</h3>
             <p className="mt-0.5 text-xs text-white/90">{section.subtitle}</p>
             {idx < itemsByHorizon.length - 1 && (
-              <ArrowRight className="absolute -right-5 top-1/2 hidden h-5 w-5 -translate-y-1/2 text-amber-500 md:block" />
+              <ArrowRight className="absolute -right-5 top-1/2 hidden h-5 w-5 -translate-y-1/2 text-gold-500 md:block" />
             )}
           </div>
           {section.items.length > 0 ? (
@@ -439,18 +439,18 @@ function RoadmapView({
                   key={finding.id + section.key}
                   type="button"
                   onClick={() => onSelectFinding(finding)}
-                  className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-xs transition hover:border-emerald-300 hover:shadow-sm"
+                  className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-xs transition hover:border-bsi-300 hover:shadow-sm"
                 >
                   <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-slate-900 group-hover:text-emerald-700">
+                    <span className="block text-sm font-semibold text-slate-900 group-hover:text-bsi-700">
                       {finding.title}
                     </span>
                   </span>
                   <span className="flex shrink-0 items-center gap-2">
-                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">
+                    <span className="rounded-full border border-gold-200 bg-gold-50 px-2.5 py-0.5 text-[11px] font-bold text-gold-800">
                       DVF {dvf != null ? dvf.toFixed(2) : "N/A"}
                     </span>
-                    <ArrowRight className="h-4 w-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+                    <ArrowRight className="h-4 w-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-bsi-600" />
                   </span>
                 </button>
               ))}
@@ -524,7 +524,7 @@ function FindingsByCategoryView({
               aria-expanded={open}
               className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-slate-50 sm:px-5"
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-bsi-50 text-bsi-700">
                 <Layers className="h-5 w-5" />
               </span>
               <span className="min-w-0 flex-1">
@@ -533,7 +533,7 @@ function FindingsByCategoryView({
                   {group.findings.length} {group.findings.length === 1 ? "finding" : "findings"}
                 </span>
               </span>
-              <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+              <span className="shrink-0 rounded-full bg-bsi-50 px-2.5 py-1 text-xs font-bold text-bsi-700">
                 {group.findings.length}
               </span>
               <ChevronDown className={`h-5 w-5 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
@@ -545,15 +545,15 @@ function FindingsByCategoryView({
                     <button
                       type="button"
                       onClick={() => onSelectFinding({ ...f, categoryName: group.categoryName })}
-                      className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-emerald-50/50 sm:px-5"
+                      className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-bsi-50/50 sm:px-5"
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold text-slate-900 group-hover:text-emerald-700">{f.title}</span>
+                        <span className="block text-sm font-semibold text-slate-900 group-hover:text-bsi-700">{f.title}</span>
                         {f.description && String(f.description).trim() !== "" && (
                           <span className="mt-0.5 block truncate text-xs text-slate-500">{f.description}</span>
                         )}
                       </span>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+                      <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-bsi-600" />
                     </button>
                   </li>
                 ))}
@@ -906,7 +906,7 @@ export default function ProjectResultViewer({
         <Navbar />
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-bsi-600 border-t-transparent" />
             <p className="text-sm font-semibold text-slate-600">
               Loading Workshop Prioritization Platform...
             </p>
@@ -933,7 +933,7 @@ export default function ProjectResultViewer({
             </p>
             <a
               href="/"
-              className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition"
+              className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-bsi-600 text-white hover:bg-bsi-700 transition"
             >
               Back to Home
             </a>
@@ -991,7 +991,7 @@ export default function ProjectResultViewer({
                   onClick={() => setSwitcherOpen((o) => !o)}
                   aria-haspopup="listbox"
                   aria-expanded={switcherOpen}
-                  className="inline-flex items-center gap-2 text-left transition hover:text-emerald-700"
+                  className="inline-flex items-center gap-2 text-left transition hover:text-bsi-700"
                 >
                   {project.name}
                   <ChevronDown className={`h-7 w-7 shrink-0 text-slate-400 transition-transform ${switcherOpen ? "rotate-180" : ""}`} />
@@ -1031,12 +1031,12 @@ export default function ProjectResultViewer({
                           }}
                           className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm transition ${
                             isCurrent
-                              ? "cursor-default font-semibold text-emerald-700"
-                              : "font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
+                              ? "cursor-default font-semibold text-bsi-700"
+                              : "font-medium text-slate-700 hover:bg-bsi-50 hover:text-bsi-700"
                           }`}
                         >
                           <span className="min-w-0 truncate">{p.name}</span>
-                          {isCurrent && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
+                          {isCurrent && <Check className="h-4 w-4 shrink-0 text-bsi-600" />}
                         </button>
                       );
                     })}
@@ -1176,7 +1176,7 @@ export default function ProjectResultViewer({
                       <tr
                         key={finding.id}
                         onClick={() => openIdeaPopup(finding)}
-                        className="cursor-pointer border-b border-slate-100 transition hover:bg-emerald-50/50 last:border-b-0"
+                        className="cursor-pointer border-b border-slate-100 transition hover:bg-bsi-50/50 last:border-b-0"
                       >
                         <td className="px-4 py-3.5 align-top">
                           <div className="font-semibold leading-snug text-slate-900">{finding.title}</div>
@@ -1259,7 +1259,7 @@ export default function ProjectResultViewer({
                     <span key={p} className="rounded-full bg-slate-100 px-2.5 py-0.5 font-bold text-slate-600">{p}</span>
                   ))}
                   {ideaDetail.fitur && String(ideaDetail.fitur).trim() !== "" && (
-                    <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 font-bold text-emerald-700">{ideaDetail.fitur}</span>
+                    <span className="rounded-full bg-bsi-50 px-2.5 py-0.5 font-bold text-bsi-700">{ideaDetail.fitur}</span>
                   )}
                 </p>
               </div>
@@ -1303,8 +1303,8 @@ export default function ProjectResultViewer({
                     <div className="mt-2 overflow-hidden rounded-xl border border-slate-200">
                       <div className="hidden grid-cols-[140px_1fr_1fr] bg-slate-50 sm:grid">
                         <div className="px-3 py-2" />
-                        <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-emerald-700">Termasuk</div>
-                        <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-amber-700">Tidak Termasuk</div>
+                        <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-bsi-700">Termasuk</div>
+                        <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gold-700">Tidak Termasuk</div>
                       </div>
                       {rows.map((r) => (
                         <div key={r.label} className="grid grid-cols-1 gap-1 border-t border-slate-100 px-3 py-3 sm:grid-cols-[140px_1fr_1fr] sm:gap-0 sm:px-0 sm:py-0">
@@ -1313,11 +1313,11 @@ export default function ProjectResultViewer({
                             <p className="text-xs text-slate-400">{r.sub}</p>
                           </div>
                           <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                            <span className="mb-0.5 block text-xs font-semibold text-emerald-700 sm:hidden">Termasuk</span>
+                            <span className="mb-0.5 block text-xs font-semibold text-bsi-700 sm:hidden">Termasuk</span>
                             <p className="text-sm leading-relaxed text-slate-700">{has(r.a) ? r.a : "—"}</p>
                           </div>
                           <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                            <span className="mb-0.5 block text-xs font-semibold text-amber-700 sm:hidden">Tidak Termasuk</span>
+                            <span className="mb-0.5 block text-xs font-semibold text-gold-700 sm:hidden">Tidak Termasuk</span>
                             <p className="text-sm leading-relaxed text-slate-700">{has(r.b) ? r.b : "—"}</p>
                           </div>
                         </div>
@@ -1354,10 +1354,10 @@ export default function ProjectResultViewer({
                           <button
                             type="button"
                             onClick={() => openFindingPopup(target)}
-                            className="group flex w-full items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-emerald-700"
+                            className="group flex w-full items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:border-bsi-300 hover:bg-bsi-50/60 hover:text-bsi-700"
                           >
                             <span className="min-w-0">{r.title}</span>
-                            <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+                            <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-bsi-600" />
                           </button>
                         </li>
                       );
@@ -1386,7 +1386,7 @@ export default function ProjectResultViewer({
               <div className="min-w-0">
                 <h2 className="text-base font-bold leading-snug text-slate-900 sm:text-lg">{findingDetail.title}</h2>
                 <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                  <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 font-bold text-emerald-700">
+                  <span className="rounded-full bg-bsi-50 px-2.5 py-0.5 font-bold text-bsi-700">
                     {findingDetail.categoryName || "Uncategorized"}
                   </span>
                   {(findingDetail.linkedIdeas || []).length > 0 && (
@@ -1461,10 +1461,10 @@ export default function ProjectResultViewer({
                           <button
                             type="button"
                             onClick={() => openIdeaPopup(target)}
-                            className="group flex w-full items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-emerald-700"
+                            className="group flex w-full items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:border-bsi-300 hover:bg-bsi-50/60 hover:text-bsi-700"
                           >
                             <span className="min-w-0">{li.title}</span>
-                            <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+                            <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-bsi-600" />
                           </button>
                         </li>
                       );

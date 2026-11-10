@@ -49,7 +49,7 @@ export default function Navbar({
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-10">
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-aleph-gradient text-lg font-bold text-white shadow-sm">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-bsi-600 text-lg font-bold text-white shadow-sm">
               B
             </div>
             <div>
@@ -72,7 +72,7 @@ export default function Navbar({
                 className="btn-secondary btn-sm"
               >
                 <LayoutDashboard
-                  className={`h-4 w-4 ${dark ? "text-teal-300" : "text-emerald-600"}`}
+                  className={`h-4 w-4 ${dark ? "text-bsi-300" : "text-bsi-600"}`}
                   aria-hidden="true"
                 />
                 <span className="hidden sm:inline">Dashboard</span>
@@ -92,7 +92,7 @@ export default function Navbar({
                   </div>
                   <div
                     className={`text-xs font-mono ${
-                      dark ? "text-teal-300" : "text-emerald-600"
+                      dark ? "text-bsi-300" : "text-bsi-600"
                     }`}
                   >
                     {user.role}
@@ -101,7 +101,7 @@ export default function Navbar({
                 <button
                   onClick={handleLogout}
                   aria-label="Log out"
-                  className={`rounded-lg p-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                  className={`rounded-lg p-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bsi-500 ${
                     dark
                       ? "text-white/60 hover:bg-white/10 hover:text-white"
                       : "text-slate-500 hover:bg-rose-50 hover:text-rose-600"

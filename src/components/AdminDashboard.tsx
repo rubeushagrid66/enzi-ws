@@ -40,9 +40,9 @@ const PLATFORM_OPTIONS = ["CMS", "DVC"];
 // Aspect → framework linkage: which DVF dimension an aspect's votes feed.
 const FRAMEWORK_OPTIONS = ["Desirability", "Viability", "Feasibility"] as const;
 const FRAMEWORK_BADGE_CLASS: Record<string, string> = {
-  Desirability: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  Viability: "bg-blue-100 text-blue-800 border-blue-200",
-  Feasibility: "bg-amber-100 text-amber-800 border-amber-200",
+  Desirability: "bg-bsi-100 text-bsi-800 border-bsi-200",
+  Viability: "bg-deep-100 text-deep-800 border-deep-200",
+  Feasibility: "bg-gold-100 text-gold-800 border-gold-200",
 };
 
 // Aspect label: a second grouping on each aspect (Business & Ops /
@@ -1446,7 +1446,7 @@ export default function AdminDashboard() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-bsi-600 border-t-transparent" />
           <p className="text-sm font-semibold text-slate-600">Loading Admin Dashboard...</p>
         </div>
       </div>
@@ -1503,7 +1503,7 @@ export default function AdminDashboard() {
         </header>
 
         {!isAdmin && currentUser && (
-          <p className="border-b border-sky-200 bg-sky-50 px-4 py-2 text-xs font-medium text-sky-800 sm:px-6 lg:px-8">
+          <p className="border-b border-bsi-200 bg-bsi-50 px-4 py-2 text-xs font-medium text-bsi-800 sm:px-6 lg:px-8">
             {isLabelUser
               ? `You're signed in as ${currentUser.name} (${currentUser.role}) — Groups & Participants and Viability Aspects for your project, view-only.`
               : `You're signed in as ${currentUser.name} (${currentUser.role}) — you can edit Findings; everything else here is view-only.`}
@@ -1528,7 +1528,7 @@ export default function AdminDashboard() {
                 <h2 id="findings-heading" className="section-title">Ideas Pool</h2>
                 <p className="section-sub">Shared library for all projects. An idea is copied into a project before scoring — the copy is scored independently, so moving it in one workshop never moves it in another.</p>
                 {globalSetupNote && (
-                  <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{globalSetupNote}</p>
+                  <p className="mt-1 rounded-lg border border-gold-200 bg-gold-50 px-3 py-2 text-xs font-medium text-gold-800">{globalSetupNote}</p>
                 )}
               </div>
 
@@ -1562,7 +1562,7 @@ export default function AdminDashboard() {
                               <td className="px-4 py-3">
                                 <div className="flex flex-wrap gap-1">
                                   {meta.tagsList.map((t: any, i: number) => (
-                                    <span key={i} className="rounded-md bg-slate-50 px-1.5 py-0.5 text-xs font-medium text-slate-500">
+                                    <span key={i} className="chip chip-neutral">
                                       {t.category}: {t.value}
                                     </span>
                                   ))}
@@ -1621,7 +1621,7 @@ export default function AdminDashboard() {
                 <h2 id="ideas-heading" className="section-title">Findings</h2>
                 <p className="section-sub">Findings are linked to one or many ideas. Open an idea to see the findings related to it.</p>
                 {globalSetupNote && (
-                  <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{globalSetupNote}</p>
+                  <p className="mt-1 rounded-lg border border-gold-200 bg-gold-50 px-3 py-2 text-xs font-medium text-gold-800">{globalSetupNote}</p>
                 )}
               </div>
 
@@ -1662,7 +1662,7 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-4 py-3">
                                 {categoryName ? (
-                                  <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">{categoryName}</span>
+                                  <span className="chip chip-bsi">{categoryName}</span>
                                 ) : (
                                   <span className="text-xs font-medium text-slate-400">—</span>
                                 )}
@@ -1671,7 +1671,7 @@ export default function AdminDashboard() {
                                 <div className="flex flex-wrap gap-1">
                                   {linked.length > 0 ? (
                                     linked.map((f: any) => (
-                                      <span key={f.id} className="rounded-md bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-700">
+                                      <span key={f.id} className="chip chip-bsi">
                                         {f.title}
                                       </span>
                                     ))
@@ -1779,7 +1779,7 @@ export default function AdminDashboard() {
                   <p className="mt-1 text-sm text-slate-600">Enter any number for Desirability, Viability, and Feasibility. Weights are saved exactly as you type them — nothing is recalculated or forced to total 100.</p>
                   <p className="mt-1 text-sm text-slate-600">These weights are kept for reference only — scoring no longer uses a composite score. V and F are calculated per participant (1–3).</p>
                   {weightsSource && weightsSource !== "global" && (
-                    <p className="mt-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                    <p className="mt-1 rounded-lg border border-gold-200 bg-gold-50 px-3 py-2 text-xs font-medium text-gold-800">
                       Showing the {weightsSource.replace("project:", "")} project's weights for now. {globalSetupNote || "Run docs/global-setup-sql.md in the Supabase SQL editor to make weights global."}
                     </p>
                   )}
@@ -1838,7 +1838,7 @@ export default function AdminDashboard() {
 
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                   <div>
-                    {weightSaveStatus && <span className="text-sm font-medium text-emerald-600">{weightSaveStatus}</span>}
+                    {weightSaveStatus && <span className="text-sm font-medium text-bsi-600">{weightSaveStatus}</span>}
                   </div>
                   {isAdmin && (<button type="button" onClick={handleSaveWeights} className="btn-primary">Save Weights</button>)}
                 </div>
@@ -1893,7 +1893,7 @@ export default function AdminDashboard() {
 
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                   <div>
-                    {researchNSaveStatus && <span className="text-sm font-medium text-emerald-600">{researchNSaveStatus}</span>}
+                    {researchNSaveStatus && <span className="text-sm font-medium text-bsi-600">{researchNSaveStatus}</span>}
                   </div>
                   {isAdmin && (<button type="button" onClick={handleSaveResearchBasis} className="btn-primary">Save Research Basis</button>)}
                 </div>
@@ -1924,7 +1924,7 @@ export default function AdminDashboard() {
                   <h3 className="text-sm font-semibold text-slate-900">Active Groups &amp; Participants</h3>
                   {projectLoading && !activeProject ? (
                     <div className="flex items-center gap-2 py-4 text-sm text-slate-500">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" aria-hidden />
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-bsi-600 border-t-transparent" aria-hidden />
                       Loading project…
                     </div>
                   ) : activeProject?.groups?.length > 0 ? (
@@ -2007,7 +2007,7 @@ export default function AdminDashboard() {
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Active Aspects ({projectLoading && !activeProject ? "…" : (activeProject?.viabilityAspects?.length || 0)})</h3>
                   {projectLoading && !activeProject ? (
                     <div className="flex items-center gap-2 py-2 text-sm text-slate-500">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" aria-hidden />
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-bsi-600 border-t-transparent" aria-hidden />
                       Loading project…
                     </div>
                   ) : newestFirst(activeProject?.viabilityAspects || []).map((aspect: any) => (
@@ -2042,10 +2042,10 @@ export default function AdminDashboard() {
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {newestFirst(projects).map((p) => (
-                  <div key={p.id} className={`card flex flex-col justify-between p-5 transition ${p.slug === selectedProjectSlug ? "border-emerald-500 ring-2 ring-emerald-500/20" : "hover:border-slate-300"}`}>
+                  <div key={p.id} className={`card flex flex-col justify-between p-5 transition ${p.slug === selectedProjectSlug ? "border-bsi-500 ring-2 ring-bsi-500/20" : "hover:border-slate-300"}`}>
                     <div>
                       <div className="flex items-center justify-end gap-2">
-                        <span className="text-xs font-medium text-emerald-600">{p.isActive ? "Active" : "Archived"}</span>
+                        <span className="text-xs font-medium text-bsi-600">{p.isActive ? "Active" : "Archived"}</span>
                       </div>
                       <h3 className="mt-3 text-base font-semibold text-slate-900">{p.name}</h3>
                       {p.description && <p className="mt-1 line-clamp-2 text-sm text-slate-600">{p.description}</p>}
@@ -2086,10 +2086,10 @@ export default function AdminDashboard() {
                       <span className="flex items-center gap-2">
                         <span className="rounded border border-slate-200 bg-white px-2 py-0.5 font-mono text-xs font-semibold text-slate-600">{u.role}</span>
                         {u.projectName && (
-                          <span className="rounded border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-800" title="Assigned project">{u.projectName}</span>
+                          <span className="chip chip-bsi" title="Assigned project">{u.projectName}</span>
                         )}
                         {u.groupName && (
-                          <span className="rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800" title="Assigned group">{u.groupName}</span>
+                          <span className="rounded border border-bsi-200 bg-bsi-50 px-2 py-0.5 text-xs font-semibold text-bsi-800" title="Assigned group">{u.groupName}</span>
                         )}
                         <button type="button" onClick={() => openEditUser(u)} aria-label={`Edit user ${u.name}`} className="btn-icon"><Edit2 className="h-4 w-4" /></button>
                         <button type="button" onClick={() => handleDeleteUser(u)} disabled={u.id === currentUser?.id} aria-label={`Delete user ${u.name}`} title={u.id === currentUser?.id ? "You cannot delete your own account" : undefined} className="btn-icon-danger disabled:opacity-40">
@@ -2126,7 +2126,7 @@ export default function AdminDashboard() {
                 (() => {
                   const preview = slugify(projectForm.name) || editingProjectSlug;
                   return preview !== editingProjectSlug ? (
-                    <p className="mt-1 text-xs text-amber-700">
+                    <p className="mt-1 text-xs text-gold-700">
                       Saving will move this project to <span className="font-mono font-semibold">/{preview}</span> — the old link <span className="font-mono">/{editingProjectSlug}</span> will stop working.
                     </p>
                   ) : (
@@ -2143,7 +2143,7 @@ export default function AdminDashboard() {
             </div>
             {editingProjectSlug && (
               <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                <input type="checkbox" checked={projectForm.isActive} onChange={(e) => setProjectForm((f) => ({ ...f, isActive: e.target.checked }))} className="h-4 w-4 accent-emerald-600" />
+                <input type="checkbox" checked={projectForm.isActive} onChange={(e) => setProjectForm((f) => ({ ...f, isActive: e.target.checked }))} className="h-4 w-4 accent-bsi-600" />
                 Active project
               </label>
             )}
@@ -2164,11 +2164,11 @@ export default function AdminDashboard() {
                 <legend className="field-label">Where should this idea live?</legend>
                 <div className="flex flex-wrap gap-4">
                   <label className="flex cursor-pointer items-center gap-1.5">
-                    <input type="radio" name="finding-target" checked={findingTarget === "pool"} onChange={() => setFindingTarget("pool")} className="h-4 w-4 accent-emerald-600" />
+                    <input type="radio" name="finding-target" checked={findingTarget === "pool"} onChange={() => setFindingTarget("pool")} className="h-4 w-4 accent-bsi-600" />
                     <span className="text-sm text-slate-700">Shared pool (usable in any workshop)</span>
                   </label>
                   <label className="flex cursor-pointer items-center gap-1.5">
-                    <input type="radio" name="finding-target" checked={findingTarget === "project"} onChange={() => setFindingTarget("project")} className="h-4 w-4 accent-emerald-600" />
+                    <input type="radio" name="finding-target" checked={findingTarget === "project"} onChange={() => setFindingTarget("project")} className="h-4 w-4 accent-bsi-600" />
                     <span className="text-sm text-slate-700">This project only ({activeProject?.name || "selected project"})</span>
                   </label>
                 </div>
@@ -2195,8 +2195,8 @@ export default function AdminDashboard() {
               <legend className="field-label px-1">Scope</legend>
               <div className="hidden grid-cols-[150px_1fr_1fr] bg-slate-50 sm:grid">
                 <div className="px-3 py-2" />
-                <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-emerald-700">Termasuk</div>
-                <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-amber-700">Tidak Termasuk</div>
+                <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-bsi-700">Termasuk</div>
+                <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gold-700">Tidak Termasuk</div>
               </div>
               <div className="grid grid-cols-1 gap-2 border-t border-slate-100 px-3 py-3 first:border-t-0 sm:grid-cols-[150px_1fr_1fr] sm:gap-0 sm:px-0 sm:py-0">
                 <div className="sm:px-3 sm:py-3">
@@ -2204,11 +2204,11 @@ export default function AdminDashboard() {
                   <p className="text-xs text-slate-400">Peran atau pengguna</p>
                 </div>
                 <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                  <span className="mb-1 block text-xs font-semibold text-emerald-700 sm:hidden">Termasuk</span>
+                  <span className="mb-1 block text-xs font-semibold text-bsi-700 sm:hidden">Termasuk</span>
                   <input id="finding-role-users" type="text" placeholder="e.g. Semua pelanggan" value={findingForm.roleUsers} onChange={(e) => setFindingForm((f) => ({ ...f, roleUsers: e.target.value }))} className="input w-full" />
                 </div>
                 <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                  <span className="mb-1 block text-xs font-semibold text-amber-700 sm:hidden">Tidak Termasuk</span>
+                  <span className="mb-1 block text-xs font-semibold text-gold-700 sm:hidden">Tidak Termasuk</span>
                   <input id="finding-role-users-tidak-termasuk" type="text" placeholder="e.g. Admin" value={findingForm.roleUsersTidakTermasuk} onChange={(e) => setFindingForm((f) => ({ ...f, roleUsersTidakTermasuk: e.target.value }))} className="input w-full" />
                 </div>
               </div>
@@ -2218,11 +2218,11 @@ export default function AdminDashboard() {
                   <p className="text-xs text-slate-400">Langkah, fitur, layar</p>
                 </div>
                 <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                  <span className="mb-1 block text-xs font-semibold text-emerald-700 sm:hidden">Termasuk</span>
+                  <span className="mb-1 block text-xs font-semibold text-bsi-700 sm:hidden">Termasuk</span>
                   <input id="finding-step-feature-screen" type="text" placeholder="e.g. Home dan notifikasi aplikasi" value={findingForm.stepFeatureScreen} onChange={(e) => setFindingForm((f) => ({ ...f, stepFeatureScreen: e.target.value }))} className="input w-full" />
                 </div>
                 <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                  <span className="mb-1 block text-xs font-semibold text-amber-700 sm:hidden">Tidak Termasuk</span>
+                  <span className="mb-1 block text-xs font-semibold text-gold-700 sm:hidden">Tidak Termasuk</span>
                   <input id="finding-step-tidak-termasuk" type="text" placeholder="e.g. Menu pembayaran" value={findingForm.stepTidakTermasuk} onChange={(e) => setFindingForm((f) => ({ ...f, stepTidakTermasuk: e.target.value }))} className="input w-full" />
                 </div>
               </div>
@@ -2232,11 +2232,11 @@ export default function AdminDashboard() {
                   <p className="text-xs text-slate-400">Tampilan, alur, sistem</p>
                 </div>
                 <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                  <span className="mb-1 block text-xs font-semibold text-emerald-700 sm:hidden">Termasuk</span>
+                  <span className="mb-1 block text-xs font-semibold text-bsi-700 sm:hidden">Termasuk</span>
                   <textarea id="finding-apa-yang-berubah" rows={2} placeholder="What changes for the user?" value={findingForm.apaYangBerubah} onChange={(e) => setFindingForm((f) => ({ ...f, apaYangBerubah: e.target.value }))} className="input w-full" />
                 </div>
                 <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                  <span className="mb-1 block text-xs font-semibold text-amber-700 sm:hidden">Tidak Termasuk</span>
+                  <span className="mb-1 block text-xs font-semibold text-gold-700 sm:hidden">Tidak Termasuk</span>
                   <textarea id="finding-apa-yang-berubah-tidak-termasuk" rows={2} placeholder="What changes outside scope?" value={findingForm.apaYangBerubahTidakTermasuk} onChange={(e) => setFindingForm((f) => ({ ...f, apaYangBerubahTidakTermasuk: e.target.value }))} className="input w-full" />
                 </div>
               </div>
@@ -2258,7 +2258,7 @@ export default function AdminDashboard() {
               <div className="flex flex-wrap gap-4">
                 {PLATFORM_OPTIONS.map((opt) => (
                   <label key={opt} className="flex cursor-pointer items-center gap-1.5">
-                    <input type="checkbox" checked={findingForm.platform.includes(opt)} onChange={(e) => setFindingForm((f) => ({ ...f, platform: e.target.checked ? [...f.platform, opt] : f.platform.filter((p) => p !== opt) }))} className="h-4 w-4 rounded accent-emerald-600" />
+                    <input type="checkbox" checked={findingForm.platform.includes(opt)} onChange={(e) => setFindingForm((f) => ({ ...f, platform: e.target.checked ? [...f.platform, opt] : f.platform.filter((p) => p !== opt) }))} className="h-4 w-4 rounded accent-bsi-600" />
                     <span className="text-sm text-slate-700">{opt}</span>
                   </label>
                 ))}
@@ -2297,7 +2297,7 @@ export default function AdminDashboard() {
                               type="checkbox"
                               checked={findingIdeaIds.includes(i.id)}
                               onChange={() => toggleFindingIdea(i.id)}
-                              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-emerald-600"
+                              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-bsi-600"
                             />
                             <span className="min-w-0">
                               <span className="block font-medium leading-snug text-slate-900">{i.title}</span>
@@ -2379,7 +2379,7 @@ export default function AdminDashboard() {
                   const f = e.dataTransfer.files?.[0];
                   if (f) void handleImageFile(f);
                 }}
-                className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-5 text-center transition ${isDraggingImage ? "border-emerald-500 bg-emerald-50" : "border-slate-300 bg-slate-50 hover:border-emerald-400 hover:bg-emerald-50/50"}`}
+                className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-5 text-center transition ${isDraggingImage ? "border-bsi-500 bg-bsi-50" : "border-slate-300 bg-slate-50 hover:border-bsi-400 hover:bg-bsi-50/50"}`}
               >
                 {ideaForm.imageUrl ? (
                   <div className="w-full">
@@ -2515,7 +2515,7 @@ export default function AdminDashboard() {
                             const f = e.dataTransfer.files?.[0];
                             if (f) void addSubFindingImage(idx, f);
                           }}
-                          className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white px-4 py-3 text-center transition hover:border-emerald-400 hover:bg-emerald-50/50"
+                          className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-white px-4 py-3 text-center transition hover:border-bsi-400 hover:bg-bsi-50/50"
                         >
                           <ImagePlus className="h-6 w-6 text-slate-400" />
                           <p className="mt-1 text-xs font-semibold text-slate-700">Add image evidence</p>
@@ -2551,7 +2551,7 @@ export default function AdminDashboard() {
               <div className="flex flex-wrap gap-4">
                 {SUMBER_OPTIONS.map((opt) => (
                   <label key={opt} className="flex cursor-pointer items-center gap-1.5">
-                    <input type="checkbox" checked={ideaForm.sumber.includes(opt)} onChange={(e) => setIdeaForm((f) => ({ ...f, sumber: e.target.checked ? [...f.sumber, opt] : f.sumber.filter((s) => s !== opt) }))} className="h-4 w-4 rounded accent-emerald-600" />
+                    <input type="checkbox" checked={ideaForm.sumber.includes(opt)} onChange={(e) => setIdeaForm((f) => ({ ...f, sumber: e.target.checked ? [...f.sumber, opt] : f.sumber.filter((s) => s !== opt) }))} className="h-4 w-4 rounded accent-bsi-600" />
                     <span className="text-sm text-slate-700">{opt}</span>
                   </label>
                 ))}
@@ -2590,7 +2590,7 @@ export default function AdminDashboard() {
                               type="checkbox"
                               checked={ideaFindingIds.includes(f.id)}
                               onChange={() => toggleIdeaFinding(f.id)}
-                              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-emerald-600"
+                              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-bsi-600"
                             />
                             <span className="min-w-0">
                               <span className="block font-medium leading-snug text-slate-900">{f.title}</span>

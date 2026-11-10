@@ -40,12 +40,12 @@ import { normalizeFramework } from "@/lib/scoring";
 // linked aspects are not shown in this matrix and do not feed any score.
 const FRAMEWORK_ORDER = ["Viability", "Feasibility"] as const;
 const FRAMEWORK_HEADER_CLASS: Record<string, string> = {
-  Viability: "bg-blue-100 text-blue-800",
-  Feasibility: "bg-amber-100 text-amber-800",
+  Viability: "bg-deep-100 text-deep-800",
+  Feasibility: "bg-gold-100 text-gold-800",
 };
 const FRAMEWORK_BADGE_CLASS: Record<string, string> = {
-  Viability: "bg-blue-100 text-blue-800 border-blue-200",
-  Feasibility: "bg-amber-100 text-amber-800 border-amber-200",
+  Viability: "bg-deep-100 text-deep-800 border-deep-200",
+  Feasibility: "bg-gold-100 text-gold-800 border-gold-200",
 };
 
 export default function ViabilityVoteMatrix({
@@ -379,9 +379,9 @@ export default function ViabilityVoteMatrix({
     return (
       <>
         {vote.score != null ? (
-          <span className="font-bold text-emerald-700">Score {vote.score}</span>
+          <span className="font-bold text-bsi-700">Score {vote.score}</span>
         ) : (
-          <span className="font-semibold text-emerald-700">✓ validated</span>
+          <span className="font-semibold text-bsi-700">✓ validated</span>
         )}
       </>
     );
@@ -392,7 +392,7 @@ export default function ViabilityVoteMatrix({
       <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-slate-200">
         <div>
           <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-            <Users2 className="h-4 w-4 text-blue-600" />
+            <Users2 className="h-4 w-4 text-bsi-600" />
             <span>Viability Scoring</span>
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -409,7 +409,7 @@ export default function ViabilityVoteMatrix({
           </p>
         </div>
         {Object.values(saving).some(Boolean) && (
-          <span className="text-xs text-blue-600 font-semibold animate-pulse">Saving…</span>
+          <span className="text-xs text-bsi-600 font-semibold animate-pulse">Saving…</span>
         )}
       </div>
 
@@ -491,7 +491,7 @@ export default function ViabilityVoteMatrix({
                               <td className="py-2.5 px-3">{renderAspectTitle(aspect, fw)}</td>
                               <td className="py-2.5 px-3 text-center whitespace-nowrap">
                                 {groupAvg != null ? (
-                                  <span className="font-bold text-emerald-700">Score {groupAvg}</span>
+                                  <span className="font-bold text-bsi-700">Score {groupAvg}</span>
                                 ) : (
                                   <span className="text-slate-500">N/A</span>
                                 )}
@@ -535,8 +535,8 @@ export default function ViabilityVoteMatrix({
                                         onClick={() => handleScoreClick(aspect.id, p.id, n)}
                                         className={`h-8 w-8 rounded-lg border text-sm font-bold transition disabled:opacity-60 ${
                                           rowScore === n
-                                            ? "border-emerald-600 bg-emerald-600 text-white"
-                                            : "border-slate-300 bg-white text-slate-700 hover:border-emerald-400"
+                                            ? "border-bsi-600 bg-bsi-600 text-white"
+                                            : "border-slate-300 bg-white text-slate-700 hover:border-bsi-400"
                                         }`}
                                       >
                                         {n}
@@ -560,7 +560,7 @@ export default function ViabilityVoteMatrix({
                                   // every role can see what each role
                                   // scored. "Not scored yet" only when
                                   // nobody scored it.
-                                  <span className="font-bold text-emerald-700">Score {groupAvg}</span>
+                                  <span className="font-bold text-bsi-700">Score {groupAvg}</span>
                                 ) : (
                                   renderVote(vote)
                                 )}

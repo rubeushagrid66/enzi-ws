@@ -14,6 +14,35 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
+/* ── Type scale (all pages except the homepage) ────────────────
+   One size per heading level so a page title reads the same
+   everywhere. Explicit text-* utilities on an element still win
+   over these base styles, so the homepage hero (which sets its own
+   sizes) is unaffected. */
+@layer base {
+  h1 {
+    @apply text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl;
+  }
+  h2 {
+    @apply text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl;
+  }
+  h3 {
+    @apply text-lg font-semibold text-slate-900;
+  }
+  h4 {
+    @apply text-sm font-semibold text-slate-900;
+  }
+  p {
+    @apply text-sm leading-relaxed text-slate-600;
+  }
+  /* Placeholder text: one readable grey everywhere, at the input's
+     own size (16px — see the iOS rule below). */
+  ::placeholder {
+    color: #64748b;
+    opacity: 1;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -41,10 +70,10 @@ body {
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center gap-1.5 rounded-xl bg-bsi-600 px-3.5 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-bsi-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bsi-500 focus-visible:ring-offset-2 disabled:opacity-50;
   }
   .btn-secondary {
-    @apply inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-xs transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-xs transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bsi-500 focus-visible:ring-offset-2 disabled:opacity-50;
   }
   .btn-danger {
     @apply inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-3.5 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2 disabled:opacity-50;
@@ -53,30 +82,39 @@ body {
     @apply inline-flex items-center gap-1.5 rounded-xl bg-slate-800 px-3.5 py-2 text-sm font-semibold text-white shadow-xs transition hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2 disabled:opacity-50;
   }
   .btn-ghost {
-    @apply inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bsi-500 focus-visible:ring-offset-2 disabled:opacity-50;
   }
   /* Pill tabs (segmented control) — viewer Findings/Groups, group chips.
-     One style everywhere: inactive is quiet, active is solid emerald. */
+     One style everywhere: inactive is quiet, active is solid BSI teal. */
   .tab-pill {
-    @apply inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:opacity-50;
+    @apply inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bsi-500 disabled:opacity-50;
   }
   .tab-pill-active {
-    @apply bg-emerald-600 text-white hover:bg-emerald-600 hover:text-white;
-  }
-  /* Underline tabs — finding detail. One accent (emerald) for every tab;
-     the score badge keeps its own tint but the tab itself is uniform.
-     Tabs shrink and wrap instead of scrolling: min-w-0 lets each tab
-     narrow below its natural width, flex-wrap drops the badge under
-     the label when narrow, so the bar always fits without overflow-x. */
-  .tab-underline {
-    @apply flex min-w-0 flex-wrap items-center justify-center gap-x-2 gap-y-1 px-2 py-2.5 text-center text-sm font-semibold border-b-2 transition -mb-px border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 sm:px-4 sm:py-3;
-  }
-  .tab-underline-active {
-    @apply border-emerald-600 text-emerald-700 bg-emerald-50/50;
+    @apply bg-bsi-600 text-white hover:bg-bsi-600 hover:text-white;
   }
   /* Small badge / chip — one shape, tint set by the caller. */
   .badge {
     @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold;
+  }
+  /* Chip / label — THE standard chip. One radius (rounded-full) and
+     BSI tints only, so a label reads the same on every page. Use
+     .chip-bsi for the default (teal), .chip-gold for the secondary
+     (gold), .chip-neutral for plain metadata, .chip-deep for the
+     deep-teal variant. No violet, no blue, no ad-hoc radius. */
+  .chip {
+    @apply inline-flex max-w-full items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold;
+  }
+  .chip-bsi {
+    @apply border-bsi-200 bg-bsi-50 text-bsi-800;
+  }
+  .chip-gold {
+    @apply border-gold-200 bg-gold-50 text-gold-800;
+  }
+  .chip-neutral {
+    @apply border-slate-200 bg-slate-100 text-slate-700;
+  }
+  .chip-deep {
+    @apply border-bsi-300 bg-bsi-100 text-bsi-900;
   }
   /* Type scale — page titles and eyebrows are the same everywhere. */
   .page-title {
@@ -92,10 +130,10 @@ body {
     @apply rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500;
   }
   .btn-icon {
-    @apply rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500;
+    @apply rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bsi-500;
   }
   .input {
-    @apply rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500;
+    @apply rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base text-slate-900 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-bsi-500;
   }
   .field-label {
     @apply mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-400;

@@ -141,8 +141,8 @@ export default function FeasibilityMatrix({
         title: "Big Bets",
         impact: "High Impact",
         effort: "High Effort",
-        color: "text-amber-700",
-        bgBadge: "bg-amber-100 border-amber-300 text-amber-800",
+        color: "text-gold-700",
+        bgBadge: "bg-gold-100 border-gold-300 text-gold-800",
       };
     } else if (isHighImpact && isLowEffort) {
       return {
@@ -150,8 +150,8 @@ export default function FeasibilityMatrix({
         title: "Quick Wins",
         impact: "High Impact",
         effort: "Low Effort",
-        color: "text-emerald-700",
-        bgBadge: "bg-emerald-100 border-emerald-300 text-emerald-800",
+        color: "text-bsi-700",
+        bgBadge: "bg-bsi-100 border-bsi-300 text-bsi-800",
       };
     } else if (!isHighImpact && !isLowEffort) {
       return {
@@ -168,8 +168,8 @@ export default function FeasibilityMatrix({
         title: "Fill-ins",
         impact: "Low Impact",
         effort: "Low Effort",
-        color: "text-blue-700",
-        bgBadge: "bg-blue-100 border-blue-300 text-blue-800",
+        color: "text-deep-700",
+        bgBadge: "bg-deep-100 border-deep-300 text-deep-800",
       };
     }
   };
@@ -328,13 +328,13 @@ export default function FeasibilityMatrix({
                   )}
                 </>
               ) : (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold border border-emerald-200 bg-emerald-50 text-emerald-700">
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold border border-bsi-200 bg-bsi-50 text-bsi-700">
                   Computed from your scores
                 </span>
               )}
             </>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-amber-200 bg-amber-50 text-amber-800">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border border-gold-200 bg-gold-50 text-gold-800">
               Not yet placed — score the finding and it places itself, or drag the card to the agreed position
             </span>
           )}
@@ -344,12 +344,12 @@ export default function FeasibilityMatrix({
           {isAdmin ? (
             <div className="flex items-center gap-2 text-xs">
               {isSaving && (
-                <span className="text-amber-600 font-medium animate-pulse">
+                <span className="text-gold-600 font-medium animate-pulse">
                   Saving position...
                 </span>
               )}
               {saveSuccess && (
-                <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
+                <span className="inline-flex items-center gap-1 text-bsi-600 font-medium">
                   <Check className="h-3.5 w-3.5" /> Saved
                 </span>
               )}
@@ -394,24 +394,24 @@ export default function FeasibilityMatrix({
           <div className="absolute inset-y-0 left-1/2 w-0.5 border-l-2 border-dashed border-slate-300 pointer-events-none" />
 
           {/* Quadrant 1: Top-Left - Big Bets */}
-          <div className="absolute top-0 left-0 w-1/2 h-1/2 p-4 bg-amber-50/40 pointer-events-none flex flex-col justify-start">
+          <div className="absolute top-0 left-0 w-1/2 h-1/2 p-4 bg-gold-50/40 pointer-events-none flex flex-col justify-start">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-800/80">
+              <span className="text-xs font-bold uppercase tracking-wider text-gold-800/80">
                 Big Bets
               </span>
-              <span className="hidden sm:inline text-xs font-medium text-amber-600 bg-amber-100/60 px-2 py-0.5 rounded-full">
+              <span className="hidden sm:inline text-xs font-medium text-gold-600 bg-gold-100/60 px-2 py-0.5 rounded-full">
                 High Impact • High Effort
               </span>
             </div>
           </div>
 
           {/* Quadrant 2: Top-Right - Quick Wins */}
-          <div className="absolute top-0 right-0 w-1/2 h-1/2 p-4 bg-emerald-50/40 pointer-events-none flex flex-col justify-start">
+          <div className="absolute top-0 right-0 w-1/2 h-1/2 p-4 bg-bsi-50/40 pointer-events-none flex flex-col justify-start">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-800/80">
+              <span className="text-xs font-bold uppercase tracking-wider text-bsi-800/80">
                 Quick Wins
               </span>
-              <span className="hidden sm:inline text-[10px] font-medium text-emerald-600 bg-emerald-100/60 px-2 py-0.5 rounded-full">
+              <span className="hidden sm:inline text-[10px] font-medium text-bsi-600 bg-bsi-100/60 px-2 py-0.5 rounded-full">
                 High Impact • Low Effort
               </span>
             </div>
@@ -430,12 +430,12 @@ export default function FeasibilityMatrix({
           </div>
 
           {/* Quadrant 4: Bottom-Right - Fill-ins */}
-          <div className="absolute bottom-0 right-0 w-1/2 h-1/2 p-4 bg-blue-50/40 pointer-events-none flex flex-col justify-end">
+          <div className="absolute bottom-0 right-0 w-1/2 h-1/2 p-4 bg-deep-50/40 pointer-events-none flex flex-col justify-end">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-800/80">
+              <span className="text-xs font-bold uppercase tracking-wider text-deep-800/80">
                 Fill-ins
               </span>
-              <span className="hidden sm:inline text-[10px] font-medium text-blue-600 bg-blue-100/60 px-2 py-0.5 rounded-full">
+              <span className="hidden sm:inline text-[10px] font-medium text-deep-600 bg-deep-100/60 px-2 py-0.5 rounded-full">
                 Low Impact • Low Effort
               </span>
             </div>
@@ -484,12 +484,12 @@ export default function FeasibilityMatrix({
               isAdmin ? "cursor-grab active:cursor-grabbing hover:shadow-xl" : ""
             } ${
               currentInfo.quadrant === "QUICK_WINS"
-                ? "bg-gradient-to-br from-emerald-100 to-emerald-200 border-emerald-300 text-emerald-950"
+                ? "bg-gradient-to-br from-bsi-100 to-bsi-200 border-bsi-300 text-bsi-950"
                 : currentInfo.quadrant === "BIG_BETS"
-                ? "bg-gradient-to-br from-amber-100 to-amber-200 border-amber-300 text-amber-950"
+                ? "bg-gradient-to-br from-gold-100 to-gold-200 border-gold-300 text-gold-950"
                 : currentInfo.quadrant === "AVOID"
                 ? "bg-gradient-to-br from-rose-100 to-rose-200 border-rose-300 text-rose-950"
-                : "bg-gradient-to-br from-blue-100 to-blue-200 border-blue-300 text-blue-950"
+                : "bg-gradient-to-br from-deep-100 to-deep-200 border-deep-300 text-deep-950"
             }`}
           >
             {/* Post-it Header with Pin */}
@@ -524,15 +524,15 @@ export default function FeasibilityMatrix({
         {/* Legend */}
         <div className="mt-3 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            <div className="h-2.5 w-2.5 rounded-full bg-bsi-500" />
             <span>Quick Wins (High Impact, Low Effort)</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+            <div className="h-2.5 w-2.5 rounded-full bg-gold-500" />
             <span>Big Bets (High Impact, High Effort)</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+            <div className="h-2.5 w-2.5 rounded-full bg-deep-500" />
             <span>Fill-ins (Low Impact, Low Effort)</span>
           </div>
           <div className="flex items-center gap-1.5">

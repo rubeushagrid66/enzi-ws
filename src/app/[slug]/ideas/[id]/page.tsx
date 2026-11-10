@@ -95,11 +95,11 @@ export default function FindingDetailPage({
     <div className="min-h-screen bg-white flex flex-col">
       <Navbar />
 
-      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-10 flex-1">
+      <main className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 sm:py-8 flex-1">
         {loading ? (
           <div className="flex items-center justify-center py-24">
             <div className="flex flex-col items-center gap-3">
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-bsi-600 border-t-transparent" />
               <p className="text-sm font-semibold text-slate-600">
                 Loading finding...
               </p>
@@ -118,7 +118,7 @@ export default function FindingDetailPage({
             </p>
             <Link
               href={`/${slug}`}
-              className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition"
+              className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-bsi-600 text-white hover:bg-bsi-700 transition"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to {project?.name || "project"}
@@ -128,7 +128,7 @@ export default function FindingDetailPage({
           <div className="space-y-4">
             <Link
               href={`/${slug}`}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-emerald-700 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-lg px-1 py-1"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:text-bsi-700 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bsi-500 rounded-lg px-1 py-1"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to {project.name}

@@ -186,64 +186,109 @@ export default function FindingDetailView({
   const scores = localFinding.scores || {};
   const desirability = scores.desirabilityDetails || {};
 
-  // The score strip shows the SELECTED group's values for this finding
-  // (D, V, F on the 1–3 scale). The scores are the idea's overall
-  // values — all roles combined — so no group name is shown.
-  const groupScoresStrip = (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div className="p-4 rounded-xl border border-slate-200 bg-white">
-        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Desirability Score
+  // Score summary — the idea's verdict at a glance, shown once in
+  // the hero (not repeated inside every tab). DVF is the headline;
+  // D and V are the 1–3 scores; Position is the board quadrant the
+  // idea lands in (a manual pin wins, same as the board).
+  const scoreSummary = (
+    <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      <div className="rounded-xl border border-gold-200 bg-gold-50 px-3.5 py-3">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-gold-700">
+          DVF Score
         </div>
-        <div className="mt-1 text-3xl font-bold text-slate-900">
+        <div className="mt-0.5 text-2xl font-extrabold leading-none text-gold-800">
+          {groupDVF != null ? groupDVF.toFixed(2) : "N/A"}
+        </div>
+        <p className="mt-1 text-[11px] leading-tight text-gold-700/80">
+          Weighted composite of D, V &amp; F
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+          Desirability
+        </div>
+        <div className="mt-0.5 text-2xl font-bold leading-none text-slate-900">
           {groupD != null ? (
             <>
               {groupD}
-              <span className="text-sm font-normal text-slate-400"> / 3</span>
+              <span className="text-sm font-medium text-slate-400"> / 3</span>
             </>
           ) : (
             "N/A"
           )}
         </div>
-        <p className="mt-1 text-xs text-slate-500">
-          From research mentions (Wawancara + Survey)
+        <p className="mt-1 text-[11px] leading-tight text-slate-500">
+          From research mentions
         </p>
       </div>
 
-      <div className="p-4 rounded-xl border border-slate-200 bg-white">
-        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Viability &amp; Feasibility Score
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+          Viability
         </div>
-        <div className="mt-1 text-3xl font-bold text-slate-900">
+        <div className="mt-0.5 text-2xl font-bold leading-none text-slate-900">
           {groupV != null ? (
             <>
               {groupV}
-              <span className="text-sm font-normal text-slate-400"> / 3</span>
+              <span className="text-sm font-medium text-slate-400"> / 3</span>
             </>
           ) : (
             "N/A"
           )}
         </div>
-        <p className="mt-1 text-xs text-slate-500">
-          Average of all roles&apos; Viability aspect scores
+        <p className="mt-1 text-[11px] leading-tight text-slate-500">
+          Average of all roles&apos; aspect scores
         </p>
       </div>
 
-      <div className="p-4 rounded-xl border border-slate-200 bg-white">
-        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Matrix Score
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+          Position
         </div>
-        <div className="mt-1 text-3xl font-bold text-slate-900">
+        <div className="mt-0.5 text-lg font-bold leading-tight text-slate-900">
           {groupQuadrant ? QUADRANT_LABEL[groupQuadrant].title : "N/A"}
         </div>
-        <p className="mt-1 text-xs text-slate-500">
+        <p className="mt-1 text-[11px] leading-tight text-slate-500">
           {groupQuadrant
             ? QUADRANT_LABEL[groupQuadrant].detail
-            : "Not placed on the board yet — score the idea to place it"}
+            : "Not placed on the board yet"}
         </p>
       </div>
     </div>
   );
+
+  // ── About this idea ────────────────────────────────────────────
+  // The idea's content (Tujuan, Scope table, Output, Tujuan Bisnis)
+  // — the same detail fields the admin form collects and the popup
+  // shows. The detail page never showed them, so a reader only had
+  // the title + description. Only filled fields render; the whole
+  // section hides when the idea has no detail yet.
+  const scopeRows = [
+    {
+      label: "Siapa",
+      hint: "Peran atau pengguna",
+      termasuk: localFinding.roleUsers,
+      tidak: localFinding.roleUsersTidakTermasuk,
+    },
+    {
+      label: "Di mana",
+      hint: "Langkah, fitur, layar",
+      termasuk: localFinding.stepFeatureScreen,
+      tidak: localFinding.stepTidakTermasuk,
+    },
+    {
+      label: "Apa yang berubah",
+      hint: "Tampilan, alur, sistem",
+      termasuk: localFinding.apaYangBerubah,
+      tidak: localFinding.apaYangBerubahTidakTermasuk,
+    },
+  ].filter((r) => (r.termasuk && String(r.termasuk).trim()) || (r.tidak && String(r.tidak).trim()));
+  const hasDetailContent =
+    (localFinding.tujuan && String(localFinding.tujuan).trim()) ||
+    scopeRows.length > 0 ||
+    (localFinding.outputKeberhasilan && String(localFinding.outputKeberhasilan).trim()) ||
+    (localFinding.tujuanBisnis && String(localFinding.tujuanBisnis).trim());
 
   // Live preview of a source score from a typed count (same thresholds
   // as the server): Wawancara ≥66% → 3, ≥33% → 2; Survey ≥30% → 3,
@@ -348,27 +393,28 @@ export default function FindingDetailView({
   };
 
   return (
-    <div className="w-full">
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        {/* Header */}
-        <div className="p-6 border-b border-slate-200 bg-gradient-to-b from-slate-50 to-white">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  Idea Detail
-                </span>
-              </div>
-              <h2 id="finding-detail-title" className="text-2xl font-semibold text-slate-900 leading-tight sm:text-3xl">
-                {localFinding.title}
-              </h2>
-              {localFinding.description && (
-                <p className="text-sm text-slate-600 line-clamp-2">
-                  {localFinding.description}
-                </p>
-              )}
-            </div>
+    <div className="w-full space-y-4 sm:space-y-5">
+      {/* ── Hero: identity + verdict ── */}
+      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="p-5 sm:p-7">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-bsi-100 text-bsi-800 border border-bsi-200">
+              Idea Detail
+            </span>
+            {groupQuadrant && (
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                {QUADRANT_LABEL[groupQuadrant].title}
+              </span>
+            )}
           </div>
+          <h2 id="finding-detail-title" className="mt-3 font-serif text-2xl font-bold text-slate-900 leading-tight sm:text-[2rem]">
+            {localFinding.title}
+          </h2>
+          {localFinding.description && (
+            <p className="mt-1.5 text-sm leading-relaxed text-slate-600 sm:text-[15px]">
+              {localFinding.description}
+            </p>
+          )}
 
           {/* Tags list */}
           {localFinding.tagsList && localFinding.tagsList.length > 0 && (
@@ -376,7 +422,7 @@ export default function FindingDetailView({
               {localFinding.tagsList.map((tag: any, idx: number) => (
                 <span
                   key={idx}
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200"
+                  className="chip chip-neutral"
                 >
                   <span className="text-slate-400 font-normal">{tag.category}:</span>
                   <span className="font-semibold">{tag.value}</span>
@@ -400,11 +446,11 @@ export default function FindingDetailView({
                   <span
                     key={idea.id}
                     title={idea.description ? `${idea.title} — ${idea.description}` : idea.title}
-                    className="inline-flex max-w-full items-baseline gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-3 py-1"
+                    className="chip chip-bsi"
                   >
-                    <span className="truncate text-sm font-semibold text-violet-900">{idea.title}</span>
+                    <span className="truncate text-sm font-semibold text-bsi-900">{idea.title}</span>
                     {idea.description && (
-                      <span className="max-w-48 truncate text-xs text-violet-700">· {idea.description}</span>
+                      <span className="max-w-48 truncate text-xs text-bsi-700">· {idea.description}</span>
                     )}
                   </span>
                 ))}
@@ -412,68 +458,130 @@ export default function FindingDetailView({
             </div>
           )}
 
-          {/* DVF Score — the idea's overall score (all roles
-              combined), not any one group's. The group chips used to
-              sit here; they are gone because ideas are assigned to
-              roles, not groups — there is no group to switch between. */}
-          <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
-              <div
-                className="shrink-0 rounded-lg border-2 border-amber-500 bg-amber-50 px-3.5 py-2 text-sm font-bold text-amber-700"
-                title="DVF Score = (wD × D + wV × V + wF × F) / (wD + wV + wF) — the weighted composite of this idea's Desirability, Viability and Feasibility. N/A while any of D, V or F is unscored."
-              >
-                DVF Score: {groupDVF != null ? groupDVF.toFixed(2) : "N/A"}
-              </div>
-          </div>
+          {scoreSummary}
+        </div>
+      </section>
 
-          {/* Tab Navigation — no horizontal scrolling: the tabs shrink
-              and wrap (see .tab-underline) so all three always fit. */}
-          <div className="mt-6 flex border-b border-slate-200">
+      {/* ── About this idea: the idea's content, so a reader
+          understands what it is before scoring it. Only filled
+          fields render; the section hides when nothing is filled. ── */}
+      {hasDetailContent && (
+        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div className="p-5 sm:p-7">
+            <h3 className="text-sm font-bold text-slate-900">About this idea</h3>
+
+            {localFinding.tujuan && String(localFinding.tujuan).trim() && (
+              <div className="mt-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Tujuan</h4>
+                <p className="mt-1 text-sm leading-relaxed text-slate-700">{localFinding.tujuan}</p>
+              </div>
+            )}
+
+            {scopeRows.length > 0 && (
+              <div className="mt-5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Scope</h4>
+                <div className="mt-2 overflow-hidden rounded-xl border border-slate-200">
+                  <div className="hidden sm:grid sm:grid-cols-[7rem_1fr_1fr] bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    <div className="px-3 py-2" />
+                    <div className="px-3 py-2">Termasuk</div>
+                    <div className="px-3 py-2 border-l border-slate-200">Tidak Termasuk</div>
+                  </div>
+                  {scopeRows.map((row) => (
+                    <div key={row.label} className="grid border-t border-slate-200 first:border-t-0 sm:grid-cols-[7rem_1fr_1fr]">
+                      <div className="px-3 pt-2.5 sm:py-3">
+                        <p className="text-sm font-semibold text-slate-800">{row.label}</p>
+                        <p className="text-xs text-slate-400">{row.hint}</p>
+                      </div>
+                      <div className="px-3 pt-1 pb-2.5 sm:py-3">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-bsi-700 sm:hidden">Termasuk</p>
+                        <p className="text-sm leading-relaxed text-slate-700">{row.termasuk || "—"}</p>
+                      </div>
+                      <div className="px-3 pb-2.5 sm:py-3 sm:border-l sm:border-slate-200">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-rose-700 sm:hidden">Tidak Termasuk</p>
+                        <p className="text-sm leading-relaxed text-slate-700">{row.tidak || "—"}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {localFinding.outputKeberhasilan && String(localFinding.outputKeberhasilan).trim() && (
+              <div className="mt-5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Output Keberhasilan</h4>
+                <p className="mt-1 text-sm leading-relaxed text-slate-700">{localFinding.outputKeberhasilan}</p>
+              </div>
+            )}
+
+            {localFinding.tujuanBisnis && String(localFinding.tujuanBisnis).trim() && (
+              <div className="mt-5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Tujuan Bisnis</h4>
+                <p className="mt-1 text-sm leading-relaxed text-slate-700">{localFinding.tujuanBisnis}</p>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── Scoring ── */}
+      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div className="p-5 sm:p-6">
+          {/* Segmented tab bar — three short labels with a score
+              badge each; the pill background keeps it one tidy row
+              on mobile instead of wrapping tabs. */}
+          <div className="grid grid-cols-3 gap-1 rounded-full bg-slate-100 p-1" role="tablist" aria-label="Scoring dimensions">
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "desirability"}
               onClick={() => setActiveTab("desirability")}
-              className={`tab-underline ${activeTab === "desirability" ? "tab-underline-active" : ""}`}
+              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-semibold transition sm:text-sm ${activeTab === "desirability" ? "bg-white text-bsi-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
             >
-              <Target className="hidden sm:block h-4 w-4 shrink-0" />
-              <span className="min-w-0">Desirability</span>
-              <span className="badge shrink-0 bg-emerald-100 text-emerald-800">
+              <Target className="hidden h-4 w-4 shrink-0 sm:block" />
+              <span className="truncate">Desirability</span>
+              <span className="shrink-0 rounded-full bg-bsi-100 px-1.5 py-0.5 text-[11px] font-bold text-bsi-800">
                 {groupD != null ? groupD : "N/A"}
               </span>
             </button>
 
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "viability"}
               onClick={() => setActiveTab("viability")}
-              className={`tab-underline ${activeTab === "viability" ? "tab-underline-active" : ""}`}
+              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-semibold transition sm:text-sm ${activeTab === "viability" ? "bg-white text-bsi-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
             >
-              <Users2 className="hidden sm:block h-4 w-4 shrink-0" />
-              <span className="min-w-0">Viability &amp; Feasibility</span>
-              <span className="badge shrink-0 bg-emerald-100 text-emerald-800">
+              <Users2 className="hidden h-4 w-4 shrink-0 sm:block" />
+              <span className="truncate">Viability &amp; Feasibility</span>
+              <span className="shrink-0 rounded-full bg-bsi-100 px-1.5 py-0.5 text-[11px] font-bold text-bsi-800">
                 {groupV != null ? `${groupV} / 3` : "N/A"}
               </span>
             </button>
 
             <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "feasibility"}
               onClick={() => setActiveTab("feasibility")}
-              className={`tab-underline ${activeTab === "feasibility" ? "tab-underline-active" : ""}`}
+              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-xs font-semibold transition sm:text-sm ${activeTab === "feasibility" ? "bg-white text-bsi-700 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
             >
-              <Compass className="hidden sm:block h-4 w-4 shrink-0" />
-              <span className="min-w-0">Impact vs Effort Matrix</span>
-              <span className="badge shrink-0 bg-emerald-100 text-emerald-800">
+              <Compass className="hidden h-4 w-4 shrink-0 sm:block" />
+              <span className="truncate">Matrix</span>
+              <span className="shrink-0 rounded-full bg-bsi-100 px-1.5 py-0.5 text-[11px] font-bold text-bsi-800">
                 {groupQuadrant ? QUADRANT_LABEL[groupQuadrant].title : "N/A"}
               </span>
             </button>
           </div>
-        </div>
 
-        {/* Tab Content Body */}
-        <div className="p-6">
+          <div className="mt-5">
           {/* TAB 1: DESIRABILITY */}
           {activeTab === "desirability" && (
             <div className="space-y-6">
-              {groupScoresStrip}
 
               {/* Research mentions — the only input to D */}
               <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
                 <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
-                  <HelpCircle className="h-4 w-4 text-emerald-600" />
+                  <HelpCircle className="h-4 w-4 text-bsi-600" />
                   <span>Research mentions — how many users mentioned this idea</span>
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
@@ -528,12 +636,12 @@ export default function FindingDetailView({
                       interview users
                       {interviewPreview.percent != null && <> ({interviewPreview.percent}%)</>}
                     </span>
-                    <span className="ml-auto pb-2 text-sm font-bold text-emerald-700">
+                    <span className="ml-auto pb-2 text-sm font-bold text-bsi-700">
                       {interviewPreview.score != null ? `Score ${interviewPreview.score} / 3` : "—"}
                     </span>
                   </div>
                   {interviewN == null && (
-                    <p className="mt-2 text-xs text-amber-700">
+                    <p className="mt-2 text-xs text-gold-700">
                       {isAdmin
                         ? "Total interview users is not set — type it above (it applies to every idea in this project)."
                         : "Total interview users is not set for this project — an admin sets it here or in the dashboard (Framework & Weighting → Research basis)."}
@@ -589,12 +697,12 @@ export default function FindingDetailView({
                       survey respondents
                       {surveyPreview.percent != null && <> ({surveyPreview.percent}%)</>}
                     </span>
-                    <span className="ml-auto pb-2 text-sm font-bold text-emerald-700">
+                    <span className="ml-auto pb-2 text-sm font-bold text-bsi-700">
                       {surveyPreview.score != null ? `Score ${surveyPreview.score} / 3` : "—"}
                     </span>
                   </div>
                   {surveyN == null && (
-                    <p className="mt-2 text-xs text-amber-700">
+                    <p className="mt-2 text-xs text-gold-700">
                       {isAdmin
                         ? "Total survey respondents is not set — type it above (it applies to every idea in this project)."
                         : "Total survey respondents is not set for this project — an admin sets it here or in the dashboard (Framework & Weighting → Research basis)."}
@@ -605,7 +713,7 @@ export default function FindingDetailView({
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                   <p className="text-sm text-slate-600">
                     {previewD != null ? (
-                      <>Resulting D: <span className="font-extrabold text-emerald-700">{previewD} / 3</span> (round up the average of the source scores; a single source stands alone)</>
+                      <>Resulting D: <span className="font-extrabold text-bsi-700">{previewD} / 3</span> (round up the average of the source scores; a single source stands alone)</>
                     ) : (
                       "Enter a count for Wawancara and/or Survey to score Desirability."
                     )}
@@ -623,14 +731,14 @@ export default function FindingDetailView({
                   </button>
                 </div>
                 {researchStatus && (
-                  <p role="status" className="mt-2 text-sm font-semibold text-emerald-700">
+                  <p role="status" className="mt-2 text-sm font-semibold text-bsi-700">
                     {researchStatus}
                   </p>
                 )}
               </div>
 
               {/* How D is built */}
-              <div role="note" className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+              <div role="note" className="rounded-xl border border-bsi-200 bg-bsi-50 p-4 text-sm text-bsi-800">
                 <span className="font-bold">How this score is built: </span>
                 {desirability.formulaExplanation ||
                   "No research numbers yet \u2014 enter how many users mentioned this idea in Wawancara and/or Survey."}
@@ -641,8 +749,6 @@ export default function FindingDetailView({
           {/* TAB 2: VIABILITY */}
           {activeTab === "viability" && (
             <div className="space-y-6">
-              {groupScoresStrip}
-
               <ViabilityVoteMatrix
                 project={project}
                 finding={localFinding}
@@ -656,8 +762,6 @@ export default function FindingDetailView({
           {/* TAB 3: FEASIBILITY */}
           {activeTab === "feasibility" && (
             <div className="space-y-6">
-              {groupScoresStrip}
-
               {/* Interactive 2x2 Feasibility Matrix — the idea's overall
                   position (all roles combined), or N/A / unplaced when
                   the idea has no value for a dimension. */}
@@ -674,15 +778,14 @@ export default function FindingDetailView({
               />
             </div>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50">
-          <div className="text-xs text-slate-500">
-            D, V and F are all on the 1–3 scale. D = research mentions (Wawancara + Survey, rounded-up average); V = average of your Viability aspect scores; F = 4 − average of your Effort aspect scores. There is no composite score.
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Footer note */}
+      <p className="px-1 text-xs leading-relaxed text-slate-400">
+        D, V and F are all on the 1–3 scale. D = research mentions (Wawancara + Survey, rounded-up average); V = average of your Viability aspect scores; F = 4 − average of your Effort aspect scores. There is no composite score.
+      </p>
     </div>
   );
 }

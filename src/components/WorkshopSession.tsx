@@ -32,8 +32,8 @@ function StatusChip({ scored, label }: { scored: boolean; label: string }) {
     <span
       className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-bold ${
         scored
-          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-          : "border-amber-200 bg-amber-50 text-amber-800"
+          ? "border-bsi-200 bg-bsi-50 text-bsi-800"
+          : "border-gold-200 bg-gold-50 text-gold-800"
       }`}
     >
       {scored && <CheckCircle2 className="h-3 w-3" />}
@@ -234,7 +234,7 @@ export default function WorkshopSession({
         <Navbar />
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-bsi-600 border-t-transparent" />
             <p className="text-sm font-semibold text-slate-600">Loading workshop…</p>
           </div>
         </div>
@@ -250,7 +250,7 @@ export default function WorkshopSession({
           <div className="max-w-md w-full p-8 bg-white rounded-2xl border border-slate-200 text-center shadow-sm">
             <h2 className="text-xl font-bold text-slate-900">Project Not Found</h2>
             <p className="mt-2 text-sm text-slate-600">{error || "This project does not exist."}</p>
-            <Link href="/" className="mt-6 inline-flex px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white">
+            <Link href="/" className="mt-6 inline-flex px-4 py-2 rounded-xl text-xs font-semibold bg-bsi-600 text-white">
               Back to Home
             </Link>
           </div>
@@ -282,7 +282,7 @@ export default function WorkshopSession({
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+            <span className="text-xs font-bold uppercase tracking-wider text-bsi-700 bg-bsi-50 px-2.5 py-0.5 rounded-full border border-bsi-200">
               Workshop Scoring Session
             </span>
             <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -335,7 +335,7 @@ export default function WorkshopSession({
                       aria-current={active ? "true" : undefined}
                       className={`w-full rounded-xl border p-3 text-left transition ${
                         active
-                          ? "border-emerald-500 bg-emerald-50/60"
+                          ? "border-bsi-500 bg-bsi-50/60"
                           : "border-slate-200 bg-white hover:bg-slate-50"
                       }`}
                     >
@@ -438,7 +438,7 @@ export default function WorkshopSession({
                     <StatusChip scored={!!st.feasibilityScored} label="Feasibility" />
                   </div>
                   {status && (
-                    <p role="status" className="mt-3 text-sm font-semibold text-emerald-700">
+                    <p role="status" className="mt-3 text-sm font-semibold text-bsi-700">
                       {status}
                     </p>
                   )}
@@ -455,7 +455,7 @@ export default function WorkshopSession({
                       onClick={() => setStep(s.id)}
                       className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold border transition ${
                         step === s.id
-                          ? "bg-emerald-600 text-white border-emerald-600"
+                          ? "bg-bsi-600 text-white border-bsi-600"
                           : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
                       }`}
                     >
@@ -470,7 +470,7 @@ export default function WorkshopSession({
                   <div className="card p-6 space-y-4">
                     <div>
                       <h3 className="flex items-center gap-2 text-base font-bold text-slate-900">
-                        <Target className="h-4 w-4 text-emerald-600" />
+                        <Target className="h-4 w-4 text-bsi-600" />
                         Step 1 — Desirability score (from research)
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">
@@ -497,7 +497,7 @@ export default function WorkshopSession({
                                 ? `${s.mentions} of ${s.total} (${s.percent}%)`
                                 : "No count entered"}
                             </div>
-                            <div className="text-xs font-semibold text-emerald-700">
+                            <div className="text-xs font-semibold text-bsi-700">
                               {s?.score != null ? `Score ${s.score} / 3` : "\u2014"}
                             </div>
                           </div>
@@ -513,7 +513,7 @@ export default function WorkshopSession({
 
                     <p className="text-sm text-slate-600">
                       {st.desirabilityScored ? (
-                        <>Desirability score: <span className="font-extrabold text-emerald-700">{selectedFinding.scores?.desirability} / 3</span>
+                        <>Desirability score: <span className="font-extrabold text-bsi-700">{selectedFinding.scores?.desirability} / 3</span>
                           {" — "}
                           {selectedFinding.scores?.desirabilityDetails?.formulaExplanation}
                         </>
@@ -529,7 +529,7 @@ export default function WorkshopSession({
                   <div className="card p-6 space-y-4">
                     <div>
                       <h3 className="flex items-center gap-2 text-base font-bold text-slate-900">
-                        <Users2 className="h-4 w-4 text-blue-600" />
+                        <Users2 className="h-4 w-4 text-bsi-600" />
                         Step 2 — Record votes (Viability)
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">
@@ -554,7 +554,7 @@ export default function WorkshopSession({
                     />
                     <p className="text-sm text-slate-600">
                       {mySelected.viability != null ? (
-                        <>Your Viability score: <span className="font-bold text-emerald-700">{mySelected.viability} / 3</span> (average of your Viability aspect scores)</>
+                        <>Your Viability score: <span className="font-bold text-bsi-700">{mySelected.viability} / 3</span> (average of your Viability aspect scores)</>
                       ) : (
                         "Not scored by you yet — record at least one vote on a Viability aspect to score it."
                       )}
@@ -567,7 +567,7 @@ export default function WorkshopSession({
                   <div className="card p-6 space-y-4">
                     <div>
                       <h3 className="flex items-center gap-2 text-base font-bold text-slate-900">
-                        <Compass className="h-4 w-4 text-amber-600" />
+                        <Compass className="h-4 w-4 text-gold-600" />
                         Step 3 — Consensus placement (Feasibility)
                       </h3>
                       <p className="mt-1 text-sm text-slate-600">
@@ -601,7 +601,7 @@ export default function WorkshopSession({
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <p className="text-sm text-slate-600">
                         {mySelected.feasibility != null ? (
-                          <>Placed: <span className="font-bold text-slate-900">{boardPosWorkshop?.quadrant?.replace("_", " ") ?? "—"}</span> — Your Feasibility score: <span className="font-extrabold text-amber-700">{mySelected.feasibility} / 3</span> (4 − average of your Effort scores)</>
+                          <>Placed: <span className="font-bold text-slate-900">{boardPosWorkshop?.quadrant?.replace("_", " ") ?? "—"}</span> — Your Feasibility score: <span className="font-extrabold text-gold-700">{mySelected.feasibility} / 3</span> (4 − average of your Effort scores)</>
                         ) : (
                           "Not scored by you yet — record votes on Feasibility-linked aspects in Step 2. The board places the card once you have D, V and F; dragging it pins it to a manual position."
                         )}
@@ -659,7 +659,7 @@ export default function WorkshopSession({
                 </div>
 
                 {st.scored && (
-                  <div role="status" className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                  <div role="status" className="flex items-start gap-2 rounded-xl border border-bsi-200 bg-bsi-50 p-4 text-sm text-bsi-800">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>
                       <span className="font-bold">Fully scored.</span> This finding now
