@@ -154,6 +154,10 @@ export default function AdminDashboard() {
   // Access rule: only ADMIN edits config. Everyone else can edit
   // Findings only; everything else in the admin area is view-only.
   const isAdmin = currentUser?.role === "ADMIN";
+  // Label-role users (Tech / Product / Business & Ops) get a reduced
+  // dashboard: only Groups & Participants and Viability Aspects,
+  // view-only, and only their assigned project (no switcher).
+  const isLabelUser = ["Tech", "Product", "Business & Ops"].includes(currentUser?.role ?? "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -185,15 +189,19 @@ export default function AdminDashboard() {
   useEffect(() => {
     // Users & Roles is admin-only: a non-admin landing on /dashboard/user
     // (e.g. via a pasted URL) falls back to Ideas & Tags.
+    // Label-role users only have Groups & Participants and Viability
+    // Aspects: any other tab (e.g. via a pasted URL) falls back to Groups.
     if (!loading && urlTab === "users" && !isAdmin) {
       setActiveTab("findings");
+    } else if (!loading && isLabelUser && urlTab !== "groups" && urlTab !== "aspects") {
+      setActiveTab("groups");
     } else {
       setActiveTab(urlTab);
     }
     setError(null);
     setSidebarOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, loading, isAdmin]);
+  }, [pathname, loading, isAdmin, isLabelUser]);
 
   // Confirm dialog
   const [confirm, setConfirm] = useState<{ title: string; message: string; confirmLabel?: string } | null>(null);
@@ -380,7 +388,19 @@ export default function AdminDashboard() {
       setProjects(loadedProjects);
       // Once the first project is known, its details, the global setup
       // and the users list are independent — fetch them together.
-      const firstSlug = loadedProjects.length > 0 ? loadedProjects[0].slug : null;
+      // Label-role users only ever see their assigned project: resolve
+      // it from their projectId (fresh, from the projects list) and
+      // fall back to the JWT projectSlug, then to the first project
+      // when they have no assignment.
+      const userRole = userData.user?.role ?? "";
+      const userIsLabel = ["Tech", "Product", "Business & Ops"].includes(userRole);
+      let firstSlug = loadedProjects.length > 0 ? loadedProjects[0].slug : null;
+      if (userIsLabel) {
+        const mine =
+          loadedProjects.find((p: any) => p.id === userData.user?.projectId) ||
+          loadedProjects.find((p: any) => p.slug === userData.user?.projectSlug);
+        if (mine) firstSlug = mine.slug;
+      }
       if (firstSlug) setSelectedProjectSlug(firstSlug);
       await Promise.all([
         firstSlug ? loadProjectDetails(firstSlug) : Promise.resolve(),
@@ -1261,7 +1281,9 @@ export default function AdminDashboard() {
 
         {!isAdmin && currentUser && (
           <p className="border-b border-sky-200 bg-sky-50 px-4 py-2 text-xs font-medium text-sky-800 sm:px-6 lg:px-8">
-            You&apos;re signed in as {currentUser.name} ({currentUser.role}) — you can edit Findings; everything else here is view-only.
+            {isLabelUser
+              ? `You're signed in as ${currentUser.name} (${currentUser.role}) — Groups & Participants and Viability Aspects for your project, view-only.`
+              : `You're signed in as ${currentUser.name} (${currentUser.role}) — you can edit Findings; everything else here is view-only.`}
           </p>
         )}
 

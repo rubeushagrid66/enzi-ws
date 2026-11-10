@@ -51,7 +51,15 @@ export default function AdminSidebar({
   currentUser: any;
   onLogout: () => void;
 }) {
-  const items = ADMIN_NAV.filter((i) => i.id !== "users" || isAdmin);
+  // Label-role users (Tech / Product / Business & Ops) see a reduced
+  // dashboard: only Groups & Participants and Viability Aspects,
+  // view-only, and only their assigned project (no switcher).
+  const isLabelUser = ["Tech", "Product", "Business & Ops"].includes(currentUser?.role ?? "");
+  const items = ADMIN_NAV.filter((i) => {
+    if (i.id === "users") return isAdmin;
+    if (isLabelUser) return i.id === "groups" || i.id === "aspects";
+    return true;
+  });
   const groups: Array<{ label: string; items: typeof ADMIN_NAV }> = [
     { label: "Workshop", items: items.filter((i) => i.group === "Workshop") },
     { label: "Manage", items: items.filter((i) => i.group === "Manage") },
@@ -79,7 +87,11 @@ export default function AdminSidebar({
         </button>
       </div>
 
-      {/* Project switcher */}
+      {/* Project switcher — hidden for label-role users: they only
+          ever see their assigned project, so there is nothing to
+          switch between. (The dashboard forces their active project
+          to the assigned one.) */}
+      {!isLabelUser && (
       <div className="px-4 pb-4">
         <label htmlFor="admin-project-switcher" className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">
           Active project
@@ -107,6 +119,7 @@ export default function AdminSidebar({
           </a>
         )}
       </div>
+      )}
 
       {/* Nav */}
       <nav aria-label="Admin" className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
