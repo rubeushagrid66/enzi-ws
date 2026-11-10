@@ -263,7 +263,7 @@ export default function AdminDashboard() {
   const [findingModalOpen, setFindingModalOpen] = useState(false);
   const [editingFindingId, setEditingFindingId] = useState<string | null>(null);
   // Where a new finding goes: the shared pool, or the selected project.
-  const [findingTarget, setFindingTarget] = useState<"pool" | "project">("pool");
+  const [findingTarget, setFindingTarget] = useState<"pool" | "project">("project");
   const [findingForm, setFindingForm] = useState({ title: "", description: "", sumber: [] as string[], fitur: "", platform: [] as string[], tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", roleUsersTidakTermasuk: "", stepFeatureScreen: "", stepTidakTermasuk: "", apaYangBerubah: "", apaYangBerubahTidakTermasuk: "", outputKeberhasilan: "", tujuanBisnis: "" });
   // Finding ids (the linked "Findings" tab items) ticked for this pool
   // idea in its modal — the reverse of an idea's Linked Ideas list.
@@ -639,7 +639,7 @@ export default function AdminDashboard() {
   // scored on its own (see handleCopyFindingToProject).
   const openCreateFinding = () => {
     setEditingFindingId(null);
-    setFindingTarget("pool");
+    setFindingTarget("project");
     setFindingForm({ title: "", description: "", sumber: [], fitur: "", platform: [], tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", roleUsersTidakTermasuk: "", stepFeatureScreen: "", stepTidakTermasuk: "", apaYangBerubah: "", apaYangBerubahTidakTermasuk: "", outputKeberhasilan: "", tujuanBisnis: "" });
     setFindingIdeaIds([]);
     setFindingIdeaSearch("");
@@ -2164,12 +2164,12 @@ export default function AdminDashboard() {
                 <legend className="field-label">Where should this idea live?</legend>
                 <div className="flex flex-wrap gap-4">
                   <label className="flex cursor-pointer items-center gap-1.5">
-                    <input type="radio" name="finding-target" checked={findingTarget === "pool"} onChange={() => setFindingTarget("pool")} className="h-4 w-4 accent-bsi-600" />
-                    <span className="text-sm text-slate-700">Shared pool (usable in any workshop)</span>
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-1.5">
                     <input type="radio" name="finding-target" checked={findingTarget === "project"} onChange={() => setFindingTarget("project")} className="h-4 w-4 accent-bsi-600" />
                     <span className="text-sm text-slate-700">This project only ({activeProject?.name || "selected project"})</span>
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-1.5">
+                    <input type="radio" name="finding-target" checked={findingTarget === "pool"} onChange={() => setFindingTarget("pool")} className="h-4 w-4 accent-bsi-600" />
+                    <span className="text-sm text-slate-700">Shared pool (usable in any workshop)</span>
                   </label>
                 </div>
               </fieldset>
