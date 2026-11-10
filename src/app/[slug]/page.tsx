@@ -20,6 +20,7 @@ import {
 
 import { scoresForParticipant, findingBoardPosition, groupAverageScores, findingBoardPositionForScores, calculateDVFScore, type FeasibilityQuadrant, type WeightInput } from "@/lib/scoring";
 import { useMeParticipantId } from "@/lib/useMeParticipant";
+import { slugify } from "@/lib/slugify";
 
 // Equal-thirds fallback for the DVF weights (framework is 33/33/33
 // today); the live weights are fetched and replace this.
@@ -618,15 +619,144 @@ export default function ProjectResultViewer({
     }
     return map;
   }, [project?.findings]);
+  // Same lookups keyed by title slug, for opening a tab/popup from a
+  // shared URL (/{slug}/ideas/{idea-title},
+  // /{slug}/findings/{finding-title}). First match wins when two
+  // titles slugify the same way.
+  const ideaBySlug = useMemo(() => {
+    const map: Record<string, any> = {};
+    for (const f of project?.findings || []) {
+      const s = slugify(f.title || "");
+      if (s && !map[s]) map[s] = f;
+    }
+    return map;
+  }, [project?.findings]);
+  const findingBySlug = useMemo(() => {
+    const map: Record<string, any> = {};
+    for (const g of project?.findingsByCategory || []) {
+      for (const f of g.findings || []) {
+        const s = slugify(f.title || "");
+        if (s && !map[s]) map[s] = { ...f, categoryName: g.categoryName };
+      }
+    }
+    return map;
+  }, [project?.findingsByCategory]);
+
+  // ── URL slugs: the address bar mirrors the current tab + topmost
+  // popup, so a tab or an open popup is shareable and the back button
+  // walks back through them. Tabs: /{slug}/findings (Findings tab),
+  // /{slug}/ideas (Ideas tab), /{slug}/group (Groups tab),
+  // /{slug}/roadmap. Popups: /{slug}/findings/{finding-title},
+  // /{slug}/ideas/{idea-title}. The URL is updated with pushState
+  // (not router.push) so switching tabs/popups never remounts the
+  // page or refetches the project; back/forward is handled by the
+  // popstate listener below. The base /{slug} is the Ideas tab.
+  type ProjectView = "findings" | "categories" | "groups" | "roadmap";
+  const tabSlugForView = (v: ProjectView) =>
+    v === "categories" ? "findings" : v === "findings" ? "ideas" : v === "groups" ? "group" : "roadmap";
+  const urlForState = (v: ProjectView, idea: any | null, finding: any | null, top: "idea" | "finding" | null) => {
+    if (top === "finding" && finding) return `/${slug}/findings/${slugify(finding.title || "")}`;
+    if (top === "idea" && idea) return `/${slug}/ideas/${slugify(idea.title || "")}`;
+    return `/${slug}/${tabSlugForView(v)}`;
+  };
+  const pushUrl = (url: string) => {
+    if (typeof window !== "undefined" && window.location.pathname !== url) {
+      window.history.pushState(null, "", url);
+    }
+  };
+  // User actions: update the state AND push the matching URL, so the
+  // back button steps back through tabs and popups.
+  const goToTab = (v: ProjectView) => {
+    setView(v);
+    setSelectedGroupId(null);
+    setIdeaDetail(null);
+    setFindingDetail(null);
+    setTopPopup(null);
+    pushUrl(`/${slug}/${tabSlugForView(v)}`);
+  };
+  const openIdeaPopup = (idea: any) => {
+    setIdeaDetail(idea);
+    setTopPopup("idea");
+    pushUrl(`/${slug}/ideas/${slugify(idea.title || "")}`);
+  };
+  const openFindingPopup = (finding: any) => {
+    setFindingDetail(finding);
+    setTopPopup("finding");
+    pushUrl(`/${slug}/findings/${slugify(finding.title || "")}`);
+  };
+  const closeIdeaPopup = () => {
+    const nextTop = findingDetail ? ("finding" as const) : null;
+    setIdeaDetail(null);
+    setTopPopup(nextTop);
+    pushUrl(urlForState(view, null, findingDetail, nextTop));
+  };
+  const closeFindingPopup = () => {
+    const nextTop = ideaDetail ? ("idea" as const) : null;
+    setFindingDetail(null);
+    setTopPopup(nextTop);
+    pushUrl(urlForState(view, ideaDetail, null, nextTop));
+  };
+  const closeTopPopup = () => {
+    if (topPopup === "idea" && ideaDetail) closeIdeaPopup();
+    else if (findingDetail) closeFindingPopup();
+    else if (ideaDetail) closeIdeaPopup();
+  };
+  // Apply a URL to the state: parse the path after /{slug} into a tab
+  // + optional popup, and open the matching item. Used on first load
+  // and on back/forward. A popup slug that matches nothing just shows
+  // the tab.
+  const applyUrlToState = (pathname: string) => {
+    const rest = pathname.split("/").filter(Boolean).slice(1);
+    const tabSeg = rest[0];
+    const itemSeg = rest[1];
+    let nextView: ProjectView = "findings";
+    if (tabSeg === "findings") nextView = "categories";
+    else if (tabSeg === "ideas") nextView = "findings";
+    else if (tabSeg === "group" || tabSeg === "groups") nextView = "groups";
+    else if (tabSeg === "roadmap") nextView = "roadmap";
+    setView(nextView);
+    setSelectedGroupId(null);
+    if (itemSeg && tabSeg === "findings") {
+      const f = findingBySlug[itemSeg];
+      setFindingDetail(f || null);
+      setIdeaDetail(null);
+      setTopPopup(f ? "finding" : null);
+    } else if (itemSeg && tabSeg === "ideas") {
+      const idea = ideaBySlug[itemSeg];
+      setIdeaDetail(idea || null);
+      setFindingDetail(null);
+      setTopPopup(idea ? "idea" : null);
+    } else {
+      setIdeaDetail(null);
+      setFindingDetail(null);
+      setTopPopup(null);
+    }
+  };
+  // First load: once the project data is in, open whatever the URL
+  // asks for (tab + popup). Runs once, so later project refreshes
+  // never clobber what the user is doing.
+  const didInitialUrlSync = useRef(false);
+  useEffect(() => {
+    if (didInitialUrlSync.current || !project || typeof window === "undefined") return;
+    didInitialUrlSync.current = true;
+    applyUrlToState(window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project]);
+  // Back/forward: the URL changed without a click, so re-apply it.
+  // Reads the latest project + lookups through refs so the listener
+  // itself never goes stale.
+  const applyUrlRef = useRef(applyUrlToState);
+  applyUrlRef.current = applyUrlToState;
+  useEffect(() => {
+    const onPopState = () => applyUrlRef.current(window.location.pathname);
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
   useEffect(() => {
     if (!ideaDetail && !findingDetail) return;
     const onKey = (e: KeyboardEvent) => {
       // Escape closes the topmost popup first, then the one beneath it.
-      if (e.key === "Escape") {
-        if (topPopup === "idea" && ideaDetail) setIdeaDetail(null);
-        else if (findingDetail) setFindingDetail(null);
-        else setIdeaDetail(null);
-      }
+      if (e.key === "Escape") closeTopPopup();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -894,6 +1024,9 @@ export default function ProjectResultViewer({
                             setView("findings");
                             setSelectedGroupId(null);
                             setSearchQuery("");
+                            setIdeaDetail(null);
+                            setFindingDetail(null);
+                            setTopPopup(null);
                             router.push(`/${p.slug}`);
                           }}
                           className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm transition ${
@@ -938,7 +1071,7 @@ export default function ProjectResultViewer({
             type="button"
             role="tab"
             aria-selected={view === "categories"}
-            onClick={() => { setView("categories"); setSelectedGroupId(null); }}
+            onClick={() => goToTab("categories")}
             className={`tab-pill ${view === "categories" ? "tab-pill-active" : ""}`}
           >
             <Lightbulb className="h-3.5 w-3.5" /> Findings
@@ -947,7 +1080,7 @@ export default function ProjectResultViewer({
             type="button"
             role="tab"
             aria-selected={view === "findings"}
-            onClick={() => { setView("findings"); setSelectedGroupId(null); }}
+            onClick={() => goToTab("findings")}
             className={`tab-pill ${view === "findings" ? "tab-pill-active" : ""}`}
           >
             Ideas
@@ -956,7 +1089,7 @@ export default function ProjectResultViewer({
             type="button"
             role="tab"
             aria-selected={view === "groups"}
-            onClick={() => { setView("groups"); setSelectedGroupId(null); }}
+            onClick={() => goToTab("groups")}
             className={`tab-pill ${view === "groups" ? "tab-pill-active" : ""}`}
           >
             <Users className="h-3.5 w-3.5" /> Groups
@@ -965,7 +1098,7 @@ export default function ProjectResultViewer({
             type="button"
             role="tab"
             aria-selected={view === "roadmap"}
-            onClick={() => { setView("roadmap"); setSelectedGroupId(null); }}
+            onClick={() => goToTab("roadmap")}
             className={`tab-pill ${view === "roadmap" ? "tab-pill-active" : ""}`}
           >
             <Map className="h-3.5 w-3.5" /> Roadmap
@@ -995,7 +1128,7 @@ export default function ProjectResultViewer({
         ) : view === "categories" ? (
           <FindingsByCategoryView
             findingsByCategory={project?.findingsByCategory || []}
-            onSelectFinding={(f: any) => { setFindingDetail(f); setTopPopup("finding"); }}
+            onSelectFinding={(f: any) => openFindingPopup(f)}
           />
         ) : (
         <>
@@ -1042,7 +1175,7 @@ export default function ProjectResultViewer({
                     {filteredFindings.map((finding) => (
                       <tr
                         key={finding.id}
-                        onClick={() => { setIdeaDetail(finding); setTopPopup("idea"); }}
+                        onClick={() => openIdeaPopup(finding)}
                         className="cursor-pointer border-b border-slate-100 transition hover:bg-emerald-50/50 last:border-b-0"
                       >
                         <td className="px-4 py-3.5 align-top">
@@ -1114,7 +1247,7 @@ export default function ProjectResultViewer({
         >
           <button
             aria-label="Close"
-            onClick={() => setIdeaDetail(null)}
+            onClick={closeIdeaPopup}
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           />
           <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
@@ -1132,7 +1265,7 @@ export default function ProjectResultViewer({
               </div>
               <button
                 type="button"
-                onClick={() => setIdeaDetail(null)}
+                onClick={closeIdeaPopup}
                 aria-label="Close dialog"
                 className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
               >
@@ -1220,7 +1353,7 @@ export default function ProjectResultViewer({
                         <li key={r.id}>
                           <button
                             type="button"
-                            onClick={() => { setFindingDetail(target); setTopPopup("finding"); }}
+                            onClick={() => openFindingPopup(target)}
                             className="group flex w-full items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-emerald-700"
                           >
                             <span className="min-w-0">{r.title}</span>
@@ -1245,7 +1378,7 @@ export default function ProjectResultViewer({
         >
           <button
             aria-label="Close"
-            onClick={() => setFindingDetail(null)}
+            onClick={closeFindingPopup}
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           />
           <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
@@ -1263,7 +1396,7 @@ export default function ProjectResultViewer({
               </div>
               <button
                 type="button"
-                onClick={() => setFindingDetail(null)}
+                onClick={closeFindingPopup}
                 aria-label="Close dialog"
                 className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
               >
@@ -1327,7 +1460,7 @@ export default function ProjectResultViewer({
                         <li key={li.id}>
                           <button
                             type="button"
-                            onClick={() => { setIdeaDetail(target); setTopPopup("idea"); }}
+                            onClick={() => openIdeaPopup(target)}
                             className="group flex w-full items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-emerald-700"
                           >
                             <span className="min-w-0">{li.title}</span>

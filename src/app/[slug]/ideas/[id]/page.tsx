@@ -6,6 +6,8 @@ import { ArrowLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import FindingDetailView from "@/components/FindingDetailView";
 import { useMeParticipantId } from "@/lib/useMeParticipant";
+import { slugify } from "@/lib/slugify";
+import ProjectResultViewer from "../../page";
 
 export default function FindingDetailPage({
   params,
@@ -77,6 +79,17 @@ export default function FindingDetailPage({
   const meId = useMeParticipantId(project?.slug, currentUser);
   const finding =
     project?.findings?.find((f: any) => f.id === id) ?? null;
+  // Title-slug popup URL (/{slug}/ideas/{idea-title}): the segment is
+  // a slugified title, not an idea id. Render the project page
+  // instead — it reads the URL and opens that idea's popup. An actual
+  // id always wins, so the scoring detail page keeps working for
+  // UUIDs and short ids alike.
+  const isTitleSlug =
+    !finding &&
+    !!project?.findings?.some((f: any) => slugify(f.title || "") === id);
+  if (isTitleSlug) {
+    return <ProjectResultViewer params={{ slug }} />;
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
