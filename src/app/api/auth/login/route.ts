@@ -69,18 +69,35 @@ export async function POST(request: Request) {
     // Resolve the user's assigned project (label-role users) so the
     // client can redirect to that project's viewer page after login.
     // ADMIN / FACILITATOR have no single project (projectSlug null).
+    // Prefer the user's own project; fall back to their group's
+    // project, so a user who only has a group assignment still lands
+    // on the right project page.
+    // (Capture the narrowed non-null user: the awaits below reset
+    // TypeScript's narrowing on the `let` binding. Safe: we already
+    // returned 401 above when there is no user.)
+    const currentUser = user!;
     let projectSlug: string | null = null;
-    const projectId = (user as any).projectId ?? null;
+    let projectId = (currentUser as any).projectId ?? null;
+    if (!projectId) {
+      // Fall back to the user's group: a label-role user's project can
+      // come from the group they belong to.
+      const full = await dbService.getUserById(currentUser.id).catch(() => null);
+      const groupId = (full as any)?.groupId ?? null;
+      if (groupId) {
+        const group = await dbService.getGroupById(groupId).catch(() => null);
+        projectId = (group as any)?.projectId ?? null;
+      }
+    }
     if (projectId) {
       const proj = await dbService.getProjectById(projectId).catch(() => null);
       projectSlug = proj?.slug ?? null;
     }
 
     const token = signToken({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role as "ADMIN" | "FACILITATOR",
+      id: currentUser.id,
+      name: currentUser.name,
+      email: currentUser.email,
+      role: currentUser.role as "ADMIN" | "FACILITATOR",
       projectId,
       projectSlug,
     });
@@ -88,10 +105,10 @@ export async function POST(request: Request) {
     const response = NextResponse.json({
       success: true,
       user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
+        id: currentUser.id,
+        name: currentUser.name,
+        email: currentUser.email,
+        role: currentUser.role,
         projectId,
         projectSlug,
       },
