@@ -979,7 +979,7 @@ export default function ProjectResultViewer({
             <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
               <div className="min-w-0">
                 <h2 className="text-base font-bold leading-snug text-slate-900 sm:text-lg">{imagePopup.title}</h2>
-                <p className="mt-0.5 text-xs text-slate-500">Image evidence from related findings</p>
+                <p className="mt-0.5 text-xs text-slate-500">Image and description from related findings</p>
               </div>
               <button
                 type="button"
@@ -992,22 +992,33 @@ export default function ProjectResultViewer({
             </div>
             <div className="overflow-y-auto px-5 py-4">
               {(() => {
-                const withImage = (imagePopup.relatedIdeas || []).filter((r: any) => r.imageUrl);
-                if (withImage.length === 0) {
+                // Show every related finding that has something to show —
+                // an image, a description, or both. A finding with neither
+                // is skipped. The description comes from the finding's
+                // Description field (set when the finding is created).
+                const withContent = (imagePopup.relatedIdeas || []).filter(
+                  (r: any) => r.imageUrl || (r.description && String(r.description).trim() !== "")
+                );
+                if (withContent.length === 0) {
                   return (
                     <div className="flex flex-col items-center justify-center py-10 text-center">
                       <ImageOff className="h-10 w-10 text-slate-300" />
-                      <p className="mt-3 text-sm font-semibold text-slate-500">No image reference</p>
-                      <p className="mt-1 text-xs text-slate-400">None of this idea&apos;s related findings has an uploaded image yet.</p>
+                      <p className="mt-3 text-sm font-semibold text-slate-500">No image or description</p>
+                      <p className="mt-1 text-xs text-slate-400">None of this idea&apos;s related findings has an uploaded image or a description yet.</p>
                     </div>
                   );
                 }
                 return (
-                  <div className="space-y-5">
-                    {withImage.map((r: any) => (
+                  <div className="space-y-6">
+                    {withContent.map((r: any) => (
                       <figure key={r.id}>
-                        <img src={r.imageUrl} alt={`Image evidence for ${r.title}`} className="h-auto w-full rounded-xl border border-slate-200 object-contain" />
+                        {r.imageUrl && (
+                          <img src={r.imageUrl} alt={`Image evidence for ${r.title}`} className="h-auto w-full rounded-xl border border-slate-200 object-contain" />
+                        )}
                         <figcaption className="mt-2 text-xs font-medium text-slate-500">{r.title}</figcaption>
+                        {r.description && String(r.description).trim() !== "" && (
+                          <p className="mt-1 text-sm leading-relaxed text-slate-700">{r.description}</p>
+                        )}
                       </figure>
                     ))}
                   </div>
