@@ -86,7 +86,10 @@ export async function GET(
           }
         }
       }
-      sumber.forEach((s) => tagsList.push({ category: "Sumber", value: s }));
+      // Visual tagsList — only the fields that exist on the create/edit
+      // form (Fitur, Platform). "Sumber" is not a form field anymore,
+      // so it is not shown as a tag (the raw `sumber` value is still
+      // returned, so editing never wipes it).
       if (fitur) tagsList.push({ category: "Fitur", value: fitur });
       platform.forEach((p) => tagsList.push({ category: "Platform", value: p }));
       return { sumber, fitur, platform, tagsList };

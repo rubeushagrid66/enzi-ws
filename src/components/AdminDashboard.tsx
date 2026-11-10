@@ -89,16 +89,22 @@ function findingMeta(f: any) {
       // Leave the defaults: unparseable tags render as nothing.
     }
   }
-  const tagsList: Array<{ category: string; value: string }> = (f.tagsList ||
-    [
-      ...sumber.map((s) => ({ category: "Sumber", value: s })),
-      ...(fitur ? [{ category: "Fitur", value: fitur }] : []),
-      ...platform.map((p) => ({ category: "Platform", value: p })),
-    ]
+  // Tags shown in the pool table: only the fields that exist on the
+  // create/edit form (Fitur, Platform). "Sumber" is not a form field
+  // anymore, so it is not shown as a tag — the raw `sumber` value is
+  // still parsed above and returned, so editing a finding never wipes
+  // it, but it no longer renders as a chip. This filters Sumber out
+  // of an API-supplied tagsList too, not just the locally built one.
+  const tagsList: Array<{ category: string; value: string }> = (f.tagsList || [
+    ...(fitur ? [{ category: "Fitur", value: fitur }] : []),
+    ...platform.map((p) => ({ category: "Platform", value: p })),
+  ]
   ).filter(
-    // The stored tags can repeat a value (e.g. Platform: CMS twice) —
-    // show each chip once so the Tags column stays quiet.
     (t: any, i: number, arr: any[]) =>
+      // Drop "Sumber" chips (no such field on the form) and de-dupe
+      // the rest (the stored tags can repeat a value, e.g. Platform:
+      // CMS twice) so the Tags column stays quiet.
+      t.category !== "Sumber" &&
       arr.findIndex((x: any) => x.category === t.category && x.value === t.value) === i
   );
   return { sumber, fitur, platform, tagsList };
