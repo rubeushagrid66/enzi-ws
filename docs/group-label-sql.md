@@ -10,10 +10,11 @@ aspects whose label matches its assigned role (the label gate, enforced
 in the vote API and the V&F table). Ideas are no longer assigned to
 groups — every group scores every idea in the project.
 
-Mapping (group number → role, same in both projects):
-- Grup 1 = Product
-- Grup 2 = Tech
-- Grup 3 = Business & Ops
+Mapping (follow each group's existing NAME — the name already is the
+label; the "Grup 1/2/3" numbering is just the group id order):
+- "Business & Ops" = grp_1 (CMS) and 69480cb5-2ebc-400f-9f89-08bd59f939db (DVC)
+- "Tech" = grp_2 (CMS) and c2492b0e-a333-4e46-acd3-d5a1bdad846b (DVC)
+- "Product" = grp_3 (CMS) and e04df247-b9a1-4637-9a5a-b6cb4a1a9a2c (DVC)
 
 ## SQL
 
@@ -21,18 +22,20 @@ Mapping (group number → role, same in both projects):
 -- 1. Add the label column (idempotent).
 ALTER TABLE groups ADD COLUMN IF NOT EXISTS label TEXT;
 
--- 2. Assign roles. Group ids are stable (from the project data):
+-- 2. Assign roles to match each group's existing NAME (the name
+--    already is the label). Do NOT use the id order: grp_1 is named
+--    "Business & Ops", grp_2 "Tech", grp_3 "Product" (same in DVC).
 --    CMS: grp_1 / grp_2 / grp_3
---    DVC: 69480cb5-2ebc-400f-9f89-08bd59f939db (Grup 1),
---         c2492b0e-a333-4e46-acd3-d5a1bdad846b (Grup 2),
---         e04df247-b9a1-4637-9a5a-b6cb4a1a9a2c (Grup 3)
-UPDATE groups SET label = 'Product' WHERE id IN (
+--    DVC: 69480cb5-2ebc-400f-9f89-08bd59f939db (Business & Ops),
+--         c2492b0e-a333-4e46-acd3-d5a1bdad846b (Tech),
+--         e04df247-b9a1-4637-9a5a-b6cb4a1a9a2c (Product)
+UPDATE groups SET label = 'Business & Ops' WHERE id IN (
   'grp_1', '69480cb5-2ebc-400f-9f89-08bd59f939db'
 );
 UPDATE groups SET label = 'Tech' WHERE id IN (
   'grp_2', 'c2492b0e-a333-4e46-acd3-d5a1bdad846b'
 );
-UPDATE groups SET label = 'Business & Ops' WHERE id IN (
+UPDATE groups SET label = 'Product' WHERE id IN (
   'grp_3', 'e04df247-b9a1-4637-9a5a-b6cb4a1a9a2c'
 );
 
