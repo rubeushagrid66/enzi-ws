@@ -59,47 +59,39 @@ export default function FindingDetailView({
     return () => { cancelled = true; };
   }, [finding.id, project.slug]);
 
-  // ── Group scope ──────────────────────────────────────────────────
-  // The group chips sit above the three tabs and scope the whole page:
-  // the score strip, the tab badges, the matrix and the board all show
-  // the SELECTED group's values. Default is the viewer's own group
-  // (the group holding their participant row), else the first group.
+  // ── Idea scope: role-based, not group-based ──────────────────────
+  // Ideas are assigned to ROLES, not groups: every role scores the
+  // same idea, but only on its own label's aspects (Business & Ops
+  // scores BizOps aspects, Product scores Product aspects, Tech
+  // scores Tech aspects — the vote API enforces it). So there is ONE
+  // view of an idea: V/F and DVF are the combination of all roles'
+  // contributions, and there is no group to switch between. The
+  // group chips are gone. `myGroupId` is kept only so the V&F matrix
+  // knows the viewer's own role (for the label gate).
   const groups = (project.groups || []).filter((g: any) => g.isActive !== false);
   const myGroupId =
     groups.find((g: any) =>
       (g.participants || []).some((p: any) => p.id === meId)
     )?.id ?? null;
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const activeGroupId =
-    selectedGroupId && groups.some((g: any) => g.id === selectedGroupId)
-      ? selectedGroupId
-      : myGroupId ?? groups[0]?.id ?? null;
-  const activeGroup = groups.find((g: any) => g.id === activeGroupId) || null;
-  // Participants of the selected group who can score (the admin /
-  // facilitator account is not a scorer and is never listed). The
-  // viewer's own participant id is always included: ADMIN/FACILITATOR
-  // score as themselves in any group, so their vote counts in the
-  // group's V/F even though their row lives in only one group.
-  // (For a regular user the id is already in the group, so the extra
-  // entry is a harmless duplicate — the average counts each
-  // participant once.)
+  // Every scorer in the project (all groups, admin/facilitator
+  // excluded): each participant only scores their own role's aspects,
+  // so averaging across all of them gives the idea's overall V/F.
+  // The viewer's own participant id is always included: ADMIN /
+  // FACILITATOR score as themselves in any group, so their vote counts
+  // in the idea's V/F even though their row lives in only one group.
   const groupParticipantIds: string[] = [
-    ...(activeGroup?.participants || [])
+    ...groups.flatMap((g: any) => (g.participants || []))
       .filter((p: any) => p.isActive !== false && p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR")
       .map((p: any) => p.id),
     ...(meId ? [meId] : []),
   ];
-  // The selected group's values for this finding. V/F are the average
-  // of the group's participants who scored that dimension (1 decimal);
-  // a dimension nobody in the group scored is null. D is the finding's
-  // research score — it comes from the research mentions and the
-  // project's basis N, NOT from any group's votes, so it is the same
-  // for every group in this project. Ideas are no longer assigned to
-  // groups, so there is no assignment gate: every group scores every
-  // idea, and V/F are never N/A just because a finding is not
-  // "assigned" to the group. A group's V/F only reflects the aspects
-  // its members may score (their group's assigned role), because the
-  // vote API only lets them vote on those aspects.
+  // The idea's values. V/F are the average of all participants who
+  // scored that dimension (1 decimal); a dimension nobody scored is
+  // null. D is the finding's research score — it comes from the
+  // research mentions and the project's basis N, NOT from any group's
+  // votes, so it is the same for every viewer. A role's V/F only
+  // reflects the aspects its members may score (their group's assigned
+  // role), because the vote API only lets them vote on those aspects.
   const groupVF = groupAverageScores(
     localFinding.scores?.participantScores,
     groupParticipantIds
@@ -107,7 +99,7 @@ export default function FindingDetailView({
   const groupD = localFinding.scores?.desirability ?? null;
   const groupV = groupVF.viability;
   const groupF = groupVF.feasibility;
-  // The quadrant this group lands in on the board (from its D/V/F —
+  // The quadrant this idea lands in on the board (from its D/V/F —
   // a manual pin wins, same as the board). This is what the Matrix
   // score box shows: the quadrant name, not the F number.
   const groupBoardPos = findingBoardPositionForScores(localFinding, groupD, groupV, groupF);
@@ -127,9 +119,9 @@ export default function FindingDetailView({
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
-  // DVF Score for the SELECTED group: the weighted composite of this
-  // group's D, V and F. Null (shown as N/A) while any dimension is
-  // unscored or the group is not assigned to this finding.
+  // DVF Score for the IDEA: the weighted composite of this idea's
+  // D, V and F (all roles combined). Null (shown as N/A) while any
+  // dimension is unscored.
   const groupDVF = calculateDVFScore(groupD, groupV, groupF, weights ?? [
     { name: "Desirability", weight: 33 },
     { name: "Viability", weight: 33 },
@@ -195,14 +187,13 @@ export default function FindingDetailView({
   const desirability = scores.desirabilityDetails || {};
 
   // The score strip shows the SELECTED group's values for this finding
-  // (D, V, F on the 1–3 scale). A group that did not select this
-  // finding has no value here and shows N/A on every card.
-  const groupLabel = activeGroup ? activeGroup.name : "—";
+  // (D, V, F on the 1–3 scale). The scores are the idea's overall
+  // values — all roles combined — so no group name is shown.
   const groupScoresStrip = (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div className="p-4 rounded-xl border border-slate-200 bg-white">
         <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Desirability Score ({groupLabel})
+          Desirability Score
         </div>
         <div className="mt-1 text-3xl font-bold text-slate-900">
           {groupD != null ? (
@@ -221,7 +212,7 @@ export default function FindingDetailView({
 
       <div className="p-4 rounded-xl border border-slate-200 bg-white">
         <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Viability &amp; Feasibility Score ({groupLabel})
+          Viability &amp; Feasibility Score
         </div>
         <div className="mt-1 text-3xl font-bold text-slate-900">
           {groupV != null ? (
@@ -234,13 +225,13 @@ export default function FindingDetailView({
           )}
         </div>
         <p className="mt-1 text-xs text-slate-500">
-          Average of {groupLabel}&apos;s Viability aspect scores
+          Average of all roles&apos; Viability aspect scores
         </p>
       </div>
 
       <div className="p-4 rounded-xl border border-slate-200 bg-white">
         <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Matrix Score ({groupLabel})
+          Matrix Score
         </div>
         <div className="mt-1 text-3xl font-bold text-slate-900">
           {groupQuadrant ? QUADRANT_LABEL[groupQuadrant].title : "N/A"}
@@ -421,61 +412,18 @@ export default function FindingDetailView({
             </div>
           )}
 
-          {/* Group selector — sits above the three tabs and scopes the
-              whole page (score strip, tab badges, matrix, board) to the
-              selected group. A group that did not select this finding
-              shows N/A on every value. The DVF Score sits on this row
-              (not in the finding header) because it belongs to the
-              selected group: switching groups changes it. */}
-          {groups.length > 0 && (
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Choose a group to view">
-              {groups.map((g: any) => {
-                // "Me": ADMIN/FACILITATOR are overseers, not group
-                // members — they never get a "Me" on a group chip, even
-                // though an "Enzi Lead Admin" participant row exists.
-                const isPrivileged = currentUser?.role === "ADMIN" || currentUser?.role === "FACILITATOR";
-                const isMe = !isPrivileged && Boolean(meId && myGroupId && g.id === myGroupId);
-                const selected = g.id === activeGroupId;
-                return (
-                  <button
-                    key={g.id}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => setSelectedGroupId(g.id)}
-                    className={`tab-pill ${selected ? "tab-pill-active" : ""}`}
-                  >
-                    {g.name}
-                    {g.label && (
-                      <span
-                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${
-                          selected ? "bg-white/25 text-white" : "bg-violet-100 text-violet-800"
-                        }`}
-                      >
-                        {g.label}
-                      </span>
-                    )}
-                    {isMe && (
-                      <span
-                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold ${
-                          selected ? "bg-white/25 text-white" : "bg-emerald-100 text-emerald-800"
-                        }`}
-                      >
-                        • Me
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-              </div>
+          {/* DVF Score — the idea's overall score (all roles
+              combined), not any one group's. The group chips used to
+              sit here; they are gone because ideas are assigned to
+              roles, not groups — there is no group to switch between. */}
+          <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
               <div
                 className="shrink-0 rounded-lg border-2 border-amber-500 bg-amber-50 px-3.5 py-2 text-sm font-bold text-amber-700"
-                title="DVF Score = (wD × D + wV × V + wF × F) / (wD + wV + wF) — the weighted composite of this group's Desirability, Viability and Feasibility. N/A while any of D, V or F is unscored."
+                title="DVF Score = (wD × D + wV × V + wF × F) / (wD + wV + wF) — the weighted composite of this idea's Desirability, Viability and Feasibility. N/A while any of D, V or F is unscored."
               >
                 DVF Score: {groupDVF != null ? groupDVF.toFixed(2) : "N/A"}
               </div>
-            </div>
-          )}
+          </div>
 
           {/* Tab Navigation — no horizontal scrolling: the tabs shrink
               and wrap (see .tab-underline) so all three always fit. */}
@@ -699,7 +647,7 @@ export default function FindingDetailView({
                 project={project}
                 finding={localFinding}
                 currentUser={currentUser}
-                selectedGroupId={activeGroupId}
+                selectedGroupId={myGroupId}
                 onVotesChanged={handleVotesChanged}
               />
             </div>
@@ -710,10 +658,9 @@ export default function FindingDetailView({
             <div className="space-y-6">
               {groupScoresStrip}
 
-              {/* Interactive 2x2 Feasibility Matrix — scoped to the
-                  selected group: the card sits at the group's D/V/F
-                  position (or N/A / unplaced when the group has no
-                  value for this finding). */}
+              {/* Interactive 2x2 Feasibility Matrix — the idea's overall
+                  position (all roles combined), or N/A / unplaced when
+                  the idea has no value for a dimension. */}
               <FeasibilityMatrix
                 finding={localFinding}
                 allFindings={allFindings}
@@ -721,7 +668,7 @@ export default function FindingDetailView({
                 isAdmin={isAdmin}
                 meId={meId}
                 groupScores={{ desirability: groupD, viability: groupV, feasibility: groupF }}
-                selectedGroupId={activeGroupId}
+                selectedGroupId={myGroupId}
                 groupParticipantIds={groupParticipantIds}
                 onPositionSaved={handleFeasibilitySaved}
               />

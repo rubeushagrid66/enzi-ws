@@ -37,17 +37,14 @@ const QUADRANT_META: Record<FeasibilityQuadrant, { title: string; detail: string
   AVOID: { title: "Avoid", detail: "Low Impact, High Effort" },
 };
 
-/** A finding's D/V/F FOR one group. D is the finding's research score
- *  (same for every group in the project); V/F are this group's
- *  participant averages. Ideas are no longer assigned to groups —
- *  every group scores every idea — so there is no assignment gate
- *  here. A group's V/F only reflects the aspects its members may
- *  score (their group's assigned role), because the vote API only
- *  lets them vote on those aspects. All null when the group has no
- *  complete score. */
-function groupScoresFor(finding: any, group: any, extraParticipantIds: string[] = []): { d: number | null; v: number | null; f: number | null } {
+/** A finding's D/V/F for the IDEA (all roles combined). Ideas are
+ *  assigned to roles, not groups: every role scores the same idea,
+ *  but only on its own label's aspects. Averaging across every
+ *  scorer in the project gives the idea's single overall V/F — the
+ *  number the detail page, the cards and the Roadmap all show. */
+function overallScoresFor(finding: any, groups: any[], extraParticipantIds: string[] = []): { d: number | null; v: number | null; f: number | null } {
   const participantIds: string[] = [
-    ...(group.participants || [])
+    ...groups.flatMap((g: any) => (g.participants || []))
       .filter((p: any) => p.isActive !== false && p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR")
       .map((p: any) => p.id),
     // The viewer's own id: ADMIN/FACILITATOR score as themselves in
@@ -59,12 +56,9 @@ function groupScoresFor(finding: any, group: any, extraParticipantIds: string[] 
   return { d: finding.scores?.desirability ?? null, v: vf.viability, f: vf.feasibility };
 }
 
-/** A finding's quadrant FOR one group (null when it has none there).
- *  Ideas are no longer assigned to groups, so there is no assignment
- *  gate — a finding has a quadrant for every group that scores it.
- *  A manual pin wins over the computed position, same as the board. */
-function quadrantForGroup(finding: any, group: any, extraParticipantIds: string[] = []): FeasibilityQuadrant | null {
-  const { d, v, f } = groupScoresFor(finding, group, extraParticipantIds);
+/** A finding's quadrant for the IDEA (null when it has none). */
+function overallQuadrantFor(finding: any, groups: any[], extraParticipantIds: string[] = []): FeasibilityQuadrant | null {
+  const { d, v, f } = overallScoresFor(finding, groups, extraParticipantIds);
   return findingBoardPositionForScores(finding, d, v, f).quadrant;
 }
 
@@ -72,25 +66,22 @@ function FindingCard({
   finding,
   meId,
   onSelect,
-  group,
+  groups,
 }: {
   finding: any;
   meId: string | null;
   onSelect: (f: any) => void;
-  /** When given (inside a group), the card shows THIS group's V/F and
-      quadrant, matching its section and the detail page — not the
-      logged-in viewer's own scores. */
-  group?: any;
+  /** All groups in the project: the card shows the IDEA's overall
+      V/F (all roles combined), not one group's values. */
+  groups: any[];
 }) {
   const s = finding.scores || {};
-  // V/F and quadrant: inside a group these are the GROUP's values
-  // (group averages, same as the detail page and the section the card
-  // sits under). Without a group they fall back to the logged-in
-  // viewer's own scores.
-  const groupVF = group ? groupScoresFor(finding, group, meId ? [meId] : []) : null;
+  // V/F: the idea's overall values (all roles combined). Without any
+  // scorer they fall back to the logged-in viewer's own scores.
+  const overallVF = overallScoresFor(finding, groups, meId ? [meId] : []);
   const my = scoresForParticipant(s.participantScores, meId);
-  const shownV = groupVF ? groupVF.v : my.viability;
-  const shownF = groupVF ? groupVF.f : my.feasibility;
+  const shownV = overallVF.v ?? my.viability;
+  const shownF = overallVF.f ?? my.feasibility;
   // Score boxes: label row is a fixed height so a two-line label
   // ("Viability & Feasibility") never pushes its value out of line
   // with the other two boxes.
@@ -242,7 +233,7 @@ function GroupsView({
                 key={finding.id}
                 finding={finding}
                 meId={meId}
-                group={selectedGroup}
+                groups={groups}
                 onSelect={onSelectFinding}
               />
             ))}
@@ -401,23 +392,17 @@ function RoadmapView({
     { key: "BIG_BETS", horizon: "Jangka Panjang", subtitle: "High impact, high effort. Plan these for later.", banner: "bg-teal-900" },
   ];
 
-  // For each horizon quadrant, the findings placed there, with the
-  // groups that place them there — ordered by DVF score, highest
-  // first. A finding placed by several groups takes its best DVF
-  // among those groups, so the order reflects its strongest case.
+  // For each horizon quadrant, the findings placed there — ordered by
+  // the idea's overall DVF score, highest first. Ideas are assigned
+  // to roles, not groups, so each idea has ONE overall position (all
+  // roles combined), not one per group.
   const itemsByHorizon = HORIZONS.map((h) => {
-    const items: { finding: any; groups: any[]; dvf: number | null }[] = [];
+    const items: { finding: any; dvf: number | null }[] = [];
     for (const finding of findings) {
-      const placing = groups.filter((g) => quadrantForGroup(finding, g, meId ? [meId] : []) === h.key);
-      if (placing.length === 0) continue;
-      const dvfs = placing
-        .map((g) => {
-          const { d, v, f } = groupScoresFor(finding, g, meId ? [meId] : []);
-          return calculateDVFScore(d, v, f, weights ?? EQUAL_THIRDS);
-        })
-        .filter((x): x is number => x != null);
-      const dvf = dvfs.length > 0 ? Math.max(...dvfs) : null;
-      items.push({ finding, groups: placing, dvf });
+      if (overallQuadrantFor(finding, groups, meId ? [meId] : []) !== h.key) continue;
+      const { d, v, f } = overallScoresFor(finding, groups, meId ? [meId] : []);
+      const dvf = calculateDVFScore(d, v, f, weights ?? EQUAL_THIRDS);
+      items.push({ finding, dvf });
     }
     items.sort((a, b) => (b.dvf ?? -1) - (a.dvf ?? -1));
     return { ...h, items };

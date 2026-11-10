@@ -168,15 +168,6 @@ export default function ViabilityVoteMatrix({
     votesByAspect[v.aspectId][v.participantId] = v;
   }
 
-  // Participants shown in this matrix (aspect rows): the admin /
-  // facilitator account is not a scorer and is never listed. A login
-  // is identified by its role + group, not by a participant name —
-  // participant names are informational only, so a regular user never
-  // sees any name here, only their own score row.
-  const displayParticipants = orderedParticipants.filter(
-    (p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR"
-  );
-
   // Participants assigned to a given aspect. No names in this tab, for
   // ANY role, in any project: every viewer — regular user, ADMIN,
   // FACILITATOR — sees ONE row per aspect, their own score. ADMIN /
@@ -198,30 +189,27 @@ export default function ViabilityVoteMatrix({
   const participantsForAspect = (_aspect: any) =>
     meParticipant ? [meParticipant] : [];
 
-  // Group average score for one aspect across the selected group's
-  // participants — the read-only, name-free summary a viewer sees for
-  // an aspect in a project/group where they have no "me" (e.g. a CMS
-  // login viewing Value Chain). Includes the viewer's own vote when
-  // they have one (ADMIN/FACILITATOR score as themselves). Null when
-  // nobody scored.
+  // Average score for one aspect across EVERYONE who scored it.
+  // Ideas are assigned to roles, not groups, and the vote API only
+  // lets a role's own group score that role's aspects — so all votes
+  // on an aspect are, by construction, from that aspect's role. The
+  // average is therefore the role's average, and it is the same no
+  // matter which role is viewing. (It used to be restricted to the
+  // selected group's participants, which hid other roles' scores.)
+  // Null when nobody scored.
   const groupAspectAverage = (aspectId: string): number | null => {
-    const ids = new Set((displayParticipants || []).map((p: any) => p.id));
-    if (meId) ids.add(meId);
-    const vs = Array.from(ids)
-      .map((id) => (votesByAspect[aspectId] || {})[id])
-      .filter((v: any) => v && v.score != null);
+    const vs = Object.values(votesByAspect[aspectId] || {}).filter(
+      (v: any) => v && v.score != null
+    );
     if (vs.length === 0) return null;
     return Number((vs.reduce((s: number, v: any) => s + Number(v.score), 0) / vs.length).toFixed(1));
   };
 
-  // Non-empty reasons the selected group's participants gave for one
-  // aspect — the name-free Alasan shown alongside the group average
-  // above. Empty when nobody left a reason.
+  // Non-empty reasons anyone gave for one aspect — the name-free
+  // Alasan shown alongside the aspect average above. Empty when
+  // nobody left a reason.
   const groupAspectReasons = (aspectId: string): string[] => {
-    const ids = new Set((displayParticipants || []).map((p: any) => p.id));
-    if (meId) ids.add(meId);
-    return Array.from(ids)
-      .map((id) => (votesByAspect[aspectId] || {})[id])
+    return Object.values(votesByAspect[aspectId] || {})
       .filter((v: any) => v && v.reason && String(v.reason).trim() !== "")
       .map((v: any) => String(v.reason).trim());
   };
