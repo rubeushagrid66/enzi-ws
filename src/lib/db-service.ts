@@ -263,6 +263,7 @@ export const dbService = {
         viabilityAspects: (aspectsRes.data || []).map((a: any) => ({
           id: a.id,
           name: a.name,
+          createdAt: a.created_at ?? null,
           // The framework column only exists after the SQL in
           // docs/aspect-framework-sql.md is run; until then every aspect
           // reads as Viability, exactly as before. Same for the label
@@ -275,6 +276,7 @@ export const dbService = {
         groups: (groupsRes.data || []).map((g: any) => ({
           id: g.id,
           name: g.name,
+          createdAt: g.created_at ?? null,
           // The label role assigned to this group (Product / Tech /
           // Business & Ops). The label gate reads it from here, so it
           // must be included — dropping it silently opens the gate.
@@ -495,6 +497,7 @@ export const dbService = {
           id: f.id,
           title: f.title,
           description: f.description,
+          createdAt: f.created_at ?? null,
           tags: typeof f.tags === "string" ? f.tags : JSON.stringify(f.tags || []),
           feasibilityX: f.feasibility_x != null ? Number(f.feasibility_x) : null,
           feasibilityY: f.feasibility_y != null ? Number(f.feasibility_y) : null,

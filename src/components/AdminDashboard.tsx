@@ -144,6 +144,18 @@ function AspectLabelBadge({ label }: { label?: string | null }) {
 // across tab navigations — switching tabs swaps the content instantly
 // without a reload or a data refetch. The active tab is read from the
 // URL itself (/dashboard/<slug>).
+
+// Every admin list shows the most recent item first. Sort by createdAt
+// descending; rows without a timestamp (older rows, or a mapping that
+// predates the field) sink to the bottom in their original order.
+function newestFirst<T extends { createdAt?: string | null }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => {
+    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return tb - ta;
+  });
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const pathname = usePathname();
@@ -1405,7 +1417,7 @@ export default function AdminDashboard() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {poolFindings.length > 0 ? (
-                        poolFindings.map((f: any) => {
+                        newestFirst(poolFindings).map((f: any) => {
                           const meta = findingMeta(f);
                           const isPool = !f.projectId;
                           return (
@@ -1500,7 +1512,7 @@ export default function AdminDashboard() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {ideas.length > 0 ? (
-                        ideas.map((idea: any) => {
+                        newestFirst(ideas).map((idea: any) => {
                           const linked = (idea.findingIds || [])
                             .map((fid: string) => poolFindings.find((f: any) => f.id === fid))
                             .filter(Boolean);
@@ -1713,7 +1725,7 @@ export default function AdminDashboard() {
                     </div>
                   ) : activeProject?.groups?.length > 0 ? (
                     <div className="max-h-[500px] space-y-4 overflow-y-auto pr-1">
-                      {activeProject.groups.map((group: any) => (
+                      {newestFirst(activeProject.groups).map((group: any) => (
                         <div key={group.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
                           <div className="mb-2 flex items-center justify-between gap-2">
                             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{group.name}{group.label ? ` · ${group.label}` : ""} ({(group.participants || []).filter((p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR").length} participants)</span>
@@ -1794,7 +1806,7 @@ export default function AdminDashboard() {
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" aria-hidden />
                       Loading project…
                     </div>
-                  ) : activeProject?.viabilityAspects?.map((aspect: any) => (
+                  ) : newestFirst(activeProject?.viabilityAspects || []).map((aspect: any) => (
                     <div key={aspect.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
@@ -1825,7 +1837,7 @@ export default function AdminDashboard() {
                 <p className="section-sub">Switch between workshops or create new project workspaces.</p>
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {projects.map((p) => (
+                {newestFirst(projects).map((p) => (
                   <div key={p.id} className={`card flex flex-col justify-between p-5 transition ${p.slug === selectedProjectSlug ? "border-emerald-500 ring-2 ring-emerald-500/20" : "hover:border-slate-300"}`}>
                     <div>
                       <div className="flex items-center justify-end gap-2">
@@ -1861,7 +1873,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="space-y-2 border-t border-slate-100 pt-4">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Existing Credentials ({usersList.length})</h3>
-                  {usersList.map((u) => (
+                  {newestFirst(usersList).map((u) => (
                     <div key={u.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <div className="min-w-0">
                         <div className="text-sm font-medium text-slate-700">{u.name}{u.id === currentUser?.id && <span className="ml-2 text-xs font-medium text-slate-500">(you)</span>}</div>
