@@ -1,12 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Target,
   Users2,
   Compass,
   HelpCircle,
+  ChevronDown,
 } from "lucide-react";
+import { slugify } from "@/lib/slugify";
 import FeasibilityMatrix from "./FeasibilityMatrix";
 import ViabilityVoteMatrix from "./ViabilityVoteMatrix";
 import { groupAverageScores, normalizeFramework, findingBoardPositionForScores, calculateDVFScore, type FeasibilityQuadrant, type WeightInput } from "@/lib/scoring";
@@ -41,6 +44,10 @@ export default function FindingDetailView({
   const [activeTab, setActiveTab] = useState<"desirability" | "viability" | "feasibility">(
     "desirability"
   );
+  // About section is collapsed by default so a scorer lands straight
+  // on the score summary + scoring tabs without scrolling past the
+  // (often long) idea content. Tap the header to expand it.
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [localFinding, setLocalFinding] = useState(finding);
 
   // ── Related ideas ────────────────────────────────────────────────
@@ -191,7 +198,7 @@ export default function FindingDetailView({
   // D and V are the 1–3 scores; Position is the board quadrant the
   // idea lands in (a manual pin wins, same as the board).
   const scoreSummary = (
-    <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+    <div className="mt-5 grid auto-rows-fr grid-cols-2 gap-2.5 sm:grid-cols-4">
       <div className="rounded-xl border border-gold-200 bg-gold-50 px-3.5 py-3">
         <div className="text-[11px] font-bold uppercase tracking-wider text-gold-700">
           DVF Score
@@ -200,7 +207,7 @@ export default function FindingDetailView({
           {groupDVF != null ? groupDVF.toFixed(2) : "N/A"}
         </div>
         <p className="mt-1 text-[11px] leading-tight text-gold-700/80">
-          Weighted composite of D, V &amp; F
+          Weighted composite
         </p>
       </div>
 
@@ -238,7 +245,7 @@ export default function FindingDetailView({
           )}
         </div>
         <p className="mt-1 text-[11px] leading-tight text-slate-500">
-          Average of all roles&apos; aspect scores
+          All roles&apos; average
         </p>
       </div>
 
@@ -246,13 +253,13 @@ export default function FindingDetailView({
         <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
           Position
         </div>
-        <div className="mt-0.5 text-lg font-bold leading-tight text-slate-900">
+        <div className="mt-0.5 text-2xl font-bold leading-none text-slate-900">
           {groupQuadrant ? QUADRANT_LABEL[groupQuadrant].title : "N/A"}
         </div>
         <p className="mt-1 text-[11px] leading-tight text-slate-500">
           {groupQuadrant
             ? QUADRANT_LABEL[groupQuadrant].detail
-            : "Not placed on the board yet"}
+            : "Not placed yet"}
         </p>
       </div>
     </div>
@@ -443,16 +450,17 @@ export default function FindingDetailView({
               </h3>
               <div className="mt-2 flex flex-wrap gap-2">
                 {relatedIdeas.map((idea: any) => (
-                  <span
+                  <Link
                     key={idea.id}
+                    href={`/${project.slug}/findings/${slugify(idea.title || "")}`}
                     title={idea.description ? `${idea.title} — ${idea.description}` : idea.title}
-                    className="chip chip-bsi"
+                    className="chip chip-bsi transition hover:border-bsi-300 hover:bg-bsi-100"
                   >
                     <span className="truncate text-sm font-semibold text-bsi-900">{idea.title}</span>
                     {idea.description && (
                       <span className="max-w-48 truncate text-xs text-bsi-700">· {idea.description}</span>
                     )}
-                  </span>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -464,14 +472,31 @@ export default function FindingDetailView({
 
       {/* ── About this idea: the idea's content, so a reader
           understands what it is before scoring it. Only filled
-          fields render; the section hides when nothing is filled. ── */}
+          fields render; the section hides when nothing is filled.
+          Collapsed by default so a scorer lands straight on the
+          score summary + scoring tabs without scrolling. ── */}
       {hasDetailContent && (
         <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <div className="p-5 sm:p-7">
-            <h3 className="text-sm font-bold text-slate-900">About this idea</h3>
+          <button
+            type="button"
+            onClick={() => setAboutOpen((v) => !v)}
+            aria-expanded={aboutOpen}
+            className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-bsi-500 sm:px-7"
+          >
+            <span className="text-sm font-bold text-slate-900">About this idea</span>
+            <span className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-slate-500">
+              {aboutOpen ? "Hide" : "Show"}
+              <ChevronDown
+                className={`h-4 w-4 text-slate-400 transition-transform ${aboutOpen ? "rotate-180" : ""}`}
+              />
+            </span>
+          </button>
+
+          {aboutOpen && (
+          <div className="border-t border-slate-200 px-5 pb-5 pt-4 sm:px-7 sm:pb-7">
 
             {localFinding.tujuan && String(localFinding.tujuan).trim() && (
-              <div className="mt-4">
+              <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Tujuan</h4>
                 <p className="mt-1 text-sm leading-relaxed text-slate-700">{localFinding.tujuan}</p>
               </div>
@@ -520,6 +545,7 @@ export default function FindingDetailView({
               </div>
             )}
           </div>
+          )}
         </section>
       )}
 
@@ -594,7 +620,7 @@ export default function FindingDetailView({
                     <span className="text-sm font-semibold text-slate-800">Wawancara</span>
                     <span className="text-xs text-slate-500">&ge; 66% &rarr; 3 &middot; &ge; 33% &rarr; 2 &middot; below 33% &rarr; 1</span>
                   </div>
-                  <div className="mt-3 flex flex-wrap items-end gap-3">
+                  <div className="mt-3 flex flex-wrap items-end gap-2">
                     <label className="block">
                       <span className="field-label">Users who mentioned it</span>
                       <input
@@ -632,12 +658,14 @@ export default function FindingDetailView({
                         className="input w-20"
                       />
                     </label>
-                    <span className="text-sm text-slate-600 pb-2">
-                      interview users
-                      {interviewPreview.percent != null && <> ({interviewPreview.percent}%)</>}
-                    </span>
-                    <span className="ml-auto pb-2 text-sm font-bold text-bsi-700">
-                      {interviewPreview.score != null ? `Score ${interviewPreview.score} / 3` : "—"}
+                    <span className="ml-auto flex items-baseline gap-2 pb-2">
+                      <span className="text-sm text-slate-600">
+                        interview users
+                        {interviewPreview.percent != null && <> ({interviewPreview.percent}%)</>}
+                      </span>
+                      <span className="text-sm font-bold text-bsi-700">
+                        {interviewPreview.score != null ? `Score ${interviewPreview.score} / 3` : "—"}
+                      </span>
                     </span>
                   </div>
                   {interviewN == null && (
@@ -655,7 +683,7 @@ export default function FindingDetailView({
                     <span className="text-sm font-semibold text-slate-800">Survey</span>
                     <span className="text-xs text-slate-500">&ge; 30% &rarr; 3 &middot; &ge; 15% &rarr; 2 &middot; below 15% &rarr; 1</span>
                   </div>
-                  <div className="mt-3 flex flex-wrap items-end gap-3">
+                  <div className="mt-3 flex flex-wrap items-end gap-2">
                     <label className="block">
                       <span className="field-label">Users who mentioned it</span>
                       <input
@@ -693,12 +721,14 @@ export default function FindingDetailView({
                         className="input w-20"
                       />
                     </label>
-                    <span className="text-sm text-slate-600 pb-2">
-                      survey respondents
-                      {surveyPreview.percent != null && <> ({surveyPreview.percent}%)</>}
-                    </span>
-                    <span className="ml-auto pb-2 text-sm font-bold text-bsi-700">
-                      {surveyPreview.score != null ? `Score ${surveyPreview.score} / 3` : "—"}
+                    <span className="ml-auto flex items-baseline gap-2 pb-2">
+                      <span className="text-sm text-slate-600">
+                        survey respondents
+                        {surveyPreview.percent != null && <> ({surveyPreview.percent}%)</>}
+                      </span>
+                      <span className="text-sm font-bold text-bsi-700">
+                        {surveyPreview.score != null ? `Score ${surveyPreview.score} / 3` : "—"}
+                      </span>
                     </span>
                   </div>
                   {surveyN == null && (
