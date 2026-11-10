@@ -33,6 +33,12 @@ interface FindingDetailViewProps {
   meId?: string | null;
 }
 
+// ── Finding chip label: cap at 40 characters with an ellipsis so
+// a long finding title never stretches the chip across the page.
+// The full title stays in the tooltip and in the popup itself.
+const chipLabel = (s: string) =>
+  s.length > 40 ? `${s.slice(0, 40).trimEnd()}…` : s;
+
 export default function FindingDetailView({
   finding,
   allFindings,
@@ -456,7 +462,7 @@ export default function FindingDetailView({
                     title={idea.description ? `${idea.title} — ${idea.description}` : idea.title}
                     className="chip chip-bsi transition hover:border-bsi-300 hover:bg-bsi-100"
                   >
-                    <span className="truncate text-sm font-semibold text-bsi-900">{idea.title}</span>
+                    <span className="truncate text-sm font-semibold text-bsi-900">{chipLabel(idea.title || "")}</span>
                     {idea.description && (
                       <span className="max-w-48 truncate text-xs text-bsi-700">· {idea.description}</span>
                     )}
