@@ -245,7 +245,13 @@ export async function GET(
       const byCategory = new Map<string | null, any[]>();
       for (const idea of ideas) {
         const linkedIds = (idea.findingIds || []).filter((fid: string) => projectFindingIds.has(fid));
-        if (linkedIds.length === 0) continue;
+        // A finding belongs to this project when it is linked to one
+        // of the project's ideas, OR when it is scoped to the project
+        // directly (project_id) — so a finding can show on the
+        // Findings tab even with no idea linked to it, and still stay
+        // out of the other project.
+        const scopedToProject = idea.projectId && idea.projectId === project.id;
+        if (linkedIds.length === 0 && !scopedToProject) continue;
         const groupKey = idea.categoryId ?? null;
         const entry = {
           id: idea.id,
@@ -254,6 +260,7 @@ export async function GET(
           imageUrl: idea.imageUrl || null,
           categoryId: idea.categoryId ?? null,
           verbatimEvidence: idea.verbatimEvidence || "",
+          projectId: idea.projectId ?? null,
           subFindings: subMap[idea.id] || [],
           linkedIdeas: linkedIds.map((fid: string) => ({ id: fid, title: poolTitleById.get(fid) || "Untitled" })),
         };

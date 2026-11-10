@@ -721,6 +721,7 @@ export const dbService = {
         imageUrl: i.image_url || null,
         categoryId: i.category_id ?? null,
         verbatimEvidence: i.verbatim_evidence || "",
+        projectId: i.project_id ?? null,
         findingIds: linkMap[i.id] || [],
         createdAt: i.created_at,
       }));
@@ -746,7 +747,7 @@ export const dbService = {
     }
   },
 
-  async createIdea(data: { title: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null; verbatimEvidence?: string | null }) {
+  async createIdea(data: { title: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null; verbatimEvidence?: string | null; projectId?: string | null }) {
     if (isSupabaseConfigured && supabase) {
       // image_url is only sent when an image was uploaded — so a
       // create never fails on a production table that doesn't have the
@@ -755,6 +756,7 @@ export const dbService = {
       if (data.imageUrl) row.image_url = data.imageUrl;
       if (data.categoryId) row.category_id = data.categoryId;
       if (data.verbatimEvidence) row.verbatim_evidence = data.verbatimEvidence;
+      if (data.projectId) row.project_id = data.projectId;
       const { data: idea, error } = await supabase
         .from("ideas")
         .insert(row)
@@ -770,7 +772,7 @@ export const dbService = {
     return { id, title: data.title, description: data.description || "", sumber: data.sumber || [] };
   },
 
-  async updateIdea(id: string, data: { title?: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null; verbatimEvidence?: string | null }) {
+  async updateIdea(id: string, data: { title?: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null; verbatimEvidence?: string | null; projectId?: string | null }) {
     if (isSupabaseConfigured && supabase) {
       const patch: any = {};
       if (data.title !== undefined) patch.title = data.title;
@@ -781,6 +783,9 @@ export const dbService = {
       // carries the field, so an edit from an older client never fails
       // on a production table that doesn't have the column yet.
       if (data.verbatimEvidence !== undefined) patch.verbatim_evidence = data.verbatimEvidence || null;
+      // projectId undefined = leave it alone; null = clear it (back
+      // to shared/unscoped); a string = scope it to that project.
+      if (data.projectId !== undefined) patch.project_id = data.projectId;
       // categoryId undefined = leave it alone; null = clear it; a
       // string = assign it. Only sent when the form actually carries
       // the field, so an edit from an older client never fails on a
@@ -804,6 +809,11 @@ export const dbService = {
       // instead of failing the whole edit.
       if (error && data.verbatimEvidence !== undefined && String((error as any)?.message || "").includes("verbatim_evidence")) {
         delete patch.verbatim_evidence;
+        ({ data: idea, error } = await supabase.from("ideas").update(patch).eq("id", id).select().single());
+      }
+      // Same safety net for project_id.
+      if (error && data.projectId !== undefined && String((error as any)?.message || "").includes("project_id")) {
+        delete patch.project_id;
         ({ data: idea, error } = await supabase.from("ideas").update(patch).eq("id", id).select().single());
       }
       if (error) throw error;
