@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import {
@@ -589,10 +589,27 @@ export default function ProjectResultViewer({
   // tab.
   const [ideaDetail, setIdeaDetail] = useState<any | null>(null);
   const [findingDetail, setFindingDetail] = useState<any | null>(null);
+  // Lookup for opening a finding's detail from anywhere on the page
+  // (e.g. a related finding inside the idea popup): the full finding
+  // record — category name + linked ideas — keyed by id.
+  const findingById = useMemo(() => {
+    const map: Record<string, any> = {};
+    for (const g of project?.findingsByCategory || []) {
+      for (const f of g.findings || []) {
+        map[f.id] = { ...f, categoryName: g.categoryName };
+      }
+    }
+    return map;
+  }, [project?.findingsByCategory]);
   useEffect(() => {
     if (!ideaDetail && !findingDetail) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setIdeaDetail(null); setFindingDetail(null); }
+      // Escape closes the topmost popup first (finding detail over
+      // idea detail), then the one beneath it.
+      if (e.key === "Escape") {
+        if (findingDetail) setFindingDetail(null);
+        else setIdeaDetail(null);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -1176,11 +1193,26 @@ export default function ProjectResultViewer({
                 <section>
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Related findings</p>
                   <ul className="mt-2 space-y-1.5">
-                    {(ideaDetail.relatedIdeas || []).map((r: any) => (
-                      <li key={r.id} className="rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-sm font-medium text-slate-700">
-                        {r.title}
-                      </li>
-                    ))}
+                    {(ideaDetail.relatedIdeas || []).map((r: any) => {
+                      // Open the finding's own detail popup on top of
+                      // this one (drill-down); closing it returns here.
+                      // Fall back to the row's own data if the finding
+                      // is not in this project's category list.
+                      const full = findingById[r.id];
+                      const target = full || { ...r, categoryName: "Uncategorized", linkedIdeas: [{ id: ideaDetail.id, title: ideaDetail.title }] };
+                      return (
+                        <li key={r.id}>
+                          <button
+                            type="button"
+                            onClick={() => setFindingDetail(target)}
+                            className="group flex w-full items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 text-left text-sm font-medium text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-emerald-700"
+                          >
+                            <span className="min-w-0">{r.title}</span>
+                            <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </section>
               )}
