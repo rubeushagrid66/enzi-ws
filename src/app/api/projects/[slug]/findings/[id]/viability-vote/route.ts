@@ -53,7 +53,9 @@ export async function POST(
     }
 
     // Resolve who is voting. Label-role users always vote as themselves.
-    const me = await dbService.resolveMeParticipant(params.slug, session);
+    // The project is loaded once here and passed to resolveMeParticipant
+    // so the vote does not pay for two full project loads per save.
+    const me = await dbService.resolveMeParticipant(params.slug, session, project);
     if (!me) {
       // Label-role user assigned to another project: no participant row
       // exists for them here, so they cannot vote in this project.
@@ -128,14 +130,12 @@ export async function POST(
     }
 
     // A reason-only update (score omitted) keeps the existing score;
-    // an explicit null clears the vote.
+    // an explicit null clears the vote. Look the single vote up
+    // directly instead of scanning the project's findings.
     let effectiveScore = score;
     if (score === undefined) {
-      const f = (project.findings || []).find((x: any) => x.id === findingId);
-      const existing = (f?.viabilityVotes || []).find(
-        (v: any) => v.participantId === voterId && v.aspectId === aspectId
-      );
-      effectiveScore = existing?.score ?? null;
+      const existing = await dbService.getViabilityVote(findingId, voterId, aspectId);
+      effectiveScore = (existing as any)?.score ?? null;
     }
 
     const vote = await dbService.upsertViabilityVote(

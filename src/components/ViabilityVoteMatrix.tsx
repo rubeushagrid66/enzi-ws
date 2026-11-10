@@ -72,12 +72,19 @@ export default function ViabilityVoteMatrix({
   const [meId, setMeId] = useState<string | null>(null);
   const [meGroupId, setMeGroupId] = useState<string | null>(null);
   const [meFailed, setMeFailed] = useState(false);
+  // True while the "me" lookup is in flight for a signed-in user.
+  // Until it resolves the table must NOT fall back to the read-only
+  // group-average view — that is what made the scoring controls look
+  // absent for ~30–60s. While loading, the aspect rows render with
+  // disabled buttons and a "Loading…" note instead.
+  const [meLoading, setMeLoading] = useState(false);
   // The "me" participant's display name (only needed when the project
   // data does not list the row yet).
   const [meName, setMeName] = useState<string | null>(null);
   useEffect(() => {
     if (!currentUser) return;
     let cancelled = false;
+    setMeLoading(true);
     (async () => {
       try {
         const res = await fetch(`/api/projects/${project.slug}/participants/me`, {
@@ -98,8 +105,12 @@ export default function ViabilityVoteMatrix({
         } else if (!cancelled) {
           setMeFailed(true);
         }
+        if (!cancelled) setMeLoading(false);
       } catch {
-        if (!cancelled) setMeFailed(true);
+        if (!cancelled) {
+          setMeFailed(true);
+          setMeLoading(false);
+        }
       }
     })();
     return () => {
@@ -438,6 +449,34 @@ export default function ViabilityVoteMatrix({
                     return (
                       <React.Fragment key={aspect.id}>
                         {rows.length === 0 ? (
+                          meLoading && currentUser ? (
+                            // "Me" lookup still in flight for a signed-in
+                            // scorer: show the scoring controls disabled
+                            // with a loading note, instead of the
+                            // read-only group average, so the table never
+                            // looks uneditable while their own row loads.
+                            <tr key={aspect.id} className="hover:bg-slate-50/80 transition align-top">
+                              <td className="py-2.5 px-3">{renderAspectTitle(aspect, fw)}</td>
+                              <td className="py-2.5 px-3 text-center whitespace-nowrap">
+                                <span className="inline-flex items-center gap-1" role="group" aria-label={`Score for ${aspect.name}`}>
+                                  {[1, 2, 3].map((n) => (
+                                    <button
+                                      key={n}
+                                      type="button"
+                                      disabled
+                                      aria-label={`Score ${n} for ${aspect.name}`}
+                                      className="h-8 w-8 rounded-lg border border-slate-200 bg-slate-50 text-sm font-bold text-slate-400"
+                                    >
+                                      {n}
+                                    </button>
+                                  ))}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 min-w-[180px]">
+                                <span className="text-xs text-slate-400 italic">Loading…</span>
+                              </td>
+                            </tr>
+                          ) : (
                             // Viewer with no "me" in this project/group
                             // (e.g. a CMS login viewing Value Chain, or a
                             // failed "me" lookup): one read-only row with
@@ -460,6 +499,7 @@ export default function ViabilityVoteMatrix({
                                 )}
                               </td>
                             </tr>
+                          )
                         ) : (
                           rows.map((p: any) => {
                           const isMe = p.id === meId;

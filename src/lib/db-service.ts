@@ -1218,6 +1218,26 @@ export const dbService = {
    * is what feeds the per-participant V/F formulas. When `reason` is
    * undefined the existing reason is kept; pass null to clear it.
    */
+  /** A single viability vote (finding + participant + aspect), or null.
+   *  A one-row lookup — the vote route uses it for reason-only updates
+   *  instead of loading the whole project to scan its findings. */
+  async getViabilityVote(findingId: string, participantId: string, aspectId: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("viability_votes")
+        .select("*")
+        .eq("finding_id", findingId)
+        .eq("participant_id", participantId)
+        .eq("aspect_id", aspectId)
+        .maybeSingle();
+      if (error || !data) return null;
+      return data;
+    }
+    return (prisma as any).viabilityVote?.findFirst?.({
+      where: { findingId, participantId, aspectId },
+    }).catch(() => null) ?? null;
+  },
+
   async upsertViabilityVote(
     findingId: string,
     participantId: string,
@@ -1818,8 +1838,11 @@ export const dbService = {
    * moved there, and a new row is created there. Otherwise the old
    * behaviour above applies.
    */
-  async resolveMeParticipant(projectSlug: string, session: { id: string; name: string; role: string }) {
-    const project = await dbService.getProjectBySlug(projectSlug);
+  async resolveMeParticipant(projectSlug: string, session: { id: string; name: string; role: string }, preloadedProject?: any) {
+    // Callers that already loaded the project (e.g. the vote route)
+    // pass it in so this does not re-fetch the whole project — a vote
+    // used to pay for two full project loads per save.
+    const project = preloadedProject ?? (await dbService.getProjectBySlug(projectSlug));
     if (!project) throw new NotFoundError("Project not found");
     const allParticipants: any[] = (project.groups || []).flatMap((g: any) =>
       (g.participants || []).map((p: any) => ({ ...p, groupId: g.id, groupName: g.name }))
