@@ -460,7 +460,7 @@ export default function FindingDetailView({
               </span>
             )}
           </div>
-          <h2 id="finding-detail-title" className="mt-3 font-serif text-2xl font-bold text-slate-900 leading-tight sm:text-[2rem]">
+          <h2 id="finding-detail-title" className="mt-3 font-sans text-2xl font-bold text-slate-900 leading-tight sm:text-[2rem]">
             {localFinding.title}
           </h2>
           {localFinding.description && (
