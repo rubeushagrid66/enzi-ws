@@ -103,6 +103,19 @@ export default function FeasibilityMatrix({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Board pixel size, for clamping the ghost markers of other findings
+  // inside the board — a raw 0/100 position would otherwise hang half
+  // the marker off the edge, where overflow-hidden clips it to a sliver.
+  const [boardSize, setBoardSize] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const update = () => setBoardSize({ w: el.clientWidth, h: el.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   // Latest dragged coordinates. React state updates are async, so reading
   // posX/posY in the pointer-up handler can save the previous position.
   // The ref always holds the newest values from the last pointer move.
@@ -373,25 +386,33 @@ export default function FeasibilityMatrix({
 
       {/* 2x2 Matrix Canvas */}
       <div className="relative">
-        {/* Y-Axis Labels (Impact) — hidden on phones, where they crowd
-            the board's left edge. Top = high impact, bottom = low. */}
-        <div className="absolute -left-6 top-[15%] -translate-y-1/2 -rotate-90 text-xs font-bold uppercase tracking-widest text-slate-500 select-none hidden sm:block">
-          Impact Tinggi
-        </div>
-        <div className="absolute -left-6 top-[85%] -translate-y-1/2 -rotate-90 text-xs font-bold uppercase tracking-widest text-slate-500 select-none hidden sm:block">
-          Impact Rendah
-        </div>
-
         {/* X-Axis Label (Effort) — short form on phones. */}
         <div className="text-center text-xs font-bold uppercase tracking-widest text-slate-500 select-none pb-1">
           <span className="sm:hidden">← Tinggi ———— Rendah →</span>
           <span className="hidden sm:inline">← Effort Tinggi —————— Effort Rendah →</span>
         </div>
 
-        <div
-          ref={containerRef}
-          className="relative h-[380px] w-full rounded-2xl border-2 border-slate-300 bg-white overflow-hidden shadow-inner select-none sm:h-[480px]"
-        >
+        {/* Board + Y-axis labels. The left rail (sm:pl-8) reserves room
+            for the vertical Impact labels so they sit beside the board
+            instead of overlapping or clipping against its left edge. */}
+        <div className="relative sm:pl-8">
+          {/* Y-Axis Labels (Impact) — vertical text via writing-mode,
+              hidden on phones. Top = high impact, bottom = low. */}
+          <div className="absolute left-0 top-[15%] -translate-y-1/2 hidden sm:block select-none">
+            <span className="text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl] whitespace-nowrap">
+              Impact Tinggi
+            </span>
+          </div>
+          <div className="absolute left-0 top-[85%] -translate-y-1/2 hidden sm:block select-none">
+            <span className="text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl] whitespace-nowrap">
+              Impact Rendah
+            </span>
+          </div>
+
+          <div
+            ref={containerRef}
+            className="relative h-[380px] w-full rounded-2xl border-2 border-slate-300 bg-white overflow-hidden shadow-inner select-none sm:h-[480px]"
+          >
           {/* Quadrant Dividers */}
           <div className="absolute inset-x-0 top-1/2 h-0.5 border-t-2 border-dashed border-slate-300 pointer-events-none" />
           <div className="absolute inset-y-0 left-1/2 w-0.5 border-l-2 border-dashed border-slate-300 pointer-events-none" />
@@ -453,12 +474,24 @@ export default function FeasibilityMatrix({
             .map(({ finding: other, pos }) => {
               const ox = pos.x ?? 50;
               const oy = pos.y ?? 50;
+              // Clamp the marker's centre so the whole chip stays on the
+              // board: half the chip is ~78px wide / ~15px tall. The
+              // clamp is in percent of the measured board size, so it
+              // holds at any viewport width.
+              const halfW = 78;
+              const halfH = 15;
+              const minX = boardSize.w > 0 ? (halfW / boardSize.w) * 100 : 10;
+              const maxX = 100 - minX;
+              const minY = boardSize.h > 0 ? (halfH / boardSize.h) * 100 : 5;
+              const maxY = 100 - minY;
+              const cx = Math.min(Math.max(ox, minX), maxX);
+              const cy = Math.min(Math.max(oy, minY), maxY);
               return (
                 <div
                   key={other.id}
                   style={{
-                    left: `${ox}%`,
-                    bottom: `${oy}%`,
+                    left: `${cx}%`,
+                    bottom: `${cy}%`,
                     transform: "translate(-50%, 50%)",
                   }}
                   title={`${other.title} (${pos.quadrant?.replace("_", " ") || "Unassigned"}${pos.pinned ? " · manual" : ""})`}
@@ -522,6 +555,7 @@ export default function FeasibilityMatrix({
               <span>Eff: {(100 - posX).toFixed(0)}%</span>
             </div>
           </div>
+        </div>
         </div>
 
         {/* Legend */}
