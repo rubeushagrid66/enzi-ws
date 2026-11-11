@@ -150,17 +150,21 @@ export default function AdminSidebar({
                           }`}
                         >
                           <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${active ? "text-bsi-700" : "text-slate-500"}`} />
-                          <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">{item.label}</span>
-                          {item.badge && (
-                            <span className={`rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide ${active ? "bg-bsi-100 text-bsi-800" : "bg-slate-100 text-slate-600"}`}>
-                              {item.badge}
+                          <span className="min-w-0 flex-1">
+                            {item.badge && (
+                              <span className={`mb-1 inline-block rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide ${active ? "bg-bsi-100 text-bsi-800" : "bg-slate-100 text-slate-600"}`}>
+                                {item.badge}
+                              </span>
+                            )}
+                            <span className="flex items-start gap-2">
+                              <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">{item.label}</span>
+                              {(count !== undefined || (projectLoading && (item.id === "groups" || item.id === "aspects"))) && (
+                                <span className={`shrink-0 text-xs font-medium tabular-nums ${active ? "text-bsi-700" : "text-slate-500"}`}>
+                                  {count !== undefined ? count : "…"}
+                                </span>
+                              )}
                             </span>
-                          )}
-                          {(count !== undefined || (projectLoading && (item.id === "groups" || item.id === "aspects"))) && (
-                            <span className={`text-xs font-medium tabular-nums ${active ? "text-bsi-700" : "text-slate-500"}`}>
-                              {count !== undefined ? count : "…"}
-                            </span>
-                          )}
+                          </span>
                         </Link>
                       </li>
                     );
