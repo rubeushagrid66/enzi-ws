@@ -270,7 +270,13 @@ function GroupsView({
       {groups.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {groups.map((g: any) => {
-            const count = groupFindings[g.id]?.length;
+            // Every group scores every idea in the project, so the
+            // count is the project's idea count — already loaded with
+            // the project (and filtered by the same Platform rule as
+            // the per-group fetch), so it shows instantly instead of
+            // waiting for the per-group fetch. The per-group fetch
+            // still supplies the detail list when a group is opened.
+            const count = groupFindings[g.id]?.length ?? (project.findings || []).length;
             const participants: any[] = (g.participants || []).filter((p: any) => p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR");
             // "Me": this group holds the viewer's own participant row.
             // ADMIN/FACILITATOR are overseers, not group members — they
