@@ -362,10 +362,33 @@ export default function FeasibilityMatrix({
 
       {/* 2x2 Matrix Canvas */}
       <div className="relative">
-        {/* X-Axis Label (Effort) — short form on phones. */}
+        {/* X-Axis Label (Effort) — short form on phones. The separator
+            uses the same 6 (desktop) / 4 (phone) small bars as the Y-axis
+            (h-px w-2.5 bg-slate-500), arranged in a row, so both axes
+            share one dash style. */}
         <div className="text-center text-xs font-bold uppercase tracking-widest text-slate-500 select-none pb-1">
-          <span className="sm:hidden">← Tinggi ———— Rendah →</span>
-          <span className="hidden sm:inline">← Effort Tinggi —————— Effort Rendah →</span>
+          <span className="sm:hidden inline-flex items-center justify-center gap-1">
+            <span aria-hidden="true">←</span> Tinggi
+            <span className="flex items-center gap-[3px]" aria-hidden="true">
+              <span className="block h-px w-2.5 bg-slate-500" />
+              <span className="block h-px w-2.5 bg-slate-500" />
+              <span className="block h-px w-2.5 bg-slate-500" />
+              <span className="block h-px w-2.5 bg-slate-500" />
+            </span>
+            Rendah <span aria-hidden="true">→</span>
+          </span>
+          <span className="hidden sm:inline-flex items-center justify-center gap-1">
+            <span aria-hidden="true">←</span> Effort Tinggi
+            <span className="flex items-center gap-[3px]" aria-hidden="true">
+              <span className="block h-px w-2.5 bg-slate-500" />
+              <span className="block h-px w-2.5 bg-slate-500" />
+              <span className="block h-px w-2.5 bg-slate-500" />
+              <span className="block h-px w-2.5 bg-slate-500" />
+              <span className="block h-px w-2.5 bg-slate-500" />
+              <span className="block h-px w-2.5 bg-slate-500" />
+            </span>
+            Effort Rendah <span aria-hidden="true">→</span>
+          </span>
         </div>
 
         {/* Board + Y-axis. The left rail (sm:pl-8) reserves room for
@@ -375,31 +398,21 @@ export default function FeasibilityMatrix({
           {/* Y-Axis — the same arrow/dash format as the X-axis, vertical:
               ↑ IMPACT TINGGI ——— IMPACT RENDAH ↓. The whole group is
               centred in the rail (not pushed to the top/bottom), and the
-              separator is 6 solid horizontal bars (20px wide x 2px tall,
-              writing-mode forced horizontal-tb) — the same "-" shape the
-              X-axis uses, sized up so they unmistakably read as horizontal
-              dashes, not vertical bars. The text is flipped (rotate-180)
-              so it reads bottom-to-top, the easy direction for a
-              left-side axis. Hidden on phones. */}
+              separator is exactly 6 dashes, like the X-axis. The text is
+              flipped (rotate-180) so it reads bottom-to-top, the easy
+              direction for a left-side axis. Hidden on phones. */}
           <div className="absolute left-0 top-0 bottom-0 hidden select-none sm:flex flex-col items-center justify-center gap-2">
             <span className="text-xs font-bold leading-none text-slate-500" aria-hidden="true">↑</span>
             <span className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl]" style={{ transform: "rotate(180deg)" }}>
               Impact Tinggi
             </span>
-            {/* Separator: 6 solid horizontal bars, 20px wide x 2px tall
-                (w-5 h-0.5), with writing-mode forced horizontal-tb.
-                The previous 11x1px em-dash glyphs measured horizontal
-                but were too tiny to read as "-" in the vertical rail, so
-                they looked like vertical bars at a glance. These bars
-                are physical rectangles, 10x wider than tall, so they
-                unmistakably read as "-" like the X-axis dashes. */}
-            <span className="flex flex-col items-center gap-2" aria-hidden="true" style={{ writingMode: "horizontal-tb" }}>
-              <span className="block h-0.5 w-5 bg-slate-500" />
-              <span className="block h-0.5 w-5 bg-slate-500" />
-              <span className="block h-0.5 w-5 bg-slate-500" />
-              <span className="block h-0.5 w-5 bg-slate-500" />
-              <span className="block h-0.5 w-5 bg-slate-500" />
-              <span className="block h-0.5 w-5 bg-slate-500" />
+            <span className="flex flex-col items-center gap-[3px]" aria-hidden="true">
+              <span className="block h-px w-2.5 bg-slate-500" />
+              <span className="block h-px w-2.5 bg-slate-500" />
+              <span className="block h-px w-2.5 bg-slate-500" />
+              <span className="block h-px w-2.5 bg-slate-500" />
+              <span className="block h-px w-2.5 bg-slate-500" />
+              <span className="block h-px w-2.5 bg-slate-500" />
             </span>
             <span className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl]" style={{ transform: "rotate(180deg)" }}>
               Impact Rendah
