@@ -508,16 +508,10 @@ function FindingsByCategoryView({
   onSelectFinding: (f: any) => void;
 }) {
   const [expanded, setExpanded] = useState<Set<string | null>>(new Set());
-  const didAutoExpand = useRef(false);
-  useEffect(() => {
-    // Open the first category once the data arrives, so the tab is
-    // not an empty wall of headers. After that the user owns the
-    // expand/collapse state.
-    if (!didAutoExpand.current && findingsByCategory.length > 0) {
-      didAutoExpand.current = true;
-      setExpanded(new Set([findingsByCategory[0].categoryId]));
-    }
-  }, [findingsByCategory]);
+  // All categories start COLLAPSED — the Findings tab opens as a
+  // clean list of category headers, and the user expands the ones
+  // they want to read. (The first category used to auto-expand on
+  // load; that was removed so nothing is open by default.)
   const toggle = (categoryId: string | null) => {
     setExpanded((prev) => {
       const next = new Set(prev);
