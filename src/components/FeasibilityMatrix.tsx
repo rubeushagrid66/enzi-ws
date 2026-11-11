@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Sparkles, Move, Check, AlertCircle, ShieldAlert } from "lucide-react";
-import { FeasibilityQuadrant, findingBoardPosition, findingBoardPositionForScores, groupAverageScores } from "@/lib/scoring";
+import { FeasibilityQuadrant, findingBoardPosition, findingBoardPositionForScores } from "@/lib/scoring";
 
 interface FindingItem {
   id: string;
@@ -64,17 +64,6 @@ export default function FeasibilityMatrix({
         groupScores.feasibility
       )
     : findingBoardPosition(finding, meId);
-  // A position for another finding on the same board, scoped to the
-  // selected group when one is given (that group's average V/F for that
-  // finding, and its D only if the group is assigned to it).
-  const otherPos = (other: FindingItem) => {
-    if (!groupScores || !groupParticipantIds) return findingBoardPosition(other, meId);
-    const assigned = other.groupIds || [];
-    const isAssigned = assigned.length === 0 || (selectedGroupId != null && assigned.includes(selectedGroupId));
-    const d = isAssigned ? (other.scores?.desirability ?? null) : null;
-    const vf = groupAverageScores(other.scores?.participantScores, groupParticipantIds);
-    return findingBoardPositionForScores(other, d, vf.viability, vf.feasibility);
-  };
   const placedPoint = (() => {
     // A computed position snaps to the center of its quadrant. The 1–3
     // scale only yields 0/50/100, so a raw computed position often lands
@@ -103,19 +92,6 @@ export default function FeasibilityMatrix({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  // Board pixel size, for clamping the ghost markers of other findings
-  // inside the board — a raw 0/100 position would otherwise hang half
-  // the marker off the edge, where overflow-hidden clips it to a sliver.
-  const [boardSize, setBoardSize] = useState({ w: 0, h: 0 });
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const update = () => setBoardSize({ w: el.clientWidth, h: el.clientHeight });
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
   // Latest dragged coordinates. React state updates are async, so reading
   // posX/posY in the pointer-up handler can save the previous position.
   // The ref always holds the newest values from the last pointer move.
@@ -392,21 +368,24 @@ export default function FeasibilityMatrix({
           <span className="hidden sm:inline">← Effort Tinggi —————— Effort Rendah →</span>
         </div>
 
-        {/* Board + Y-axis labels. The left rail (sm:pl-8) reserves room
-            for the vertical Impact labels so they sit beside the board
-            instead of overlapping or clipping against its left edge. */}
+        {/* Board + Y-axis. The left rail (sm:pl-8) reserves room for
+            the vertical Impact axis so it sits beside the board instead
+            of overlapping or clipping against its left edge. */}
         <div className="relative sm:pl-8">
-          {/* Y-Axis Labels (Impact) — vertical text via writing-mode,
-              hidden on phones. Top = high impact, bottom = low. */}
-          <div className="absolute left-0 top-[15%] -translate-y-1/2 hidden sm:block select-none">
-            <span className="text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl] whitespace-nowrap">
+          {/* Y-Axis — the same arrow/dash format as the X-axis, vertical:
+              ↑ IMPACT TINGGI ——— IMPACT RENDAH ↓. The text is flipped
+              (rotate-180) so it reads bottom-to-top, the easy direction
+              for a left-side axis. Hidden on phones. */}
+          <div className="absolute left-0 top-0 bottom-0 hidden select-none sm:flex flex-col items-center justify-between py-1">
+            <span className="text-xs font-bold leading-none text-slate-500" aria-hidden="true">↑</span>
+            <span className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl] rotate-180">
               Impact Tinggi
             </span>
-          </div>
-          <div className="absolute left-0 top-[85%] -translate-y-1/2 hidden sm:block select-none">
-            <span className="text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl] whitespace-nowrap">
+            <span className="w-px flex-1 border-l-2 border-dashed border-slate-300" aria-hidden="true" />
+            <span className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl] rotate-180">
               Impact Rendah
             </span>
+            <span className="text-xs font-bold leading-none text-slate-500" aria-hidden="true">↓</span>
           </div>
 
           <div
@@ -465,47 +444,9 @@ export default function FeasibilityMatrix({
             </div>
           </div>
 
-          {/* Ghost / Context Markers of Other Findings in the Project.
-              Each shows at its own board position for this viewer
-              (pinned, or computed from that viewer's D/V/F). */}
-          {allFindings
-            .map((other) => ({ finding: other, pos: otherPos(other) }))
-            .filter(({ finding: f, pos }) => f.id !== finding.id && pos.x != null && pos.y != null)
-            .map(({ finding: other, pos }) => {
-              const ox = pos.x ?? 50;
-              const oy = pos.y ?? 50;
-              // Clamp the marker's centre so the whole chip stays on the
-              // board: half the chip is ~90px wide. The top edge also
-              // clears the quadrant title (~32px), so a chip pinned to
-              // the top sits below the title instead of overlapping it.
-              const halfW = 90;
-              const halfHBottom = 22;
-              const halfHTop = 56;
-              const minX = boardSize.w > 0 ? (halfW / boardSize.w) * 100 : 12;
-              const maxX = 100 - minX;
-              const minY = boardSize.h > 0 ? (halfHBottom / boardSize.h) * 100 : 6;
-              const maxY = boardSize.h > 0 ? 100 - (halfHTop / boardSize.h) * 100 : 88;
-              const cx = Math.min(Math.max(ox, minX), maxX);
-              const cy = Math.min(Math.max(oy, minY), maxY);
-              return (
-                <div
-                  key={other.id}
-                  style={{
-                    left: `${cx}%`,
-                    bottom: `${cy}%`,
-                    transform: "translate(-50%, 50%)",
-                  }}
-                  title={`${other.title} (${pos.quadrant?.replace("_", " ") || "Unassigned"}${pos.pinned ? " · manual" : ""})`}
-                  className="absolute pointer-events-none z-10 flex items-center gap-1 opacity-45 hover:opacity-100 transition"
-                >
-                  <div className="h-4 w-4 rounded-full bg-slate-400 border-2 border-white shadow-xs" />
-                  <span className="max-w-[140px] whitespace-normal break-words rounded border border-slate-200 bg-white/90 px-1.5 py-0.5 text-xs font-medium leading-tight text-slate-600 shadow-xs">
-                    {other.title}
-                  </span>
-                </div>
-              );
-            })}
-
+          {/* The board shows only the opened idea's post-it — the other
+              findings' ghost markers are hidden (they cluttered the
+              board and overlapped the quadrant titles). */}
           {/* Active Finding Post-It Note */}
           <div
             style={{
