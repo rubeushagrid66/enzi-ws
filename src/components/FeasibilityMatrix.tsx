@@ -378,11 +378,11 @@ export default function FeasibilityMatrix({
               for a left-side axis. Hidden on phones. */}
           <div className="absolute left-0 top-0 bottom-0 hidden select-none sm:flex flex-col items-center justify-between py-1">
             <span className="text-xs font-bold leading-none text-slate-500" aria-hidden="true">↑</span>
-            <span className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl] rotate-180">
+            <span className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl]" style={{ transform: "rotate(180deg)" }}>
               Impact Tinggi
             </span>
             <span className="w-px flex-1 border-l-2 border-dashed border-slate-300" aria-hidden="true" />
-            <span className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl] rotate-180">
+            <span className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl]" style={{ transform: "rotate(180deg)" }}>
               Impact Rendah
             </span>
             <span className="text-xs font-bold leading-none text-slate-500" aria-hidden="true">↓</span>
