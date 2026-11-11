@@ -475,15 +475,16 @@ export default function FeasibilityMatrix({
               const ox = pos.x ?? 50;
               const oy = pos.y ?? 50;
               // Clamp the marker's centre so the whole chip stays on the
-              // board: half the chip is ~78px wide / ~15px tall. The
-              // clamp is in percent of the measured board size, so it
-              // holds at any viewport width.
-              const halfW = 78;
-              const halfH = 15;
-              const minX = boardSize.w > 0 ? (halfW / boardSize.w) * 100 : 10;
+              // board: half the chip is ~90px wide. The top edge also
+              // clears the quadrant title (~32px), so a chip pinned to
+              // the top sits below the title instead of overlapping it.
+              const halfW = 90;
+              const halfHBottom = 22;
+              const halfHTop = 56;
+              const minX = boardSize.w > 0 ? (halfW / boardSize.w) * 100 : 12;
               const maxX = 100 - minX;
-              const minY = boardSize.h > 0 ? (halfH / boardSize.h) * 100 : 5;
-              const maxY = 100 - minY;
+              const minY = boardSize.h > 0 ? (halfHBottom / boardSize.h) * 100 : 6;
+              const maxY = boardSize.h > 0 ? 100 - (halfHTop / boardSize.h) * 100 : 88;
               const cx = Math.min(Math.max(ox, minX), maxX);
               const cy = Math.min(Math.max(oy, minY), maxY);
               return (
@@ -498,7 +499,7 @@ export default function FeasibilityMatrix({
                   className="absolute pointer-events-none z-10 flex items-center gap-1 opacity-45 hover:opacity-100 transition"
                 >
                   <div className="h-4 w-4 rounded-full bg-slate-400 border-2 border-white shadow-xs" />
-                  <span className="text-xs font-medium text-slate-600 bg-white/90 px-1.5 py-0.5 rounded shadow-xs max-w-[120px] truncate border border-slate-200">
+                  <span className="max-w-[140px] whitespace-normal break-words rounded border border-slate-200 bg-white/90 px-1.5 py-0.5 text-xs font-medium leading-tight text-slate-600 shadow-xs">
                     {other.title}
                   </span>
                 </div>

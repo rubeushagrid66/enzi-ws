@@ -204,10 +204,19 @@ export default function AdminDashboard() {
     // Category is admin-only too. Label-role users only have Groups &
     // Participants and Viability Aspects: any other tab (e.g. via a
     // pasted URL) falls back to Groups.
+    // When the URL points at a tab the user can't open, fall back to a
+    // tab they can — and rewrite the URL to match, so the address bar
+    // never disagrees with the active menu (e.g. a label user landing
+    // on /dashboard/ideas must end up on /dashboard/groups, not on
+    // /dashboard/ideas showing Groups & Participants).
     if (!loading && (urlTab === "users" || urlTab === "categories") && !isAdmin) {
       setActiveTab("findings");
+      const href = ADMIN_NAV.find((i) => i.id === "findings")?.href ?? "/dashboard/ideas";
+      if (pathname !== href) router.replace(href);
     } else if (!loading && isLabelUser && urlTab !== "groups" && urlTab !== "aspects") {
       setActiveTab("groups");
+      const href = ADMIN_NAV.find((i) => i.id === "groups")?.href ?? "/dashboard/groups";
+      if (pathname !== href) router.replace(href);
     } else {
       setActiveTab(urlTab);
     }

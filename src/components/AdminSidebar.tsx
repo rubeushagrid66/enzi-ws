@@ -143,14 +143,14 @@ export default function AdminSidebar({
                           href={item.href}
                           onClick={onClose}
                           aria-current={active ? "page" : undefined}
-                          className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bsi-500 ${
+                          className={`flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bsi-500 ${
                             active
                               ? "bg-bsi-50 font-semibold text-bsi-800"
                               : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                           }`}
                         >
-                          <Icon className={`h-4 w-4 shrink-0 ${active ? "text-bsi-700" : "text-slate-500"}`} />
-                          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                          <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${active ? "text-bsi-700" : "text-slate-500"}`} />
+                          <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">{item.label}</span>
                           {item.badge && (
                             <span className={`rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide ${active ? "bg-bsi-100 text-bsi-800" : "bg-slate-100 text-slate-600"}`}>
                               {item.badge}
