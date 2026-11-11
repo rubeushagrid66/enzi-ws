@@ -375,21 +375,23 @@ export default function FeasibilityMatrix({
           {/* Y-Axis — the same arrow/dash format as the X-axis, vertical:
               ↑ IMPACT TINGGI ——— IMPACT RENDAH ↓. The whole group is
               centred in the rail (not pushed to the top/bottom), and the
-              separator is exactly 6 dashes, like the X-axis. The text is
-              flipped (rotate-180) so it reads bottom-to-top, the easy
-              direction for a left-side axis. Hidden on phones. */}
+              separator is exactly 6 em-dash TEXT characters ("—"), the
+              same characters the X-axis uses — so they read as horizontal
+              dashes, not vertical bars. The text is flipped (rotate-180)
+              so it reads bottom-to-top, the easy direction for a
+              left-side axis. Hidden on phones. */}
           <div className="absolute left-0 top-0 bottom-0 hidden select-none sm:flex flex-col items-center justify-center gap-2">
             <span className="text-xs font-bold leading-none text-slate-500" aria-hidden="true">↑</span>
             <span className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl]" style={{ transform: "rotate(180deg)" }}>
               Impact Tinggi
             </span>
-            <span className="flex flex-col items-center gap-[3px]" aria-hidden="true">
-              <span className="block h-px w-2.5 bg-slate-500" />
-              <span className="block h-px w-2.5 bg-slate-500" />
-              <span className="block h-px w-2.5 bg-slate-500" />
-              <span className="block h-px w-2.5 bg-slate-500" />
-              <span className="block h-px w-2.5 bg-slate-500" />
-              <span className="block h-px w-2.5 bg-slate-500" />
+            <span className="flex flex-col items-center leading-none" aria-hidden="true">
+              <span className="text-xs font-bold leading-none text-slate-500">—</span>
+              <span className="text-xs font-bold leading-none text-slate-500">—</span>
+              <span className="text-xs font-bold leading-none text-slate-500">—</span>
+              <span className="text-xs font-bold leading-none text-slate-500">—</span>
+              <span className="text-xs font-bold leading-none text-slate-500">—</span>
+              <span className="text-xs font-bold leading-none text-slate-500">—</span>
             </span>
             <span className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl]" style={{ transform: "rotate(180deg)" }}>
               Impact Rendah
