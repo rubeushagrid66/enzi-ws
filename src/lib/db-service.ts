@@ -721,6 +721,7 @@ export const dbService = {
         imageUrl: i.image_url || null,
         categoryId: i.category_id ?? null,
         verbatimEvidence: i.verbatim_evidence || "",
+        fitur: i.fitur || "",
         projectId: i.project_id ?? null,
         findingIds: linkMap[i.id] || [],
         createdAt: i.created_at,
@@ -747,7 +748,7 @@ export const dbService = {
     }
   },
 
-  async createIdea(data: { title: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null; verbatimEvidence?: string | null; projectId?: string | null }) {
+  async createIdea(data: { title: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null; verbatimEvidence?: string | null; projectId?: string | null; fitur?: string | null }) {
     if (isSupabaseConfigured && supabase) {
       // image_url is only sent when an image was uploaded — so a
       // create never fails on a production table that doesn't have the
@@ -757,6 +758,7 @@ export const dbService = {
       if (data.categoryId) row.category_id = data.categoryId;
       if (data.verbatimEvidence) row.verbatim_evidence = data.verbatimEvidence;
       if (data.projectId) row.project_id = data.projectId;
+      if (data.fitur) row.fitur = data.fitur;
       const { data: idea, error } = await supabase
         .from("ideas")
         .insert(row)
@@ -772,7 +774,7 @@ export const dbService = {
     return { id, title: data.title, description: data.description || "", sumber: data.sumber || [] };
   },
 
-  async updateIdea(id: string, data: { title?: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null; verbatimEvidence?: string | null; projectId?: string | null }) {
+  async updateIdea(id: string, data: { title?: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null; verbatimEvidence?: string | null; projectId?: string | null; fitur?: string | null }) {
     if (isSupabaseConfigured && supabase) {
       const patch: any = {};
       if (data.title !== undefined) patch.title = data.title;
@@ -783,6 +785,9 @@ export const dbService = {
       // carries the field, so an edit from an older client never fails
       // on a production table that doesn't have the column yet.
       if (data.verbatimEvidence !== undefined) patch.verbatim_evidence = data.verbatimEvidence || null;
+      // fitur undefined = leave it alone; empty string = clear it;
+      // a string = set it. Same guard as verbatimEvidence.
+      if (data.fitur !== undefined) patch.fitur = data.fitur || null;
       // projectId undefined = leave it alone; null = clear it (back
       // to shared/unscoped); a string = scope it to that project.
       if (data.projectId !== undefined) patch.project_id = data.projectId;
@@ -814,6 +819,11 @@ export const dbService = {
       // Same safety net for project_id.
       if (error && data.projectId !== undefined && String((error as any)?.message || "").includes("project_id")) {
         delete patch.project_id;
+        ({ data: idea, error } = await supabase.from("ideas").update(patch).eq("id", id).select().single());
+      }
+      // Same safety net for fitur.
+      if (error && data.fitur !== undefined && String((error as any)?.message || "").includes("fitur")) {
+        delete patch.fitur;
         ({ data: idea, error } = await supabase.from("ideas").update(patch).eq("id", id).select().single());
       }
       if (error) throw error;
@@ -922,13 +932,13 @@ export const dbService = {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase
         .from("idea_findings")
-        .select("idea:ideas(id, title, description, image_url, verbatim_evidence)")
+        .select("idea:ideas(id, title, description, image_url, verbatim_evidence, fitur)")
         .eq("finding_id", findingId);
       if (error || !data) return [];
       return (data as any[])
         .map((r: any) => r.idea)
         .filter((i: any) => i && i.id)
-        .map((i: any) => ({ id: i.id, title: i.title, description: i.description || "", imageUrl: i.image_url || null, verbatimEvidence: i.verbatim_evidence || "" }));
+        .map((i: any) => ({ id: i.id, title: i.title, description: i.description || "", imageUrl: i.image_url || null, verbatimEvidence: i.verbatim_evidence || "", fitur: i.fitur || "" }));
     }
     try {
       const rows = await prisma.$queryRaw<Array<{ id: string; title: string; description: string }>>`

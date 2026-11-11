@@ -65,6 +65,12 @@ export default function FindingPopup({
           ) : (
             <p className="text-sm text-slate-500">No description yet.</p>
           )}
+          {finding.fitur && String(finding.fitur).trim() !== "" && (
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Fitur</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">{finding.fitur}</p>
+            </div>
+          )}
           {finding.verbatimEvidence && String(finding.verbatimEvidence).trim() !== "" && (
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Verbatim Evidence</p>
