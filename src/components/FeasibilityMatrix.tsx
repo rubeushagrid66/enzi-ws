@@ -375,8 +375,9 @@ export default function FeasibilityMatrix({
           {/* Y-Axis — the same arrow/dash format as the X-axis, vertical:
               ↑ IMPACT TINGGI ——— IMPACT RENDAH ↓. The whole group is
               centred in the rail (not pushed to the top/bottom), and the
-              separator is exactly 6 em-dash TEXT characters ("—"), the
-              same characters the X-axis uses — so they read as horizontal
+              separator is 6 solid horizontal bars (20px wide x 2px tall,
+              writing-mode forced horizontal-tb) — the same "-" shape the
+              X-axis uses, sized up so they unmistakably read as horizontal
               dashes, not vertical bars. The text is flipped (rotate-180)
               so it reads bottom-to-top, the easy direction for a
               left-side axis. Hidden on phones. */}
@@ -385,13 +386,20 @@ export default function FeasibilityMatrix({
             <span className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl]" style={{ transform: "rotate(180deg)" }}>
               Impact Tinggi
             </span>
-            <span className="flex flex-col items-center leading-none" aria-hidden="true">
-              <span className="text-xs font-bold leading-none text-slate-500">—</span>
-              <span className="text-xs font-bold leading-none text-slate-500">—</span>
-              <span className="text-xs font-bold leading-none text-slate-500">—</span>
-              <span className="text-xs font-bold leading-none text-slate-500">—</span>
-              <span className="text-xs font-bold leading-none text-slate-500">—</span>
-              <span className="text-xs font-bold leading-none text-slate-500">—</span>
+            {/* Separator: 6 solid horizontal bars, 20px wide x 2px tall
+                (w-5 h-0.5), with writing-mode forced horizontal-tb.
+                The previous 11x1px em-dash glyphs measured horizontal
+                but were too tiny to read as "-" in the vertical rail, so
+                they looked like vertical bars at a glance. These bars
+                are physical rectangles, 10x wider than tall, so they
+                unmistakably read as "-" like the X-axis dashes. */}
+            <span className="flex flex-col items-center gap-2" aria-hidden="true" style={{ writingMode: "horizontal-tb" }}>
+              <span className="block h-0.5 w-5 bg-slate-500" />
+              <span className="block h-0.5 w-5 bg-slate-500" />
+              <span className="block h-0.5 w-5 bg-slate-500" />
+              <span className="block h-0.5 w-5 bg-slate-500" />
+              <span className="block h-0.5 w-5 bg-slate-500" />
+              <span className="block h-0.5 w-5 bg-slate-500" />
             </span>
             <span className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-slate-500 [writing-mode:vertical-rl]" style={{ transform: "rotate(180deg)" }}>
               Impact Rendah
