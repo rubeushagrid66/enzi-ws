@@ -526,7 +526,35 @@ function FindingsByCategoryView({
       return next;
     });
   };
+  // Search — same bar as the Ideas tab, so the user can type whatever
+  // they want. It matches the title, description, fitur, category
+  // name, and verbatim evidence. While a query is active, only
+  // categories with a match are shown, and they auto-expand so the
+  // matches are visible; clearing the query restores the manual
+  // collapsed state.
+  const [query, setQuery] = useState("");
   const total = findingsByCategory.reduce((n, g) => n + g.findings.length, 0);
+  const q = query.trim().toLowerCase();
+  const visibleGroups = findingsByCategory
+    .map((group) => {
+      if (!q) return group;
+      const findings = group.findings.filter((f: any) => {
+        const hay = [
+          f.title,
+          f.description,
+          f.fitur,
+          group.categoryName,
+          f.verbatimEvidence,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(q);
+      });
+      return { ...group, findings };
+    })
+    .filter((g) => g.findings.length > 0);
+  const matchCount = visibleGroups.reduce((n, g) => n + g.findings.length, 0);
   if (findingsByCategory.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center">
@@ -538,14 +566,51 @@ function FindingsByCategoryView({
   }
   return (
     <div className="space-y-4">
+      {/* Search bar — the same one the Ideas tab has. A single row at
+          every width: the search takes the space, the result count
+          pins to the right, so nothing dangles. */}
+      <div className="flex items-center gap-3 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs">
+        <div className="relative min-w-0 flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <label htmlFor="findings-search" className="sr-only">Search findings</label>
+          <input
+            id="findings-search"
+            type="text"
+            placeholder="Search user findings, pain points, or keywords..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="input w-full pl-10 pr-4 py-2"
+          />
+        </div>
+        <span className="shrink-0 text-xs font-semibold text-slate-500">
+          {matchCount} {matchCount === 1 ? "finding" : "findings"}
+        </span>
+      </div>
       <p className="text-sm text-slate-500">
         <span className="font-semibold text-slate-700">{total}</span> {total === 1 ? "finding" : "findings"} in{" "}
         <span className="font-semibold text-slate-700">{findingsByCategory.length}</span>{" "}
         {findingsByCategory.length === 1 ? "category" : "categories"}
       </p>
-      {findingsByCategory.map((group) => {
-        const open = expanded.has(group.categoryId);
-        return (
+      {matchCount === 0 ? (
+        <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+          <Target className="h-10 w-10 text-slate-300 mx-auto" />
+          <h3 className="mt-3 text-base font-bold text-slate-800">
+            No Findings Match Your Search
+          </h3>
+          <p className="mt-1 text-xs text-slate-500">
+            Try clearing the search text.
+          </p>
+          <button
+            onClick={() => setQuery("")}
+            className="mt-4 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+          >
+            Clear Search
+          </button>
+        </div>
+      ) : (
+        visibleGroups.map((group) => {
+          const open = q ? true : expanded.has(group.categoryId);
+          return (
           <section key={group.categoryId ?? "uncategorized"} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
             <button
               type="button"
@@ -590,7 +655,8 @@ function FindingsByCategoryView({
             )}
           </section>
         );
-      })}
+        })
+      )}
     </div>
   );
 }
