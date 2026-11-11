@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
-import { getSession } from "@/lib/auth";
 import {
   calculateDesirabilityFromResearch,
   calculateAllParticipantScores,
@@ -12,22 +11,19 @@ import {
  * Findings for one group, with D/V/F computed in this project's
  * context (this project's aspects + research basis N).
  * GET /api/projects/[slug]/groups/[id]/findings
- * Any logged-in user can read it — the group view on the project page
- * is for everyone. Ideas are no longer assigned to groups: every
- * group scores every idea in the project, so this returns all of the
- * project's findings (by Platform tag, same as the project page),
- * not just the ones once assigned to the group.
+ * Anyone can read it — including guests (view-only). The group view
+ * on the project page is for everyone, and this returns the same
+ * public data the project page already shows. Ideas are no longer
+ * assigned to groups: every group scores every idea in the project,
+ * so this returns all of the project's findings (by Platform tag,
+ * same as the project page), not just the ones once assigned to the
+ * group.
  */
 export async function GET(
   _request: Request,
   { params }: { params: { slug: string; id: string } }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const project = await dbService.getProjectBySlug(params.slug);
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
