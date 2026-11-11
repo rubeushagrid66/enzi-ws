@@ -691,7 +691,7 @@ export default function FindingDetailView({
                   </div>
                   <div className="mt-3 flex flex-wrap items-end gap-2">
                     <label className="block">
-                      <span className="field-label">Users who mentioned it</span>
+                      <span className="field-label whitespace-nowrap">Mentioned by</span>
                       <input
                         type="number"
                         min={0}
@@ -705,12 +705,12 @@ export default function FindingDetailView({
                             ? "How many interview users mentioned this idea"
                             : "Only an admin can change the research numbers"
                         }
-                        className="input w-28"
+                        className="input w-24"
                       />
                     </label>
                     <span className="text-sm text-slate-600 pb-2">of</span>
                     <label className="block">
-                      <span className="field-label">Total interview users</span>
+                      <span className="field-label whitespace-nowrap">Total</span>
                       <input
                         type="number"
                         min={1}
@@ -724,7 +724,7 @@ export default function FindingDetailView({
                             ? "Total interview users in this project"
                             : "Only an admin can change the project totals"
                         }
-                        className="input w-20"
+                        className="input w-24"
                       />
                     </label>
                     <span className="ml-auto flex items-baseline gap-2 pb-2">
@@ -754,7 +754,7 @@ export default function FindingDetailView({
                   </div>
                   <div className="mt-3 flex flex-wrap items-end gap-2">
                     <label className="block">
-                      <span className="field-label">Users who mentioned it</span>
+                      <span className="field-label whitespace-nowrap">Mentioned by</span>
                       <input
                         type="number"
                         min={0}
@@ -768,12 +768,12 @@ export default function FindingDetailView({
                             ? "How many survey respondents mentioned this idea"
                             : "Only an admin can change the research numbers"
                         }
-                        className="input w-28"
+                        className="input w-24"
                       />
                     </label>
                     <span className="text-sm text-slate-600 pb-2">of</span>
                     <label className="block">
-                      <span className="field-label">Total survey respondents</span>
+                      <span className="field-label whitespace-nowrap">Total</span>
                       <input
                         type="number"
                         min={1}
@@ -787,7 +787,7 @@ export default function FindingDetailView({
                             ? "Total survey respondents in this project"
                             : "Only an admin can change the project totals"
                         }
-                        className="input w-20"
+                        className="input w-24"
                       />
                     </label>
                     <span className="ml-auto flex items-baseline gap-2 pb-2">
