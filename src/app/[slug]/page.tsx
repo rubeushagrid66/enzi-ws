@@ -679,7 +679,7 @@ export default function ProjectResultViewer({
   // /{slug}/ideas/{idea-title}. The URL is updated with pushState
   // (not router.push) so switching tabs/popups never remounts the
   // page or refetches the project; back/forward is handled by the
-  // popstate listener below. The base /{slug} is the Ideas tab.
+  // popstate listener below. The base /{slug} is the Findings tab.
   type ProjectView = "findings" | "categories" | "groups" | "roadmap";
   const tabSlugForView = (v: ProjectView) =>
     v === "categories" ? "findings" : v === "findings" ? "ideas" : v === "groups" ? "group" : "roadmap";
@@ -738,7 +738,7 @@ export default function ProjectResultViewer({
     const rest = pathname.split("/").filter(Boolean).slice(1);
     const tabSeg = rest[0];
     const itemSeg = rest[1];
-    let nextView: ProjectView = "findings";
+    let nextView: ProjectView = "categories";
     if (tabSeg === "findings") nextView = "categories";
     else if (tabSeg === "ideas") nextView = "findings";
     else if (tabSeg === "group" || tabSeg === "groups") nextView = "groups";
@@ -798,7 +798,7 @@ export default function ProjectResultViewer({
   // findings by Platform tag.
   // "findings" is the Ideas tab (pool findings); "categories" is the
   // new Findings tab — the linked findings grouped by category.
-  const [view, setView] = useState<"findings" | "categories" | "groups" | "roadmap">("findings");
+  const [view, setView] = useState<"findings" | "categories" | "groups" | "roadmap">("categories");
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [groupFindings, setGroupFindings] = useState<Record<string, any[]>>({});
   const [groupFindingsLoading, setGroupFindingsLoading] = useState(false);
@@ -1050,7 +1050,7 @@ export default function ProjectResultViewer({
                           onClick={() => {
                             setSwitcherOpen(false);
                             if (isCurrent) return;
-                            setView("findings");
+                            setView("categories");
                             setSelectedGroupId(null);
                             setSearchQuery("");
                             setIdeaDetail(null);
