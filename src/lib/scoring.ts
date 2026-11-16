@@ -106,7 +106,8 @@ export function getFindingScoringStatus(
 ): FindingScoringStatus {
   const votes = finding.viabilityVotes ?? [];
   // Desirability is scored only when the research mentions yield a D
-  // (at least one source has a count and a basis N). No source = unscored.
+  // (at least one source has a count above 0 — no basis N is needed
+  // under the count-based rule). No source = unscored.
   const desirabilityScored =
     calculateDesirabilityFromResearch(
       finding.interviewMentions ?? null,
@@ -147,22 +148,29 @@ export function getFindingScoringStatus(
 }
 
 /**
- * Desirability from research numbers (the user's rule, 2026-11-08).
- * A "mention" is a user mentioning this finding in that source.
+ * Desirability from research counts (the user's rule, 2026-11-16 —
+ * REPLACES the percentage rule of 2026-11-08). A "mention" is a user
+ * mentioning this finding in that source. No basis N is used: the
+ * score comes from the raw count alone.
  *
- * - Wawancara (interview): N = interview users in this project
- *   (Cash 3, DVC 2). ≥ 66% mention → 3 (Tinggi), ≥ 33% → 2 (Sedang),
- *   below 33% → 1 (Rendah).
- * - Survey: N = survey respondents in this project (Cash 121, DVC
- *   123). ≥ 30% mention → 3, ≥ 15% → 2, below 15% → 1.
+ * - Wawancara (interview): the count is the number of COMPANIES that
+ *   mentioned this finding (Cash interviewed 3 companies).
+ *   3 companies → 3 (Tinggi), 2 → 2 (Sedang), 1 → 1 (Rendah).
+ * - Survey (open questions): the count is the number of respondents.
+ *   ≥ 6 respondents → 3, 3–5 → 2, 1–2 → 1.
  * - Internal is NOT a research source and is never counted.
- * - D = the average of the two source scores, rounded UP (2.5 → 3).
- *   With only one source, D is that source's score. With no source
- *   (no count entered, or the project's basis N not set), D is null —
+ * - D = the average of the available source scores, rounded UP
+ *   (2.5 → 3). With only one source, D is that source's score.
+ *   With no source (no count entered, or a count of 0), D is null —
  *   the finding is not yet scored, never a 0 or a 1.
  *
- * Example: Pengingat otomatis — interview 2 of 3 (67%) = 3, survey
- * 40 of 121 (33%) = 3, so D = 3.
+ * The interviewN/surveyN parameters are accepted for compatibility
+ * with existing callers but are no longer used in the calculation;
+ * they are still returned as `total` for reference. `percent` is
+ * always null under the count-based rule.
+ *
+ * Example: "Tooltip penjelasan istilah" — interview 2 companies = 2,
+ * survey 4 respondents = 2, so D = 2.
  */
 export function calculateDesirabilityFromResearch(
   interviewMentions: number | null | undefined,
@@ -170,26 +178,34 @@ export function calculateDesirabilityFromResearch(
   surveyMentions: number | null | undefined,
   surveyN: number | null | undefined
 ): DesirabilityResult {
-  const sourceScore = (
+  const countScore = (
     source: "Wawancara" | "Survey",
     mentions: number | null | undefined,
-    total: number | null | undefined,
-    highPct: number,
-    midPct: number
+    total: number | null | undefined
   ): ResearchSourceScore => {
     const m = mentions != null && Number.isFinite(Number(mentions)) ? Number(mentions) : null;
     const n = total != null && Number.isFinite(Number(total)) && Number(total) > 0 ? Number(total) : null;
-    if (m == null || n == null) {
+    if (m == null || m <= 0) {
       return { source, mentions: m, total: n, percent: null, score: null };
     }
-    const frac = m / n;
-    const percent = Number((frac * 100).toFixed(1));
-    const score = frac >= highPct / 100 ? 3 : frac >= midPct / 100 ? 2 : 1;
-    return { source, mentions: m, total: n, percent, score };
+    // Count-based thresholds (no basis N, no percentage).
+    const score =
+      source === "Wawancara"
+        ? m >= 3
+          ? 3
+          : m === 2
+            ? 2
+            : 1
+        : m >= 6
+          ? 3
+          : m >= 3
+            ? 2
+            : 1;
+    return { source, mentions: m, total: n, percent: null, score };
   };
 
-  const interview = sourceScore("Wawancara", interviewMentions, interviewN, 66, 33);
-  const survey = sourceScore("Survey", surveyMentions, surveyN, 30, 15);
+  const interview = countScore("Wawancara", interviewMentions, interviewN);
+  const survey = countScore("Survey", surveyMentions, surveyN);
   const available = [interview, survey].filter((s) => s.score != null);
   const inputs: BlendInput[] = available.map((s) => ({
     label: `${s.source} ${s.score}`,
@@ -199,11 +215,14 @@ export function calculateDesirabilityFromResearch(
   let formulaExplanation: string;
   if (available.length === 0) {
     formulaExplanation =
-      "Belum ada angka riset — masukkan berapa pengguna yang menyebut ide ini dalam Wawancara dan/atau Survei.";
+      "Belum ada angka riset — masukkan berapa perusahaan (Wawancara) dan/atau responden (Survei) yang menyebut ide ini.";
   } else if (available.length === 1) {
     const s = available[0];
     score = s.score;
-    formulaExplanation = `Hanya satu sumber: D = ${s.source} ${s.score} (${s.mentions} dari ${s.total} pengguna, ${s.percent}%).`;
+    formulaExplanation =
+      s.source === "Wawancara"
+        ? `Hanya satu sumber: D = Wawancara ${s.score} (${s.mentions} perusahaan menyebut).`
+        : `Hanya satu sumber: D = Survei ${s.score} (${s.mentions} responden menyebut).`;
   } else {
     const sum = (available[0].score as number) + (available[1].score as number);
     score = Math.ceil(sum / 2);

@@ -181,42 +181,13 @@ export default function FindingDetailView({
     { name: "Feasibility", weight: 33 },
   ]);
 
-  // Research basis N for this project: the total users per source.
-  // It is per project, not per finding — editing it here updates every
-  // finding in this project. The saved values come from the project;
-  // the inputs below are what the user is typing.
-  const [savedInterviewN, setSavedInterviewN] = useState<number | null>(
-    project.interviewN ?? null
-  );
-  const [savedSurveyN, setSavedSurveyN] = useState<number | null>(
-    project.surveyN ?? null
-  );
-  const [interviewNInput, setInterviewNInput] = useState<string>(
-    project.interviewN != null ? String(project.interviewN) : ""
-  );
-  const [surveyNInput, setSurveyNInput] = useState<string>(
-    project.surveyN != null ? String(project.surveyN) : ""
-  );
-  // Parse a typed total: blank/invalid/non-positive means "not set".
-  const parseN = (raw: string): number | null => {
-    if (raw.trim() === "") return null;
-    const n = Math.floor(Number(raw));
-    return Number.isFinite(n) && n > 0 ? n : null;
-  };
-  // The totals driving the live preview are what the user is typing.
-  const interviewN = parseN(interviewNInput);
-  const surveyN = parseN(surveyNInput);
-  // Sync the totals when a different project opens (they are
-  // project-level, so they do not reset when switching findings).
-  React.useEffect(() => {
-    setSavedInterviewN(project.interviewN ?? null);
-    setSavedSurveyN(project.surveyN ?? null);
-    setInterviewNInput(project.interviewN != null ? String(project.interviewN) : "");
-    setSurveyNInput(project.surveyN != null ? String(project.surveyN) : "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.slug]);
   // Research mention inputs (local until saved). Synced when a different
   // finding is opened; typing is never clobbered by a background refresh.
+  // NOTE (aturan D baru, 2026-11-16): D dihitung dari jumlah mentah
+  // saja (perusahaan untuk Wawancara, responden untuk Survei) — basis
+  // N (Total) tidak lagi dipakai dalam perhitungan, jadi tidak ada
+  // input Total di seksi ini. Total proyek masih tersimpan di database
+  // dan bisa diubah dari dashboard (Framework & Weighting).
   const [interviewInput, setInterviewInput] = useState<string>(
     localFinding.interviewMentions != null ? String(localFinding.interviewMentions) : ""
   );
@@ -366,23 +337,31 @@ export default function FindingDetailView({
     (localFinding.tujuanBisnis && String(localFinding.tujuanBisnis).trim());
 
   // Live preview of a source score from a typed count (same thresholds
-  // as the server): Wawancara ≥66% → 3, ≥33% → 2; Survey ≥30% → 3,
-  // ≥15% → 2. A blank count or a missing basis N means that source
+  // as the server — aturan D baru, 2026-11-16, count-based, tanpa basis
+  // N): Wawancara 3 perusahaan → 3, 2 → 2, 1 → 1; Survei ≥6 responden
+  // → 3, 3–5 → 2, 1–2 → 1. A blank count (or 0) means that source
   // does not score D.
-  const previewSource = (raw: string, total: number | null, high: number, mid: number) => {
+  const previewSource = (raw: string, source: "Wawancara" | "Survey") => {
     const n = raw.trim() === "" ? null : Math.floor(Number(raw));
-    if (n == null || !Number.isFinite(n) || n < 0 || total == null || total <= 0) {
-      return { mentions: n, percent: null as number | null, score: null as number | null };
+    if (n == null || !Number.isFinite(n) || n <= 0) {
+      return { mentions: n, score: null as number | null };
     }
-    const frac = n / total;
-    return {
-      mentions: n,
-      percent: Number((frac * 100).toFixed(1)),
-      score: frac >= high / 100 ? 3 : frac >= mid / 100 ? 2 : 1,
-    };
+    const score =
+      source === "Wawancara"
+        ? n >= 3
+          ? 3
+          : n === 2
+            ? 2
+            : 1
+        : n >= 6
+          ? 3
+          : n >= 3
+            ? 2
+            : 1;
+    return { mentions: n, score };
   };
-  const interviewPreview = previewSource(interviewInput, interviewN, 66, 33);
-  const surveyPreview = previewSource(surveyInput, surveyN, 30, 15);
+  const interviewPreview = previewSource(interviewInput, "Wawancara");
+  const surveyPreview = previewSource(surveyInput, "Survey");
   const previewD = (() => {
     const ss = [interviewPreview, surveyPreview].filter((s) => s.score != null);
     if (ss.length === 0) return null;
@@ -390,34 +369,14 @@ export default function FindingDetailView({
     return Math.ceil(((ss[0].score as number) + (ss[1].score as number)) / 2);
   })();
 
-  // Save the research numbers: the per-project totals (admin only)
-  // and this finding's mention counts. The totals go first — the
-  // project PUT is a partial update, so only the totals are sent, and
-  // saving the basis before the counts means D is computed from the
-  // fresh totals. The response merges into local state like a vote save.
+  // Save the research numbers: this finding's mention counts only.
+  // (Aturan D baru, 2026-11-16: basis N / Total tidak lagi dipakai
+  // dalam perhitungan D, jadi tidak disimpan dari sini.)
+  // The response merges into local state like a vote save.
   const handleSaveResearch = async () => {
     setResearchSaving(true);
     setResearchStatus(null);
     try {
-      const newInterviewN = parseN(interviewNInput);
-      const newSurveyN = parseN(surveyNInput);
-      const nChanged =
-        newInterviewN !== savedInterviewN || newSurveyN !== savedSurveyN;
-      if (isAdmin && nChanged) {
-        const resN = await fetch(`/api/projects/${project.slug}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            interviewN: newInterviewN,
-            surveyN: newSurveyN,
-          }),
-        });
-        const dataN = await resN.json().catch(() => ({}));
-        if (!resN.ok)
-          throw new Error(dataN.error || `Could not save the project totals (${resN.status})`);
-        setSavedInterviewN(newInterviewN);
-        setSavedSurveyN(newSurveyN);
-      }
       const res = await fetch(
         `/api/projects/${project.slug}/findings/${localFinding.id}/research`,
         {
@@ -442,11 +401,7 @@ export default function FindingDetailView({
           scores: { ...prev.scores, ...(data.finding.scores || {}) },
         }));
       }
-      setResearchStatus(
-        isAdmin && nChanged
-          ? "Research numbers saved — totals and Desirability updated."
-          : "Research mentions saved — Desirability updated."
-      );
+      setResearchStatus("Research mentions saved — Desirability updated.");
     } catch (e: any) {
       setResearchStatus(e.message || "Failed to save research numbers.");
     } finally {
@@ -677,17 +632,17 @@ export default function FindingDetailView({
                   <span>Jumlah pengguna yang menyebut temuan ini dalam riset</span>
                 </div>
                 <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                  D dihitung hanya berdasarkan angka dari hasil riset. Satu penyebutan berarti satu pengguna menyampaikan temuan ini melalui sumber riset tersebut.
+                  D dihitung hanya berdasarkan jumlah penyebutan dalam riset: perusahaan untuk Wawancara, responden untuk Survei. Tidak ada basis total — skor berasal dari angka mentahnya saja.
                 </p>
                 <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                  Angka diisi secara manual: jumlah pengguna yang menyebut temuan ini dan total responden dari fitur terkait.
+                  Angka diisi secara manual: jumlah perusahaan yang menyebut temuan ini dalam Wawancara, dan jumlah responden yang menyebutnya dalam Survei.
                 </p>
 
                 {/* Wawancara */}
                 <div className="mt-4 rounded-lg border border-slate-200 p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="text-sm font-semibold text-slate-800">Wawancara</span>
-                    <span className="text-sm text-slate-600">&ge; 66% &rarr; 3 &middot; &ge; 33% &rarr; 2 &middot; below 33% &rarr; 1</span>
+                    <span className="text-sm text-slate-600">3 perusahaan &rarr; 3 &middot; 2 perusahaan &rarr; 2 &middot; 1 perusahaan &rarr; 1</span>
                   </div>
                   <div className="mt-3 flex flex-wrap items-end gap-2">
                     <label className="block">
@@ -702,55 +657,26 @@ export default function FindingDetailView({
                         disabled={!isAdmin}
                         title={
                           isAdmin
-                            ? "How many interview users mentioned this idea"
+                            ? "How many companies mentioned this idea in interviews"
                             : "Only an admin can change the research numbers"
                         }
                         className="input w-24"
                       />
                     </label>
-                    <span className="text-sm text-slate-600 pb-2">of</span>
-                    <label className="block">
-                      <span className="field-label whitespace-nowrap">Total</span>
-                      <input
-                        type="number"
-                        min={1}
-                        inputMode="numeric"
-                        value={interviewNInput}
-                        onChange={(e) => setInterviewNInput(e.target.value)}
-                        placeholder="e.g. 3"
-                        disabled={!isAdmin}
-                        title={
-                          isAdmin
-                            ? "Total interview users in this project"
-                            : "Only an admin can change the project totals"
-                        }
-                        className="input w-24"
-                      />
-                    </label>
                     <span className="ml-auto flex items-baseline gap-2 pb-2">
-                      <span className="text-sm text-slate-600">
-                        interview users
-                        {interviewPreview.percent != null && <> ({interviewPreview.percent}%)</>}
-                      </span>
+                      <span className="text-sm text-slate-600">perusahaan</span>
                       <span className="text-sm font-bold text-bsi-700">
                         {interviewPreview.score != null ? `Score ${interviewPreview.score} / 3` : "—"}
                       </span>
                     </span>
                   </div>
-                  {interviewN == null && (
-                    <p className="mt-2 text-xs text-gold-700">
-                      {isAdmin
-                        ? "Total interview users is not set — type it above (it applies to every idea in this project)."
-                        : "Total interview users is not set for this project — an admin sets it here or in the dashboard (Framework & Weighting → Research basis)."}
-                    </p>
-                  )}
                 </div>
 
                 {/* Survey */}
                 <div className="mt-4 rounded-lg border border-slate-200 p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="text-sm font-semibold text-slate-800">Survey</span>
-                    <span className="text-sm text-slate-600">&ge; 30% &rarr; 3 &middot; &ge; 15% &rarr; 2 &middot; below 15% &rarr; 1</span>
+                    <span className="text-sm text-slate-600">&ge; 6 responden &rarr; 3 &middot; 3&ndash;5 responden &rarr; 2 &middot; 1&ndash;2 responden &rarr; 1</span>
                   </div>
                   <div className="mt-3 flex flex-wrap items-end gap-2">
                     <label className="block">
@@ -771,42 +697,13 @@ export default function FindingDetailView({
                         className="input w-24"
                       />
                     </label>
-                    <span className="text-sm text-slate-600 pb-2">of</span>
-                    <label className="block">
-                      <span className="field-label whitespace-nowrap">Total</span>
-                      <input
-                        type="number"
-                        min={1}
-                        inputMode="numeric"
-                        value={surveyNInput}
-                        onChange={(e) => setSurveyNInput(e.target.value)}
-                        placeholder="e.g. 121"
-                        disabled={!isAdmin}
-                        title={
-                          isAdmin
-                            ? "Total survey respondents in this project"
-                            : "Only an admin can change the project totals"
-                        }
-                        className="input w-24"
-                      />
-                    </label>
                     <span className="ml-auto flex items-baseline gap-2 pb-2">
-                      <span className="text-sm text-slate-600">
-                        survey respondents
-                        {surveyPreview.percent != null && <> ({surveyPreview.percent}%)</>}
-                      </span>
+                      <span className="text-sm text-slate-600">survey respondents</span>
                       <span className="text-sm font-bold text-bsi-700">
                         {surveyPreview.score != null ? `Score ${surveyPreview.score} / 3` : "—"}
                       </span>
                     </span>
                   </div>
-                  {surveyN == null && (
-                    <p className="mt-2 text-xs text-gold-700">
-                      {isAdmin
-                        ? "Total survey respondents is not set — type it above (it applies to every idea in this project)."
-                        : "Total survey respondents is not set for this project — an admin sets it here or in the dashboard (Framework & Weighting → Research basis)."}
-                    </p>
-                  )}
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
