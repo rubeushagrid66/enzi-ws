@@ -11,7 +11,7 @@ export interface ScoringRule {
 
 /** One research source's contribution to Desirability (1–3). */
 export interface ResearchSourceScore {
-  source: "Wawancara" | "Survey";
+  source: "Interview" | "Survei";
   /** Users who mentioned this finding (null = not entered yet). */
   mentions: number | null;
   /** Total users in this source for the project (null = basis not set). */
@@ -153,7 +153,7 @@ export function getFindingScoringStatus(
  * mentioning this finding in that source. No basis N is used: the
  * score comes from the raw count alone.
  *
- * - Wawancara (interview): the count is the number of COMPANIES that
+ * - Interview: the count is the number of COMPANIES that
  *   mentioned this finding (Cash interviewed 3 companies).
  *   3 companies → 3 (Tinggi), 2 → 2 (Sedang), 1 → 1 (Rendah).
  * - Survey (open questions): the count is the number of respondents.
@@ -179,7 +179,7 @@ export function calculateDesirabilityFromResearch(
   surveyN: number | null | undefined
 ): DesirabilityResult {
   const countScore = (
-    source: "Wawancara" | "Survey",
+    source: "Interview" | "Survei",
     mentions: number | null | undefined,
     total: number | null | undefined
   ): ResearchSourceScore => {
@@ -190,7 +190,7 @@ export function calculateDesirabilityFromResearch(
     }
     // Count-based thresholds (no basis N, no percentage).
     const score =
-      source === "Wawancara"
+      source === "Interview"
         ? m >= 3
           ? 3
           : m === 2
@@ -204,8 +204,8 @@ export function calculateDesirabilityFromResearch(
     return { source, mentions: m, total: n, percent: null, score };
   };
 
-  const interview = countScore("Wawancara", interviewMentions, interviewN);
-  const survey = countScore("Survey", surveyMentions, surveyN);
+  const interview = countScore("Interview", interviewMentions, interviewN);
+  const survey = countScore("Survei", surveyMentions, surveyN);
   const available = [interview, survey].filter((s) => s.score != null);
   const inputs: BlendInput[] = available.map((s) => ({
     label: `${s.source} ${s.score}`,
@@ -215,18 +215,18 @@ export function calculateDesirabilityFromResearch(
   let formulaExplanation: string;
   if (available.length === 0) {
     formulaExplanation =
-      "Belum ada angka riset — masukkan berapa perusahaan (Wawancara) dan/atau responden (Survei) yang menyebut ide ini.";
+      "Belum ada angka riset — masukkan berapa perusahaan (Interview) dan/atau responden (Survei) yang menyebut ide ini.";
   } else if (available.length === 1) {
     const s = available[0];
     score = s.score;
     formulaExplanation =
-      s.source === "Wawancara"
-        ? `Hanya satu sumber: D = Wawancara ${s.score} (${s.mentions} perusahaan menyebut).`
+      s.source === "Interview"
+        ? `Hanya satu sumber: D = Interview ${s.score} (${s.mentions} perusahaan menyebut).`
         : `Hanya satu sumber: D = Survei ${s.score} (${s.mentions} responden menyebut).`;
   } else {
     const sum = (available[0].score as number) + (available[1].score as number);
     score = Math.ceil(sum / 2);
-    formulaExplanation = `Rata-rata skor Wawancara dan Survei, dibulatkan ke atas: (${available[0].score} + ${available[1].score}) / 2 = ${score}.`;
+    formulaExplanation = `Rata-rata skor Interview dan Survei, dibulatkan ke atas: (${available[0].score} + ${available[1].score}) / 2 = ${score}.`;
   }
   return { score, interview, survey, formulaExplanation, inputs };
 }

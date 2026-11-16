@@ -184,7 +184,7 @@ export default function FindingDetailView({
   // Research mention inputs (local until saved). Synced when a different
   // finding is opened; typing is never clobbered by a background refresh.
   // NOTE (aturan D baru, 2026-11-16): D dihitung dari jumlah mentah
-  // saja (perusahaan untuk Wawancara, responden untuk Survei) — basis
+  // saja (perusahaan untuk Interview, responden untuk Survei) — basis
   // N (Total) tidak lagi dipakai dalam perhitungan, jadi tidak ada
   // input Total di seksi ini. Total proyek masih tersimpan di database
   // dan bisa diubah dari dashboard (Framework & Weighting).
@@ -336,18 +336,24 @@ export default function FindingDetailView({
     (localFinding.outputKeberhasilan && String(localFinding.outputKeberhasilan).trim()) ||
     (localFinding.tujuanBisnis && String(localFinding.tujuanBisnis).trim());
 
+  // Interview basis: Cash interviewed 3 companies (per the D-rule
+  // image, "Interview (Cash, 3 perusahaan)"). DVC's interview basis
+  // is TBD — the label there shows just "Interview". The 3/2/1 scale
+  // is the same in both projects (it is what the server computes).
+  const isCashProject = project.slug === "cash-management-system";
+
   // Live preview of a source score from a typed count (same thresholds
   // as the server — aturan D baru, 2026-11-16, count-based, tanpa basis
-  // N): Wawancara 3 perusahaan → 3, 2 → 2, 1 → 1; Survei ≥6 responden
+  // N): Interview 3 perusahaan → 3, 2 → 2, 1 → 1; Survei ≥6 responden
   // → 3, 3–5 → 2, 1–2 → 1. A blank count (or 0) means that source
   // does not score D.
-  const previewSource = (raw: string, source: "Wawancara" | "Survey") => {
+  const previewSource = (raw: string, source: "Interview" | "Survei") => {
     const n = raw.trim() === "" ? null : Math.floor(Number(raw));
     if (n == null || !Number.isFinite(n) || n <= 0) {
       return { mentions: n, score: null as number | null };
     }
     const score =
-      source === "Wawancara"
+      source === "Interview"
         ? n >= 3
           ? 3
           : n === 2
@@ -360,8 +366,8 @@ export default function FindingDetailView({
             : 1;
     return { mentions: n, score };
   };
-  const interviewPreview = previewSource(interviewInput, "Wawancara");
-  const surveyPreview = previewSource(surveyInput, "Survey");
+  const interviewPreview = previewSource(interviewInput, "Interview");
+  const surveyPreview = previewSource(surveyInput, "Survei");
   const previewD = (() => {
     const ss = [interviewPreview, surveyPreview].filter((s) => s.score != null);
     if (ss.length === 0) return null;
@@ -629,20 +635,22 @@ export default function FindingDetailView({
               <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
                 <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
                   <HelpCircle className="h-4 w-4 text-bsi-600" />
-                  <span>Jumlah pengguna yang menyebut temuan ini dalam riset</span>
+                  <span>Jumlah penyebutan dalam riset</span>
                 </div>
                 <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                  D dihitung hanya berdasarkan jumlah penyebutan dalam riset: perusahaan untuk Wawancara, responden untuk Survei. Tidak ada basis total — skor berasal dari angka mentahnya saja.
+                  D dihitung hanya berdasarkan jumlah penyebutan dalam riset: perusahaan untuk Interview, responden untuk Survei. Tidak ada basis total — skor berasal dari angka mentahnya saja.
                 </p>
                 <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                  Angka diisi secara manual: jumlah perusahaan yang menyebut temuan ini dalam Wawancara, dan jumlah responden yang menyebutnya dalam Survei.
+                  Angka diisi secara manual: jumlah perusahaan yang menyebut temuan ini dalam Interview, dan jumlah responden yang menyebutnya dalam Survei.
                 </p>
 
-                {/* Wawancara */}
+                {/* Interview */}
                 <div className="mt-4 rounded-lg border border-slate-200 p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="text-sm font-semibold text-slate-800">Wawancara</span>
-                    <span className="text-sm text-slate-600">3 perusahaan &rarr; 3 &middot; 2 perusahaan &rarr; 2 &middot; 1 perusahaan &rarr; 1</span>
+                    <span className="text-sm font-semibold text-slate-800">
+                      {isCashProject ? "Interview (Cash, 3 perusahaan)" : "Interview"}
+                    </span>
+                    <span className="text-sm text-slate-600">3 perusahaan menyebutkan &rarr; 3 &middot; 2 perusahaan menyebutkan &rarr; 2 &middot; 1 perusahaan menyebutkan &rarr; 1</span>
                   </div>
                   <div className="mt-3 flex flex-wrap items-end gap-2">
                     <label className="block">
@@ -675,8 +683,8 @@ export default function FindingDetailView({
                 {/* Survey */}
                 <div className="mt-4 rounded-lg border border-slate-200 p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="text-sm font-semibold text-slate-800">Survey</span>
-                    <span className="text-sm text-slate-600">&ge; 6 responden &rarr; 3 &middot; 3&ndash;5 responden &rarr; 2 &middot; 1&ndash;2 responden &rarr; 1</span>
+                    <span className="text-sm font-semibold text-slate-800">Survei, jawaban dari open questions</span>
+                    <span className="text-sm text-slate-600">6 responden atau lebih &rarr; 3 &middot; 3 sampai 5 responden &rarr; 2 &middot; 1 sampai 2 responden &rarr; 1</span>
                   </div>
                   <div className="mt-3 flex flex-wrap items-end gap-2">
                     <label className="block">
@@ -711,7 +719,7 @@ export default function FindingDetailView({
                     {previewD != null ? (
                       <>Hasil D: <span className="font-extrabold text-bsi-700">{previewD} / 3</span></>
                     ) : (
-                      "Enter a count for Wawancara and/or Survey to score Desirability."
+                      "Enter a count for Interview and/or Survey to score Desirability."
                     )}
                   </p>
                   <button
@@ -737,7 +745,18 @@ export default function FindingDetailView({
               <div role="note" className="rounded-xl border border-bsi-200 bg-bsi-50 p-4 text-sm text-bsi-800">
                 <span className="font-bold">Perhitungan D: </span>
                 {desirability.formulaExplanation ||
-                  "Belum ada angka riset — masukkan berapa pengguna yang menyebut ide ini dalam Wawancara dan/atau Survei."}
+                  "Belum ada angka riset — masukkan berapa perusahaan (Interview) dan/atau responden (Survei) yang menyebut ide ini."}
+              </div>
+
+              {/* Aturan D (dari gambar Scoring DVF - D) */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
+                <span className="font-bold">Aturan D: </span>
+                D = rata-rata skor Interview dan Survey, lalu dibulatkan ke atas. Contoh: 2,5 dibulatkan menjadi 3. Jika hanya ada satu sumber data, gunakan skor dari sumber tersebut.
+                {isCashProject && (
+                  <span className="mt-2 block">
+                    Contoh dari temuan Cash: Pada inisiatif &ldquo;Tooltip penjelasan istilah&rdquo;, 2 perusahaan menyebutkan masalah tersebut dalam interview (skor 2), sementara 4 responden menyebutkannya dalam survei (skor 2). Rata-rata skor adalah 2, sehingga D = 2.
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -782,7 +801,7 @@ export default function FindingDetailView({
       <div className="px-1 text-sm leading-relaxed text-slate-600">
         <p>Semua skor D, V, dan F menggunakan skala 1–3.</p>
         <ul className="mt-1 list-disc pl-5">
-          <li>D (Desirability): Berdasarkan jumlah penyebutan dalam riset (Wawancara dan Survei), dengan rata-rata dibulatkan ke atas.</li>
+          <li>D (Desirability): Berdasarkan jumlah penyebutan dalam riset (Interview dan Survei), dengan rata-rata dibulatkan ke atas.</li>
           <li>V (Viability): Rata-rata skor dari seluruh aspek Viability yang dinilai kelompok Anda.</li>
           <li>F (Feasibility): 4 dikurangi rata-rata skor dari seluruh aspek Effort yang dinilai kelompok Anda.</li>
         </ul>
