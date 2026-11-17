@@ -58,6 +58,31 @@ export default function WorkshopSession({
   // "Me": the score lines below show this participant's own V/F (1–3).
   const meId = useMeParticipantId(slug, currentUser as any);
 
+  // Survey score bracket (live from the server, same as the detail
+  // page). Defaults match the Scoring DVF - D sheet (3 / 6 / ignore-0)
+  // until the fetch returns; a failed fetch keeps the defaults.
+  const [surveyBracket, setSurveyBracket] = useState<{ score2Min: number; score3Min: number; zeroBehavior: 1 | 2 }>({
+    score2Min: 3,
+    score3Min: 6,
+    zeroBehavior: 2,
+  });
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/global/survey-bracket", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.bracket) {
+          setSurveyBracket({
+            score2Min: Number(data.bracket.score2Min) || 3,
+            score3Min: Number(data.bracket.score3Min) || 6,
+            zeroBehavior: Number(data.bracket.zeroBehavior) === 1 ? 1 : 2,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   // Step 3 (Feasibility) consensus: last position saved by a drag.
   const [lastPos, setLastPos] = useState<{ x: number; y: number } | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -485,7 +510,10 @@ export default function WorkshopSession({
 
                     {(() => {
                       const d = selectedFinding.scores?.desirabilityDetails || {};
-                      const row = (label: string, s: any, threshold: string) => (
+                      // Count-based D (2026-11-16): no basis N, no
+                      // percentage. Interview counts COMPANIES, Survey
+                      // counts DISTINCT respondents (bracket thresholds).
+                      const row = (label: string, s: any, threshold: string, unit: string) => (
                         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 px-4 py-3">
                           <div>
                             <div className="text-sm font-semibold text-slate-800">{label}</div>
@@ -493,8 +521,8 @@ export default function WorkshopSession({
                           </div>
                           <div className="text-right">
                             <div className="text-sm font-bold text-slate-900">
-                              {s?.mentions != null && s?.total != null
-                                ? `${s.mentions} of ${s.total} (${s.percent}%)`
+                              {s?.mentions != null
+                                ? `${s.mentions} ${unit}`
                                 : "No count entered"}
                             </div>
                             <div className="text-xs font-semibold text-bsi-700">
@@ -505,8 +533,8 @@ export default function WorkshopSession({
                       );
                       return (
                         <div className="space-y-3">
-                          {row("Wawancara", d.interview, "\u2265 66% \u2192 3 \u00b7 \u2265 33% \u2192 2 \u00b7 below 33% \u2192 1")}
-                          {row("Survey", d.survey, "\u2265 30% \u2192 3 \u00b7 \u2265 15% \u2192 2 \u00b7 below 15% \u2192 1")}
+                          {row("Wawancara", d.interview, "3 perusahaan \u2192 3 \u00b7 2 perusahaan \u2192 2 \u00b7 1 perusahaan \u2192 1", "perusahaan")}
+                          {row("Survey", d.survey, `${surveyBracket.score3Min} responden atau lebih \u2192 3 \u00b7 ${surveyBracket.score2Min} sampai ${surveyBracket.score3Min - 1} responden \u2192 2${surveyBracket.score2Min > 1 ? ` \u00b7 1 sampai ${surveyBracket.score2Min - 1} responden \u2192 1` : ""}`, "responden")}
                         </div>
                       );
                     })()}

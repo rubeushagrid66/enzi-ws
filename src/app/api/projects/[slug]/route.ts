@@ -228,10 +228,11 @@ export async function GET(
         surveyBracket
       );
 
-      // 1. Desirability — research mentions against the project's basis
-      // N (Wawancara: ≥66% → 3, ≥33% → 2; Survey: ≥30% → 3, ≥15% → 2;
-      // D = round-up average of the two source scores, or the single
-      // source's score). Null when no source has data.
+      // 1. Desirability — research mention counts (count-based D,
+      // 2026-11-16: Interview counts COMPANIES 3→3/2→2/1→1, Survey
+      // counts DISTINCT respondents against the bracket; no basis N,
+      // no percentage. D = round-up average of the two source scores,
+      // or the single source's score). Null when no source has data.
       const desirabilityData = calculateDesirabilityFromResearch(
         effectiveInterviewMentions,
         researchN.interviewN,
