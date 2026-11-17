@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { dbService } from "@/lib/db-service";
 import {
+  calculateAutoInterviewMentions,
+  calculateAutoSurveyMentions,
   calculateDesirabilityFromResearch,
   calculateAllParticipantScores,
   getFindingScoringStatus,
@@ -29,6 +31,14 @@ export async function GET(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
     const surveyBracket = await dbService.getSurveyBracket().catch(() => null);
+    // Linked findings for the auto D (D-from-linked-findings,
+    // 2026-11-17): the stored mentions are the manual override; when
+    // they are null the auto values from linked findings apply — the
+    // same rule as the project page. Without this, CMS cards showed
+    // "—" (their stored mentions are null) while DVC cards showed D
+    // (their stored mentions exist). Best-effort: a failed ideas read
+    // leaves the auto values null, exactly as before.
+    const allIdeas = await dbService.getIdeas().catch(() => null);
     const group = (project.groups || []).find((g: any) => g.id === params.id);
     if (!group) {
       return NextResponse.json({ error: "Group not found in this project" }, { status: 404 });
@@ -111,13 +121,51 @@ export async function GET(
       return platformMatches(platform || []);
     });
 
+    // Auto interview/survey mentions per pool item, from its linked
+    // findings (same as the project page): distinct companies for
+    // interview, distinct respondents (union) for survey. Null when
+    // nothing is linked.
+    const autoInterviewByFindingId = new Map<string, number | null>();
+    const autoSurveyByFindingId = new Map<string, number | null>();
+    const linkedResearchByFindingId = new Map<string, Array<{ sumber: string[]; baznas: number; wikaGedung: number; ipcTpk: number; penyebutanSurvey: number; surveyRespondents: string[] }>>();
+    for (const idea of (allIdeas || [])) {
+      const research = {
+        sumber: idea.sumber || [],
+        baznas: idea.baznas ?? 0,
+        wikaGedung: idea.wikaGedung ?? 0,
+        ipcTpk: idea.ipcTpk ?? 0,
+        penyebutanSurvey: idea.penyebutanSurvey ?? 0,
+        surveyRespondents: Array.isArray(idea.surveyRespondents) ? idea.surveyRespondents : [],
+      };
+      for (const fid of (idea.findingIds || [])) {
+        if (!linkedResearchByFindingId.has(fid)) linkedResearchByFindingId.set(fid, []);
+        linkedResearchByFindingId.get(fid)!.push(research);
+      }
+    }
+    linkedResearchByFindingId.forEach((linked, fid) => {
+      autoInterviewByFindingId.set(fid, calculateAutoInterviewMentions(linked));
+      autoSurveyByFindingId.set(fid, calculateAutoSurveyMentions(linked));
+    });
+
     const findingsWithScores = findings.map((f: any) => {
       const { sumber, fitur, platform, tagsList } = parseFindingMeta(f.tags);
-      const scoringStatus = getFindingScoringStatus(f, project.viabilityAspects, researchN, surveyBracket);
+      // Stored mentions win (manual override); otherwise the auto
+      // values from linked findings — the same rule as the project
+      // page, so group cards show D for linked ideas too.
+      const autoInterviewMentions = autoInterviewByFindingId.get(f.id) ?? null;
+      const effectiveInterviewMentions = f.interviewMentions ?? autoInterviewMentions;
+      const autoSurveyMentions = autoSurveyByFindingId.get(f.id) ?? null;
+      const effectiveSurveyMentions = f.surveyMentions ?? autoSurveyMentions;
+      const scoringStatus = getFindingScoringStatus(
+        { ...f, interviewMentions: effectiveInterviewMentions, surveyMentions: effectiveSurveyMentions },
+        project.viabilityAspects,
+        researchN,
+        surveyBracket
+      );
       const desirabilityData = calculateDesirabilityFromResearch(
-        f.interviewMentions ?? null,
+        effectiveInterviewMentions,
         researchN.interviewN,
-        f.surveyMentions ?? null,
+        effectiveSurveyMentions,
         researchN.surveyN,
         surveyBracket
       );
@@ -128,6 +176,8 @@ export async function GET(
       );
       return {
         ...f,
+        interviewMentionsAuto: autoInterviewMentions,
+        surveyMentionsAuto: autoSurveyMentions,
         sumber,
         fitur,
         platform,

@@ -3,6 +3,8 @@ import { dbService } from "@/lib/db-service";
 import { getSession } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
 import {
+  calculateAutoInterviewMentions,
+  calculateAutoSurveyMentions,
   calculateDesirabilityFromResearch,
   calculateAllParticipantScores,
   getFindingScoringStatus,
@@ -37,6 +39,11 @@ export async function GET(
     if (!f) {
       return NextResponse.json({ error: "Finding not found" }, { status: 404 });
     }
+    // Auto D from linked findings (same rule as the project page):
+    // stored mentions win (manual override); when null, the auto
+    // values from linked findings apply. Without this, a CMS idea's
+    // D was null here (its stored mentions are null) even though the
+    // project page shows D=3 from the same links.
     const researchN = {
       interviewN:
         (project as any).interview_n != null
@@ -57,11 +64,21 @@ export async function GET(
         .map((a: any) => a.id);
     const vAspectIds = aspectIdsFor("Viability");
     const fAspectIds = aspectIdsFor("Feasibility");
-    const scoringStatus = getFindingScoringStatus(f, project.viabilityAspects, researchN, surveyBracket);
+    const linkedIdeas = await dbService.getIdeasForFinding(f.id).catch(() => []);
+    const autoInterviewMentions = calculateAutoInterviewMentions(linkedIdeas || []);
+    const effectiveInterviewMentions = f.interviewMentions ?? autoInterviewMentions;
+    const autoSurveyMentions = calculateAutoSurveyMentions(linkedIdeas || []);
+    const effectiveSurveyMentions = f.surveyMentions ?? autoSurveyMentions;
+    const scoringStatus = getFindingScoringStatus(
+      { ...f, interviewMentions: effectiveInterviewMentions, surveyMentions: effectiveSurveyMentions },
+      project.viabilityAspects,
+      researchN,
+      surveyBracket
+    );
     const desirabilityData = calculateDesirabilityFromResearch(
-      f.interviewMentions ?? null,
+      effectiveInterviewMentions,
       researchN.interviewN,
-      f.surveyMentions ?? null,
+      effectiveSurveyMentions,
       researchN.surveyN,
       surveyBracket
     );
@@ -107,6 +124,8 @@ export async function GET(
         platform,
         tagsList,
         scoringStatus,
+        interviewMentionsAuto: autoInterviewMentions,
+        surveyMentionsAuto: autoSurveyMentions,
         scores: {
           desirability: desirabilityData?.score ?? null,
           desirabilityDetails: desirabilityData,
