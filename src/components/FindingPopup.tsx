@@ -76,31 +76,6 @@ export default function FindingPopup({
               <p className="mt-1 text-sm font-semibold text-slate-800">{finding.fitur}</p>
             </div>
           )}
-          {((Array.isArray(finding.sumber) && finding.sumber.includes("Wawancara")) ||
-            (finding.baznas || 0) > 0 || (finding.wikaGedung || 0) > 0 ||
-            (finding.ipcTpk || 0) > 0 || (finding.penyebutanSurvey || 0) > 0) && (
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Penyebutan dalam Riset</p>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                  <p className="text-xs text-slate-500">Baznas</p>
-                  <p className="text-sm font-bold tabular-nums text-slate-900">{finding.baznas ?? 0}</p>
-                </div>
-                <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                  <p className="text-xs text-slate-500">WIKA Gedung</p>
-                  <p className="text-sm font-bold tabular-nums text-slate-900">{finding.wikaGedung ?? 0}</p>
-                </div>
-                <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                  <p className="text-xs text-slate-500">IPC TPK</p>
-                  <p className="text-sm font-bold tabular-nums text-slate-900">{finding.ipcTpk ?? 0}</p>
-                </div>
-                <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                  <p className="text-xs text-slate-500">Penyebutan Survey</p>
-                  <p className="text-sm font-bold tabular-nums text-slate-900">{finding.penyebutanSurvey ?? 0}</p>
-                </div>
-              </div>
-            </div>
-          )}
           {finding.verbatimEvidence && String(finding.verbatimEvidence).trim() !== "" && (
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Verbatim Evidence</p>
