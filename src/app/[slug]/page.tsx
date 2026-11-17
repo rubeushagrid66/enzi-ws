@@ -21,7 +21,7 @@ import {
 
 import { scoresForParticipant, findingBoardPosition, groupAverageScores, findingBoardPositionForScores, calculateDVFScore, type FeasibilityQuadrant, type WeightInput } from "@/lib/scoring";
 import { useMeParticipantId } from "@/lib/useMeParticipant";
-import { slugify } from "@/lib/slugify";
+import { slugify, groupSlug } from "@/lib/slugify";
 
 // Equal-thirds fallback for the DVF weights (framework is 33/33/33
 // today); the live weights are fetched and replace this.
@@ -745,12 +745,29 @@ export default function ProjectResultViewer({
     }
     return map;
   }, [project?.findingsByCategory]);
+  // Group lookup by URL slug, for opening a group from a shared URL
+  // (/{slug}/group/{group-slug}). Accepts both the hyphen-less group
+  // slug ("businessops") and the hyphenated slugify() form
+  // ("business-ops"). First match wins.
+  const groupBySlug = useMemo(() => {
+    const map: Record<string, any> = {};
+    for (const g of project?.groups || []) {
+      for (const s of [groupSlug(g.name || ""), slugify(g.name || "")]) {
+        if (s && !map[s]) map[s] = g;
+      }
+    }
+    return map;
+  }, [project?.groups]);
 
   // ── URL slugs: the address bar mirrors the current tab + topmost
   // popup, so a tab or an open popup is shareable and the back button
   // walks back through them. Tabs: /{slug}/findings (Findings tab),
   // /{slug}/ideas (Ideas tab), /{slug}/group (Groups tab),
-  // /{slug}/roadmap. Popups: /{slug}/findings/{finding-title},
+  // /{slug}/roadmap. Groups: /{slug}/group/{group-slug} opens that
+  // group ("businessops", "tech", "product"); a group card's detail
+  // lives at /{slug}/group/{group-slug}/{idea-slug} on its own route
+  // (full detail page, not the popup). Popups:
+  // /{slug}/findings/{finding-title},
   // /{slug}/ideas/{idea-title}. The URL is updated with pushState
   // (not router.push) so switching tabs/popups never remounts the
   // page or refetches the project; back/forward is handled by the
@@ -808,7 +825,10 @@ export default function ProjectResultViewer({
   // Apply a URL to the state: parse the path after /{slug} into a tab
   // + optional popup, and open the matching item. Used on first load
   // and on back/forward. A popup slug that matches nothing just shows
-  // the tab.
+  // the tab. Group URLs: /{slug}/group opens the groups list,
+  // /{slug}/group/{group-slug} opens that group (a group slug that
+  // matches nothing just shows the list). A group card's detail lives
+  // at /{slug}/group/{group-slug}/{idea-slug} on its own route.
   const applyUrlToState = (pathname: string) => {
     const rest = pathname.split("/").filter(Boolean).slice(1);
     const tabSeg = rest[0];
@@ -819,7 +839,15 @@ export default function ProjectResultViewer({
     else if (tabSeg === "group" || tabSeg === "groups") nextView = "groups";
     else if (tabSeg === "roadmap") nextView = "roadmap";
     setView(nextView);
-    setSelectedGroupId(null);
+    // Group selected from the URL (/group/{group-slug}); anything
+    // else (or an unknown slug) shows the groups list.
+    if ((tabSeg === "group" || tabSeg === "groups") && itemSeg) {
+      const g = groupBySlug[itemSeg];
+      setSelectedGroupId(g ? g.id : null);
+      if (g && !groupFindings[g.id]) loadGroupFindings(g.id);
+    } else {
+      setSelectedGroupId(null);
+    }
     if (itemSeg && tabSeg === "findings") {
       const f = findingBySlug[itemSeg];
       setFindingDetail(f || null);
@@ -927,6 +955,24 @@ export default function ProjectResultViewer({
   const openGroup = (groupId: string) => {
     setSelectedGroupId(groupId);
     if (!groupFindings[groupId]) loadGroupFindings(groupId);
+    const g = (project?.groups || []).find((x: any) => x.id === groupId);
+    if (g) pushUrl(`/${slug}/group/${groupSlug(g.name || "")}`);
+  };
+
+  // Back to the groups list (all groups) — the URL drops the group slug.
+  const backToGroups = () => {
+    setSelectedGroupId(null);
+    pushUrl(`/${slug}/group`);
+  };
+
+  // Open a group card's detail page at its group-scoped URL:
+  // /{slug}/group/{group-slug}/{idea-slug}. The detail route renders
+  // the full detail page (with Desirability), not the popup.
+  const openGroupIdea = (finding: any) => {
+    const g = (project?.groups || []).find((x: any) => x.id === selectedGroupId);
+    const gs = g ? groupSlug(g.name || "") : "";
+    if (gs) router.push(`/${slug}/group/${gs}/${slugify(finding.title || "")}`);
+    else router.push(`/${slug}/ideas/${finding.id}`);
   };
 
   // When the Groups view opens, load every group's findings in parallel
@@ -1226,8 +1272,8 @@ export default function ProjectResultViewer({
             groupFindings={groupFindings}
             groupFindingsLoading={groupFindingsLoading}
             onOpenGroup={openGroup}
-            onBackToGroups={() => setSelectedGroupId(null)}
-            onSelectFinding={(f: any) => router.push(`/${slug}/ideas/${f.id}`)}
+            onBackToGroups={backToGroups}
+            onSelectFinding={openGroupIdea}
           />
         ) : view === "categories" ? (
           <FindingsByCategoryView

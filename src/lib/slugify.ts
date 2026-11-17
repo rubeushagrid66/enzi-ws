@@ -12,3 +12,13 @@ export function slugify(name: string): string {
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
+
+/**
+ * Group slug for group URLs (/{slug}/group/{group-slug}): the group's
+ * name slugified with hyphens removed, so "Business & Ops" becomes
+ * "businessops" and "Tech" stays "tech". Resolvers accept both this
+ * form and the hyphenated slugify() form.
+ */
+export function groupSlug(name: string): string {
+  return slugify(name).replace(/-/g, "");
+}
