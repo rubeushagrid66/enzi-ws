@@ -56,6 +56,32 @@ export default function FindingDetailView({
   const [aboutOpen, setAboutOpen] = useState(false);
   const [localFinding, setLocalFinding] = useState(finding);
 
+  // ── Survey D bracket (global, from the Framework tab) ──────────
+  // The live preview below must use the same thresholds as the server.
+  // Defaults match the Scoring DVF - D sheet (3 / 6 / ignore-0) until
+  // the fetch returns; a failed fetch keeps the defaults.
+  const [surveyBracket, setSurveyBracket] = useState<{ score2Min: number; score3Min: number; zeroBehavior: 1 | 2 }>({
+    score2Min: 3,
+    score3Min: 6,
+    zeroBehavior: 2,
+  });
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/global/survey-bracket", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.bracket) {
+          setSurveyBracket({
+            score2Min: Number(data.bracket.score2Min) || 3,
+            score3Min: Number(data.bracket.score3Min) || 6,
+            zeroBehavior: Number(data.bracket.zeroBehavior) === 1 ? 1 : 2,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   // ── Related ideas ────────────────────────────────────────────────
   // Ideas linked to this finding (assigned in the admin Ideas tab).
   // Shown under the header so the finding's ideas are visible at a
@@ -383,14 +409,23 @@ export default function FindingDetailView({
   // is the same in both projects (it is what the server computes).
   const isCashProject = project.slug === "cash-management-system";
 
-  // Live preview of a source score from a typed count (same thresholds
-  // as the server — aturan D baru, 2026-11-16, count-based, tanpa basis
-  // N): Interview 3 perusahaan → 3, 2 → 2, 1 → 1; Survei ≥6 responden
-  // → 3, 3–5 → 2, 1–2 → 1. A blank count (or 0) means that source
-  // does not score D.
+  // Live preview of a source score from a typed count — same rules as
+  // the server (aturan D baru, 2026-11-16, count-based, tanpa basis
+  // N), with the survey thresholds taken from the global bracket
+  // (Framework tab; defaults 3 / 6 / ignore-0): Interview 3
+  // perusahaan → 3, 2 → 2, 1 → 1; Survei ≥score3Min responden → 3,
+  // ≥score2Min → 2, 1+ → 1 (0 counts as 1 only when the bracket's
+  // zeroBehavior is 1). A blank count means that source does not
+  // score D.
   const previewSource = (raw: string, source: "Interview" | "Survei") => {
     const n = raw.trim() === "" ? null : Math.floor(Number(raw));
-    if (n == null || !Number.isFinite(n) || n <= 0) {
+    if (n == null || !Number.isFinite(n)) {
+      return { mentions: n, score: null as number | null };
+    }
+    if (n <= 0) {
+      if (source === "Survei" && n === 0 && surveyBracket.zeroBehavior === 1) {
+        return { mentions: n, score: 1 as number | null };
+      }
       return { mentions: n, score: null as number | null };
     }
     const score =
@@ -400,9 +435,9 @@ export default function FindingDetailView({
           : n === 2
             ? 2
             : 1
-        : n >= 6
+        : n >= surveyBracket.score3Min
           ? 3
-          : n >= 3
+          : n >= surveyBracket.score2Min
             ? 2
             : 1;
     return { mentions: n, score };
@@ -750,7 +785,7 @@ export default function FindingDetailView({
                 <div className="mt-4 rounded-lg border border-slate-200 p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="text-sm font-semibold text-slate-800">Survei, jawaban dari open questions</span>
-                    <span className="text-sm text-slate-600">6 responden atau lebih &rarr; 3 &middot; 3 sampai 5 responden &rarr; 2 &middot; 1 sampai 2 responden &rarr; 1</span>
+                    <span className="text-sm text-slate-600">{surveyBracket.score3Min} responden atau lebih &rarr; 3 &middot; {surveyBracket.score2Min} sampai {surveyBracket.score3Min - 1} responden &rarr; 2{surveyBracket.score2Min > 1 ? <> &middot; 1 sampai {surveyBracket.score2Min - 1} responden &rarr; 1</> : null}</span>
                   </div>
                   <div className="mt-3 flex flex-wrap items-end gap-2">
                     <label className="block">
