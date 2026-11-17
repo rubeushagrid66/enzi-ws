@@ -127,13 +127,16 @@ export async function GET(
     // nothing is linked.
     const autoInterviewByFindingId = new Map<string, number | null>();
     const autoSurveyByFindingId = new Map<string, number | null>();
-    const linkedResearchByFindingId = new Map<string, Array<{ sumber: string[]; baznas: number; wikaGedung: number; ipcTpk: number; penyebutanSurvey: number; surveyRespondents: string[] }>>();
+    const linkedResearchByFindingId = new Map<string, Array<{ sumber: string[]; baznas: number; wikaGedung: number; ipcTpk: number; sf: number; df: number; bf: number; penyebutanSurvey: number; surveyRespondents: string[] }>>();
     for (const idea of (allIdeas || [])) {
       const research = {
         sumber: idea.sumber || [],
         baznas: idea.baznas ?? 0,
         wikaGedung: idea.wikaGedung ?? 0,
         ipcTpk: idea.ipcTpk ?? 0,
+        sf: idea.sf ?? 0,
+        df: idea.df ?? 0,
+        bf: idea.bf ?? 0,
         penyebutanSurvey: idea.penyebutanSurvey ?? 0,
         surveyRespondents: Array.isArray(idea.surveyRespondents) ? idea.surveyRespondents : [],
       };
