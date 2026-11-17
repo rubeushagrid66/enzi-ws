@@ -5,6 +5,7 @@ import { revalidateProjectPages } from "@/lib/revalidate";
 import {
   calculateDesirabilityFromResearch,
   calculateAutoInterviewMentions,
+  calculateAutoSurveyMentions,
   getFindingScoringStatus,
 } from "@/lib/scoring";
 
@@ -73,18 +74,22 @@ export async function PUT(
     // Interview mentions are the stored value when set, otherwise the
     // auto value from linked interview findings (same rule as the
     // project GET route) — so saving with the field cleared (null)
-    // keeps the auto D instead of dropping it to unscored.
+    // keeps the auto D instead of dropping it to unscored. Same for
+    // survey mentions (stored, otherwise the auto sum of linked
+    // findings' penyebutan_survey).
     const linkedIdeas = await dbService.getIdeasForFinding(id).catch(() => []);
     const autoInterviewMentions = calculateAutoInterviewMentions(linkedIdeas || []);
     const effectiveInterviewMentions = finding.interviewMentions ?? autoInterviewMentions;
+    const autoSurveyMentions = calculateAutoSurveyMentions(linkedIdeas || []);
+    const effectiveSurveyMentions = finding.surveyMentions ?? autoSurveyMentions;
     const desirabilityData = calculateDesirabilityFromResearch(
       effectiveInterviewMentions,
       researchN.interviewN,
-      finding.surveyMentions ?? null,
+      effectiveSurveyMentions,
       researchN.surveyN
     );
     const scoringStatus = getFindingScoringStatus(
-      { ...finding, interviewMentions: effectiveInterviewMentions },
+      { ...finding, interviewMentions: effectiveInterviewMentions, surveyMentions: effectiveSurveyMentions },
       project?.viabilityAspects,
       researchN
     );
@@ -95,6 +100,7 @@ export async function PUT(
       finding: {
         ...finding,
         interviewMentionsAuto: autoInterviewMentions,
+        surveyMentionsAuto: autoSurveyMentions,
         scoringStatus,
         scores: {
           desirability: desirabilityData.score,

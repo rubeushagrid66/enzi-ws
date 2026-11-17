@@ -14,6 +14,7 @@ function notFoundResponse() {
 import {
   calculateDesirabilityFromResearch,
   calculateAutoInterviewMentions,
+  calculateAutoSurveyMentions,
   calculateAllParticipantScores,
   getFindingScoringStatus,
   normalizeFramework,
@@ -177,16 +178,21 @@ export async function GET(
     // local join, no extra query. Null when no interview finding is
     // linked. The stored interviewMentions (manual override) wins;
     // otherwise D uses this auto value.
+    // Auto survey mentions use the same linked findings: the sum of
+    // each finding's penyebutan_survey. Null when no finding is
+    // linked at all.
     // Collect each pool item's linked findings, then count distinct
     // companies once per item.
     const autoInterviewByFindingId = new Map<string, number | null>();
-    const linkedResearchByFindingId = new Map<string, Array<{ sumber: string[]; baznas: number; wikaGedung: number; ipcTpk: number }>>();
+    const autoSurveyByFindingId = new Map<string, number | null>();
+    const linkedResearchByFindingId = new Map<string, Array<{ sumber: string[]; baznas: number; wikaGedung: number; ipcTpk: number; penyebutanSurvey: number }>>();
     for (const idea of (allIdeas || [])) {
       const research = {
         sumber: idea.sumber || [],
         baznas: idea.baznas ?? 0,
         wikaGedung: idea.wikaGedung ?? 0,
         ipcTpk: idea.ipcTpk ?? 0,
+        penyebutanSurvey: idea.penyebutanSurvey ?? 0,
       };
       for (const fid of (idea.findingIds || [])) {
         if (!linkedResearchByFindingId.has(fid)) linkedResearchByFindingId.set(fid, []);
@@ -195,6 +201,7 @@ export async function GET(
     }
     linkedResearchByFindingId.forEach((linked, fid) => {
       autoInterviewByFindingId.set(fid, calculateAutoInterviewMentions(linked));
+      autoSurveyByFindingId.set(fid, calculateAutoSurveyMentions(linked));
     });
 
     const findingsWithScores = (project.findings || [])
@@ -203,11 +210,15 @@ export async function GET(
 
       // Interview mentions are the stored value when the admin set
       // one, otherwise the auto value from linked interview findings.
-      // Computed first: both the scoring status and D use it.
+      // Same for survey mentions (stored, otherwise the auto sum of
+      // linked findings' penyebutan_survey). Computed first: both the
+      // scoring status and D use them.
       const autoInterviewMentions = autoInterviewByFindingId.get(f.id) ?? null;
       const effectiveInterviewMentions = f.interviewMentions ?? autoInterviewMentions;
+      const autoSurveyMentions = autoSurveyByFindingId.get(f.id) ?? null;
+      const effectiveSurveyMentions = f.surveyMentions ?? autoSurveyMentions;
       const scoringStatus = getFindingScoringStatus(
-        { ...f, interviewMentions: effectiveInterviewMentions },
+        { ...f, interviewMentions: effectiveInterviewMentions, surveyMentions: effectiveSurveyMentions },
         project.viabilityAspects,
         researchN
       );
@@ -219,7 +230,7 @@ export async function GET(
       const desirabilityData = calculateDesirabilityFromResearch(
         effectiveInterviewMentions,
         researchN.interviewN,
-        f.surveyMentions ?? null,
+        effectiveSurveyMentions,
         researchN.surveyN
       );
 
@@ -238,11 +249,14 @@ export async function GET(
         tagsList,
         scoringStatus,
         // Auto interview count from linked interview findings (null
-        // when none linked). The client shows stored interviewMentions
-        // when set, otherwise this auto value — and only sends a
-        // stored value when the admin actually changed the field, so
-        // an untouched auto value stays automatic.
+        // when none linked) and auto survey count (sum of linked
+        // findings' penyebutan_survey, null when nothing linked).
+        // The client shows stored mentions when set, otherwise these
+        // auto values — and only sends a stored value when the admin
+        // actually changed the field, so an untouched auto value
+        // stays automatic.
         interviewMentionsAuto: autoInterviewMentions,
+        surveyMentionsAuto: autoSurveyMentions,
         scores: {
           desirability: desirabilityData?.score ?? null,
           desirabilityDetails: desirabilityData,

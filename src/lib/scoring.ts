@@ -248,6 +248,7 @@ export interface LinkedFindingResearch {
   baznas?: number | null;
   wikaGedung?: number | null;
   ipcTpk?: number | null;
+  penyebutanSurvey?: number | null;
 }
 
 export function calculateAutoInterviewMentions(
@@ -262,6 +263,33 @@ export function calculateAutoInterviewMentions(
   if (interviewFindings.some((f) => (f.wikaGedung ?? 0) > 0)) count++;
   if (interviewFindings.some((f) => (f.ipcTpk ?? 0) > 0)) count++;
   return count;
+}
+
+/**
+ * Auto survey mentions for a pool item (idea), from its linked
+ * findings — the D-from-linked-findings rule (Hitung D sheet): an
+ * idea's survey count is the total respondents across its linked
+ * findings, read from each finding's penyebutan_survey ("import angka
+ * dari masing-masing findings tiap row", user 2026-11-17). Summed
+ * across ALL linked findings, whatever their sumber — an interview
+ * finding's survey mentions count too (the sheet's Matriks counts
+ * respondents per finding the same way). Returns null when NO finding
+ * is linked at all (no data — the field stays empty, not 0), else the
+ * sum (which may be 0 when the linked findings have no survey
+ * mentions — that is the "sisanya otomatis jadi 0" case).
+ * NOTE: a plain sum can double-count a respondent who mentioned two
+ * linked findings; exact distinct-respondent dedup needs the
+ * per-respondent matrix (Matriks tab), which enzi-ws does not store.
+ */
+export function calculateAutoSurveyMentions(
+  linkedFindings: LinkedFindingResearch[]
+): number | null {
+  if (!linkedFindings || linkedFindings.length === 0) return null;
+  let total = 0;
+  for (const f of linkedFindings) {
+    total += f.penyebutanSurvey ?? 0;
+  }
+  return total;
 }
 
 /**

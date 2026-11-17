@@ -209,9 +209,22 @@ export default function FindingDetailView({
   // True once the admin edits the Interview field — used on save so
   // an untouched auto value is not locked in as a manual override.
   const [interviewDirty, setInterviewDirty] = useState(false);
+  // Survey mirrors Interview: the count defaults to the auto sum of
+  // linked findings' penyebutan_survey (surveyMentionsAuto from the
+  // API, null when nothing is linked). Stored surveyMentions is the
+  // manual override and wins when set.
+  const autoSurveyMentions =
+    localFinding.surveyMentionsAuto != null
+      ? Number(localFinding.surveyMentionsAuto)
+      : null;
+  const effectiveSurveyMentions =
+    localFinding.surveyMentions != null
+      ? Number(localFinding.surveyMentions)
+      : autoSurveyMentions;
   const [surveyInput, setSurveyInput] = useState<string>(
-    localFinding.surveyMentions != null ? String(localFinding.surveyMentions) : ""
+    effectiveSurveyMentions != null ? String(effectiveSurveyMentions) : ""
   );
+  const [surveyDirty, setSurveyDirty] = useState(false);
   const [researchSaving, setResearchSaving] = useState(false);
   const [researchStatus, setResearchStatus] = useState<string | null>(null);
   React.useEffect(() => {
@@ -224,8 +237,13 @@ export default function FindingDetailView({
     );
     setInterviewDirty(false);
     setSurveyInput(
-      localFinding.surveyMentions != null ? String(localFinding.surveyMentions) : ""
+      localFinding.surveyMentions != null
+        ? String(localFinding.surveyMentions)
+        : localFinding.surveyMentionsAuto != null
+          ? String(localFinding.surveyMentionsAuto)
+          : ""
     );
+    setSurveyDirty(false);
     setResearchStatus(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localFinding.id]);
@@ -416,6 +434,12 @@ export default function FindingDetailView({
           : interviewInput.trim() === ""
             ? null
             : Math.floor(Number(interviewInput));
+      const surveyToSave =
+        !surveyDirty && localFinding.surveyMentions == null
+          ? null
+          : surveyInput.trim() === ""
+            ? null
+            : Math.floor(Number(surveyInput));
       const res = await fetch(
         `/api/projects/${project.slug}/findings/${localFinding.id}/research`,
         {
@@ -423,8 +447,7 @@ export default function FindingDetailView({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             interviewMentions: interviewToSave,
-            surveyMentions:
-              surveyInput.trim() === "" ? null : Math.floor(Number(surveyInput)),
+            surveyMentions: surveyToSave,
           }),
         }
       );
@@ -437,10 +460,13 @@ export default function FindingDetailView({
           interviewMentionsAuto:
             data.finding.interviewMentionsAuto ?? prev.interviewMentionsAuto ?? null,
           surveyMentions: data.finding.surveyMentions ?? null,
+          surveyMentionsAuto:
+            data.finding.surveyMentionsAuto ?? prev.surveyMentionsAuto ?? null,
           scoringStatus: data.finding.scoringStatus ?? prev.scoringStatus,
           scores: { ...prev.scores, ...(data.finding.scores || {}) },
         }));
         setInterviewDirty(false);
+        setSurveyDirty(false);
       }
       setResearchStatus("Research mentions saved — Desirability updated.");
     } catch (e: any) {
@@ -676,7 +702,7 @@ export default function FindingDetailView({
                   D dihitung hanya berdasarkan jumlah penyebutan dalam riset: perusahaan untuk Interview, responden untuk Survei. Tidak ada basis total — skor berasal dari angka mentahnya saja.
                 </p>
                 <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                  Angka Interview terisi otomatis dari findings interview yang ter-link ke ide ini (jumlah perusahaan yang berbeda). Angka bisa diubah manual — mengosongkannya mengembalikan ke hitungan otomatis.
+                  Angka Interview terisi otomatis dari findings interview yang ter-link ke ide ini (jumlah perusahaan yang berbeda). Angka Survei terisi otomatis dari jumlah penyebutan survei findings yang ter-link. Angka bisa diubah manual — mengosongkannya mengembalikan ke hitungan otomatis.
                 </p>
 
                 {/* Interview */}
@@ -734,7 +760,7 @@ export default function FindingDetailView({
                         min={0}
                         inputMode="numeric"
                         value={surveyInput}
-                        onChange={(e) => setSurveyInput(e.target.value)}
+                        onChange={(e) => { setSurveyInput(e.target.value); setSurveyDirty(true); }}
                         placeholder="e.g. 40"
                         disabled={!isAdmin}
                         title={
@@ -752,6 +778,11 @@ export default function FindingDetailView({
                       </span>
                     </span>
                   </div>
+                  {localFinding.surveyMentions == null && autoSurveyMentions != null && (
+                    <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                      Otomatis dari jumlah penyebutan survei findings yang ter-link ke ide ini — ubah angkanya untuk override manual.
+                    </p>
+                  )}
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
