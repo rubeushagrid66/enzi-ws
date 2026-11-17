@@ -655,13 +655,6 @@ function FindingsByCategoryView({
                         {f.description && String(f.description).trim() !== "" && (
                           <span className="mt-0.5 block truncate text-xs text-slate-500">{f.description}</span>
                         )}
-                        {((Array.isArray(f.sumber) && f.sumber.includes("Wawancara")) ||
-                          (f.baznas || 0) > 0 || (f.wikaGedung || 0) > 0 ||
-                          (f.ipcTpk || 0) > 0 || (f.penyebutanSurvey || 0) > 0) && (
-                          <span className="mt-0.5 block text-xs text-slate-500">
-                            Baznas {f.baznas ?? 0} · WIKA Gedung {f.wikaGedung ?? 0} · IPC TPK {f.ipcTpk ?? 0} · Penyebutan Survey {f.penyebutanSurvey ?? 0}
-                          </span>
-                        )}
                       </span>
                       <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-bsi-600" />
                     </button>
