@@ -807,9 +807,14 @@ export const dbService = {
         projectId: i.project_id ?? null,
         // Interview-research counts (informational only, shown on
         // the finding card and popup for Wawancara-source findings).
+        // CMS companies: baznas / wikaGedung / ipcTpk. DVC companies:
+        // sf (RSIA Sayyidah) / df (Elnusa) / bf.
         baznas: i.baznas ?? 0,
         wikaGedung: i.wika_gedung ?? 0,
         ipcTpk: i.ipc_tpk ?? 0,
+        sf: i.sf ?? 0,
+        df: i.df ?? 0,
+        bf: i.bf ?? 0,
         penyebutanSurvey: i.penyebutan_survey ?? 0,
         surveyRespondents: Array.isArray(i.survey_respondents) ? i.survey_respondents : [],
         findingIds: linkMap[i.id] || [],
@@ -837,7 +842,7 @@ export const dbService = {
     }
   },
 
-  async createIdea(data: { title: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null; verbatimEvidence?: string | null; projectId?: string | null; fitur?: string | null; baznas?: number | null; wikaGedung?: number | null; ipcTpk?: number | null; penyebutanSurvey?: number | null }) {
+  async createIdea(data: { title: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null; verbatimEvidence?: string | null; projectId?: string | null; fitur?: string | null; baznas?: number | null; wikaGedung?: number | null; ipcTpk?: number | null; sf?: number | null; df?: number | null; bf?: number | null; penyebutanSurvey?: number | null }) {
     if (isSupabaseConfigured && supabase) {
       // image_url is only sent when an image was uploaded — so a
       // create never fails on a production table that doesn't have the
@@ -854,6 +859,9 @@ export const dbService = {
       if (data.baznas !== undefined) row.baznas = data.baznas ?? 0;
       if (data.wikaGedung !== undefined) row.wika_gedung = data.wikaGedung ?? 0;
       if (data.ipcTpk !== undefined) row.ipc_tpk = data.ipcTpk ?? 0;
+      if (data.sf !== undefined) row.sf = data.sf ?? 0;
+      if (data.df !== undefined) row.df = data.df ?? 0;
+      if (data.bf !== undefined) row.bf = data.bf ?? 0;
       if (data.penyebutanSurvey !== undefined) row.penyebutan_survey = data.penyebutanSurvey ?? 0;
       const { data: idea, error } = await supabase
         .from("ideas")
@@ -870,7 +878,7 @@ export const dbService = {
     return { id, title: data.title, description: data.description || "", sumber: data.sumber || [] };
   },
 
-  async updateIdea(id: string, data: { title?: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null; verbatimEvidence?: string | null; projectId?: string | null; fitur?: string | null; baznas?: number | null; wikaGedung?: number | null; ipcTpk?: number | null; penyebutanSurvey?: number | null }) {
+  async updateIdea(id: string, data: { title?: string; description?: string; sumber?: string[]; imageUrl?: string | null; categoryId?: string | null; verbatimEvidence?: string | null; projectId?: string | null; fitur?: string | null; baznas?: number | null; wikaGedung?: number | null; ipcTpk?: number | null; sf?: number | null; df?: number | null; bf?: number | null; penyebutanSurvey?: number | null }) {
     if (isSupabaseConfigured && supabase) {
       const patch: any = {};
       if (data.title !== undefined) patch.title = data.title;
@@ -881,6 +889,9 @@ export const dbService = {
       if (data.baznas !== undefined) patch.baznas = data.baznas ?? 0;
       if (data.wikaGedung !== undefined) patch.wika_gedung = data.wikaGedung ?? 0;
       if (data.ipcTpk !== undefined) patch.ipc_tpk = data.ipcTpk ?? 0;
+      if (data.sf !== undefined) patch.sf = data.sf ?? 0;
+      if (data.df !== undefined) patch.df = data.df ?? 0;
+      if (data.bf !== undefined) patch.bf = data.bf ?? 0;
       if (data.penyebutanSurvey !== undefined) patch.penyebutan_survey = data.penyebutanSurvey ?? 0;
       // verbatimEvidence undefined = leave it alone; empty string =
       // clear it; a string = set it. Only sent when the form actually
@@ -928,16 +939,19 @@ export const dbService = {
         delete patch.fitur;
         ({ data: idea, error } = await supabase.from("ideas").update(patch).eq("id", id).select().single());
       }
-      // Same safety net for the four interview-research columns
-      // (baznas, wika_gedung, ipc_tpk, penyebutan_survey): if any of
-      // them does not exist yet in production, retry without them
-      // instead of failing the whole edit.
+      // Same safety net for the interview-research columns
+      // (baznas, wika_gedung, ipc_tpk, sf, df, bf, penyebutan_survey):
+      // if any of them does not exist yet in production, retry without
+      // them instead of failing the whole edit.
       if (error) {
         const msg = String((error as any)?.message || "");
-        if (["baznas", "wika_gedung", "ipc_tpk", "penyebutan_survey"].some((c) => msg.includes(c))) {
+        if (["baznas", "wika_gedung", "ipc_tpk", "penyebutan_survey"].some((c) => msg.includes(c)) || /\bsf\b|\bdf\b|\bbf\b/.test(msg)) {
           delete patch.baznas;
           delete patch.wika_gedung;
           delete patch.ipc_tpk;
+          delete patch.sf;
+          delete patch.df;
+          delete patch.bf;
           delete patch.penyebutan_survey;
           ({ data: idea, error } = await supabase.from("ideas").update(patch).eq("id", id).select().single());
         }
@@ -1050,15 +1064,15 @@ export const dbService = {
         rows
           .map((r: any) => r.idea)
           .filter((i: any) => i && i.id)
-          .map((i: any) => ({ id: i.id, title: i.title, description: i.description || "", imageUrl: i.image_url || null, verbatimEvidence: i.verbatim_evidence || "", fitur: i.fitur || "", sumber: i.sumber || [], baznas: i.baznas ?? 0, wikaGedung: i.wika_gedung ?? 0, ipcTpk: i.ipc_tpk ?? 0, penyebutanSurvey: i.penyebutan_survey ?? 0, surveyRespondents: Array.isArray(i.survey_respondents) ? i.survey_respondents : [] }));
+          .map((i: any) => ({ id: i.id, title: i.title, description: i.description || "", imageUrl: i.image_url || null, verbatimEvidence: i.verbatim_evidence || "", fitur: i.fitur || "", sumber: i.sumber || [], baznas: i.baznas ?? 0, wikaGedung: i.wika_gedung ?? 0, ipcTpk: i.ipc_tpk ?? 0, sf: i.sf ?? 0, df: i.df ?? 0, bf: i.bf ?? 0, penyebutanSurvey: i.penyebutan_survey ?? 0, surveyRespondents: Array.isArray(i.survey_respondents) ? i.survey_respondents : [] }));
       const { data, error } = await supabase
         .from("idea_findings")
-        .select("idea:ideas(id, title, description, image_url, verbatim_evidence, fitur, sumber, baznas, wika_gedung, ipc_tpk, penyebutan_survey, survey_respondents)")
+        .select("idea:ideas(id, title, description, image_url, verbatim_evidence, fitur, sumber, baznas, wika_gedung, ipc_tpk, sf, df, bf, penyebutan_survey, survey_respondents)")
         .eq("finding_id", findingId);
       if (!error && data) return mapRows(data as any[]);
-      // Fallback when the survey_respondents column does not exist
-      // yet (SQL not run): same rows without it.
-      if (error && /survey_respondents/i.test(error.message || "")) {
+      // Fallback when the survey_respondents or sf/df/bf columns do
+      // not exist yet (SQL not run): same rows without them.
+      if (error && /survey_respondents|\bsf\b|\bdf\b|\bbf\b/i.test(error.message || "")) {
         const retry = await supabase
           .from("idea_findings")
           .select("idea:ideas(id, title, description, image_url, verbatim_evidence, fitur, sumber, baznas, wika_gedung, ipc_tpk, penyebutan_survey)")

@@ -297,9 +297,14 @@ export function calculateDesirabilityFromResearch(
  */
 export interface LinkedFindingResearch {
   sumber?: string[] | null;
+  /** Cash Management companies (BAZNAS / WIKA Gedung / IPC TPK). */
   baznas?: number | null;
   wikaGedung?: number | null;
   ipcTpk?: number | null;
+  /** Value Chain companies (RSIA Sayyidah SF / Elnusa DF / BF). */
+  sf?: number | null;
+  df?: number | null;
+  bf?: number | null;
   penyebutanSurvey?: number | null;
   /** Distinct survey respondent IDs for this finding (from the
    *  Matriks tab for interview findings; one ID per Mapping row for
@@ -315,9 +320,14 @@ export function calculateAutoInterviewMentions(
   );
   if (interviewFindings.length === 0) return null;
   let count = 0;
+  // Cash Management companies.
   if (interviewFindings.some((f) => (f.baznas ?? 0) > 0)) count++;
   if (interviewFindings.some((f) => (f.wikaGedung ?? 0) > 0)) count++;
   if (interviewFindings.some((f) => (f.ipcTpk ?? 0) > 0)) count++;
+  // Value Chain companies (SF = RSIA Sayyidah, DF = Elnusa, BF).
+  if (interviewFindings.some((f) => (f.sf ?? 0) > 0)) count++;
+  if (interviewFindings.some((f) => (f.df ?? 0) > 0)) count++;
+  if (interviewFindings.some((f) => (f.bf ?? 0) > 0)) count++;
   return count;
 }
 

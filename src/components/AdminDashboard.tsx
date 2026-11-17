@@ -291,7 +291,7 @@ export default function AdminDashboard() {
   const [ideas, setIdeas] = useState<any[]>([]);
   const [ideaModalOpen, setIdeaModalOpen] = useState(false);
   const [editingIdeaId, setEditingIdeaId] = useState<string | null>(null);
-  const [ideaForm, setIdeaForm] = useState({ title: "", description: "", sumber: [] as string[], imageUrl: null as string | null, categoryId: null as string | null, verbatimEvidence: "", fitur: "", baznas: 0, wikaGedung: 0, ipcTpk: 0, penyebutanSurvey: 0 });
+  const [ideaForm, setIdeaForm] = useState({ title: "", description: "", sumber: [] as string[], imageUrl: null as string | null, categoryId: null as string | null, verbatimEvidence: "", fitur: "", baznas: 0, wikaGedung: 0, ipcTpk: 0, sf: 0, df: 0, bf: 0, penyebutanSurvey: 0 });
   // Finding categories (global): admin creates them; a Finding is
   // assigned to at most one. `editingCategory` is the row being
   // renamed inline, or null.
@@ -897,7 +897,7 @@ export default function AdminDashboard() {
   // ideas on its detail page.
   const openCreateIdea = () => {
     setEditingIdeaId(null);
-    setIdeaForm({ title: "", description: "", sumber: [], imageUrl: null, categoryId: null, verbatimEvidence: "", fitur: "", baznas: 0, wikaGedung: 0, ipcTpk: 0, penyebutanSurvey: 0 });
+    setIdeaForm({ title: "", description: "", sumber: [], imageUrl: null, categoryId: null, verbatimEvidence: "", fitur: "", baznas: 0, wikaGedung: 0, ipcTpk: 0, sf: 0, df: 0, bf: 0, penyebutanSurvey: 0 });
     setImageError(null);
     setSubFindings([]);
     setOrigSubFindingIds([]);
@@ -909,7 +909,7 @@ export default function AdminDashboard() {
 
   const openEditIdea = async (idea: any) => {
     setEditingIdeaId(idea.id);
-    setIdeaForm({ title: idea.title || "", description: idea.description || "", sumber: Array.isArray(idea.sumber) ? [...idea.sumber] : [], imageUrl: idea.imageUrl || null, categoryId: idea.categoryId ?? null, verbatimEvidence: idea.verbatimEvidence || "", fitur: idea.fitur || "", baznas: idea.baznas ?? 0, wikaGedung: idea.wikaGedung ?? 0, ipcTpk: idea.ipcTpk ?? 0, penyebutanSurvey: idea.penyebutanSurvey ?? 0 });
+    setIdeaForm({ title: idea.title || "", description: idea.description || "", sumber: Array.isArray(idea.sumber) ? [...idea.sumber] : [], imageUrl: idea.imageUrl || null, categoryId: idea.categoryId ?? null, verbatimEvidence: idea.verbatimEvidence || "", fitur: idea.fitur || "", baznas: idea.baznas ?? 0, wikaGedung: idea.wikaGedung ?? 0, ipcTpk: idea.ipcTpk ?? 0, sf: idea.sf ?? 0, df: idea.df ?? 0, bf: idea.bf ?? 0, penyebutanSurvey: idea.penyebutanSurvey ?? 0 });
     setImageError(null);
     setSubImageError(null);
     setIdeaFindingIds(Array.isArray(idea.findingIds) ? [...idea.findingIds] : []);
@@ -1010,7 +1010,7 @@ export default function AdminDashboard() {
           setIdeas((rows: any[]) =>
             rows.map((x: any) =>
               x.id === editingIdeaId
-                ? { ...x, title: idea.title ?? x.title, description: idea.description ?? x.description, imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? x.imageUrl ?? null, categoryId: (idea as any).category_id ?? ideaForm.categoryId ?? x.categoryId ?? null, verbatimEvidence: (idea as any).verbatim_evidence ?? ideaForm.verbatimEvidence ?? x.verbatimEvidence ?? "", fitur: (idea as any).fitur ?? ideaForm.fitur ?? x.fitur ?? "", baznas: (idea as any).baznas ?? ideaForm.baznas ?? x.baznas ?? 0, wikaGedung: (idea as any).wika_gedung ?? ideaForm.wikaGedung ?? x.wikaGedung ?? 0, ipcTpk: (idea as any).ipc_tpk ?? ideaForm.ipcTpk ?? x.ipcTpk ?? 0, penyebutanSurvey: (idea as any).penyebutan_survey ?? ideaForm.penyebutanSurvey ?? x.penyebutanSurvey ?? 0, findingIds: ideaFindingIds }
+                ? { ...x, title: idea.title ?? x.title, description: idea.description ?? x.description, imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? x.imageUrl ?? null, categoryId: (idea as any).category_id ?? ideaForm.categoryId ?? x.categoryId ?? null, verbatimEvidence: (idea as any).verbatim_evidence ?? ideaForm.verbatimEvidence ?? x.verbatimEvidence ?? "", fitur: (idea as any).fitur ?? ideaForm.fitur ?? x.fitur ?? "", baznas: (idea as any).baznas ?? ideaForm.baznas ?? x.baznas ?? 0, wikaGedung: (idea as any).wika_gedung ?? ideaForm.wikaGedung ?? x.wikaGedung ?? 0, ipcTpk: (idea as any).ipc_tpk ?? ideaForm.ipcTpk ?? x.ipcTpk ?? 0, sf: (idea as any).sf ?? ideaForm.sf ?? (x as any).sf ?? 0, df: (idea as any).df ?? ideaForm.df ?? (x as any).df ?? 0, bf: (idea as any).bf ?? ideaForm.bf ?? (x as any).bf ?? 0, penyebutanSurvey: (idea as any).penyebutan_survey ?? ideaForm.penyebutanSurvey ?? x.penyebutanSurvey ?? 0, findingIds: ideaFindingIds }
                 : x
             )
           );
@@ -1026,7 +1026,7 @@ export default function AdminDashboard() {
           ideaId = idea.id;
           setIdeas((rows: any[]) => [
             ...rows,
-            { id: idea.id, title: idea.title, description: idea.description || "", imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? null, categoryId: (idea as any).category_id ?? ideaForm.categoryId ?? null, verbatimEvidence: (idea as any).verbatim_evidence ?? ideaForm.verbatimEvidence ?? "", fitur: (idea as any).fitur ?? ideaForm.fitur ?? "", baznas: (idea as any).baznas ?? ideaForm.baznas ?? 0, wikaGedung: (idea as any).wika_gedung ?? ideaForm.wikaGedung ?? 0, ipcTpk: (idea as any).ipc_tpk ?? ideaForm.ipcTpk ?? 0, penyebutanSurvey: (idea as any).penyebutan_survey ?? ideaForm.penyebutanSurvey ?? 0, createdAt: (idea as any).created_at ?? new Date().toISOString(), findingIds: ideaFindingIds },
+            { id: idea.id, title: idea.title, description: idea.description || "", imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? null, categoryId: (idea as any).category_id ?? ideaForm.categoryId ?? null, verbatimEvidence: (idea as any).verbatim_evidence ?? ideaForm.verbatimEvidence ?? "", fitur: (idea as any).fitur ?? ideaForm.fitur ?? "", baznas: (idea as any).baznas ?? ideaForm.baznas ?? 0, wikaGedung: (idea as any).wika_gedung ?? ideaForm.wikaGedung ?? 0, ipcTpk: (idea as any).ipc_tpk ?? ideaForm.ipcTpk ?? 0, sf: (idea as any).sf ?? ideaForm.sf ?? 0, df: (idea as any).df ?? ideaForm.df ?? 0, bf: (idea as any).bf ?? ideaForm.bf ?? 0, penyebutanSurvey: (idea as any).penyebutan_survey ?? ideaForm.penyebutanSurvey ?? 0, createdAt: (idea as any).created_at ?? new Date().toISOString(), findingIds: ideaFindingIds },
           ]);
         }
       }
@@ -2631,7 +2631,7 @@ export default function AdminDashboard() {
                       // Unchecking Wawancara clears the interview-research
                       // counts, so a Survey-only finding never carries
                       // stale interview numbers.
-                      const cleared = opt === "Wawancara" && !e.target.checked ? { baznas: 0, wikaGedung: 0, ipcTpk: 0, penyebutanSurvey: 0 } : {};
+                      const cleared = opt === "Wawancara" && !e.target.checked ? { baznas: 0, wikaGedung: 0, ipcTpk: 0, sf: 0, df: 0, bf: 0, penyebutanSurvey: 0 } : {};
                       return { ...f, sumber, ...cleared };
                     })} className="h-4 w-4 rounded accent-bsi-600" />
                     <span className="text-sm text-slate-700">{opt}</span>
@@ -2642,20 +2642,39 @@ export default function AdminDashboard() {
             {ideaForm.sumber.includes("Wawancara") && (
               <fieldset>
                 <legend className="field-label">Penyebutan dalam Riset</legend>
-                <p className="mb-2 text-xs text-slate-500">Jumlah perusahaan yang menyebut finding ini dalam interview, dan jumlah responden yang menyebutkannya dalam survei. Angka ini dipakai untuk menghitung skor Desirability (D) otomatis ketika finding ini ter-link ke sebuah ide — perusahaan dihitung dari Baznas / WIKA Gedung / IPC TPK, responden dari Penyebutan Survey.</p>
+                <p className="mb-2 text-xs text-slate-500">Jumlah perusahaan yang menyebut finding ini dalam interview, dan jumlah responden yang menyebutkannya dalam survei. Angka ini dipakai untuk menghitung skor Desirability (D) otomatis ketika finding ini ter-link ke sebuah ide — perusahaan dihitung dari {selectedProjectSlug === "digital-value-chain" ? "RSIA Sayyidah (SF) / Elnusa (DF) / BF" : "Baznas / WIKA Gedung / IPC TPK"}, responden dari Penyebutan Survey.</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label htmlFor="idea-baznas" className="field-label">Baznas</label>
-                    <input id="idea-baznas" type="number" min={0} step={1} value={ideaForm.baznas} onChange={(e) => setIdeaForm((f) => ({ ...f, baznas: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className="input w-full" />
-                  </div>
-                  <div>
-                    <label htmlFor="idea-wika" className="field-label">WIKA Gedung</label>
-                    <input id="idea-wika" type="number" min={0} step={1} value={ideaForm.wikaGedung} onChange={(e) => setIdeaForm((f) => ({ ...f, wikaGedung: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className="input w-full" />
-                  </div>
-                  <div>
-                    <label htmlFor="idea-ipc" className="field-label">IPC TPK</label>
-                    <input id="idea-ipc" type="number" min={0} step={1} value={ideaForm.ipcTpk} onChange={(e) => setIdeaForm((f) => ({ ...f, ipcTpk: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className="input w-full" />
-                  </div>
+                  {selectedProjectSlug === "digital-value-chain" ? (
+                    <>
+                      <div>
+                        <label htmlFor="idea-sf" className="field-label">RSIA Sayyidah (SF)</label>
+                        <input id="idea-sf" type="number" min={0} step={1} value={ideaForm.sf} onChange={(e) => setIdeaForm((f) => ({ ...f, sf: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className="input w-full" />
+                      </div>
+                      <div>
+                        <label htmlFor="idea-df" className="field-label">Elnusa (DF)</label>
+                        <input id="idea-df" type="number" min={0} step={1} value={ideaForm.df} onChange={(e) => setIdeaForm((f) => ({ ...f, df: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className="input w-full" />
+                      </div>
+                      <div>
+                        <label htmlFor="idea-bf" className="field-label">BF</label>
+                        <input id="idea-bf" type="number" min={0} step={1} value={ideaForm.bf} onChange={(e) => setIdeaForm((f) => ({ ...f, bf: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className="input w-full" />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <label htmlFor="idea-baznas" className="field-label">Baznas</label>
+                        <input id="idea-baznas" type="number" min={0} step={1} value={ideaForm.baznas} onChange={(e) => setIdeaForm((f) => ({ ...f, baznas: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className="input w-full" />
+                      </div>
+                      <div>
+                        <label htmlFor="idea-wika" className="field-label">WIKA Gedung</label>
+                        <input id="idea-wika" type="number" min={0} step={1} value={ideaForm.wikaGedung} onChange={(e) => setIdeaForm((f) => ({ ...f, wikaGedung: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className="input w-full" />
+                      </div>
+                      <div>
+                        <label htmlFor="idea-ipc" className="field-label">IPC TPK</label>
+                        <input id="idea-ipc" type="number" min={0} step={1} value={ideaForm.ipcTpk} onChange={(e) => setIdeaForm((f) => ({ ...f, ipcTpk: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className="input w-full" />
+                      </div>
+                    </>
+                  )}
                   <div>
                     <label htmlFor="idea-survey" className="field-label">Penyebutan Survey</label>
                     <input id="idea-survey" type="number" min={0} step={1} value={ideaForm.penyebutanSurvey} onChange={(e) => setIdeaForm((f) => ({ ...f, penyebutanSurvey: Math.max(0, parseInt(e.target.value, 10) || 0) }))} className="input w-full" />

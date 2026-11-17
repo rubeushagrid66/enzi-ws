@@ -746,7 +746,7 @@ export default function FindingDetailView({
                 <div className="mt-4 rounded-lg border border-slate-200 p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="text-sm font-semibold text-slate-800">
-                      {isCashProject ? "Interview (Cash, 3 perusahaan)" : "Interview"}
+                      {isCashProject ? "Interview (Cash, 3 perusahaan)" : "Interview (VC, 3 perusahaan)"}
                     </span>
                     <span className="text-sm text-slate-600">3 perusahaan menyebutkan &rarr; 3 &middot; 2 perusahaan menyebutkan &rarr; 2 &middot; 1 perusahaan menyebutkan &rarr; 1</span>
                   </div>
