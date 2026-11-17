@@ -102,7 +102,8 @@ export function getFindingScoringStatus(
     feasibilityY?: number | null;
   },
   aspects?: Array<{ id: string; framework?: any }> | null,
-  researchN?: { interviewN?: number | null; surveyN?: number | null } | null
+  researchN?: { interviewN?: number | null; surveyN?: number | null } | null,
+  surveyBracket?: SurveyBracket | null
 ): FindingScoringStatus {
   const votes = finding.viabilityVotes ?? [];
   // Desirability is scored only when the research mentions yield a D
@@ -113,7 +114,8 @@ export function getFindingScoringStatus(
       finding.interviewMentions ?? null,
       researchN?.interviewN ?? null,
       finding.surveyMentions ?? null,
-      researchN?.surveyN ?? null
+      researchN?.surveyN ?? null,
+      surveyBracket ?? null
     ).score != null;
   let viabilityScored = votes.length > 0;
   // Feasibility is scored only by votes on Feasibility-linked aspects —
@@ -148,6 +150,44 @@ export function getFindingScoringStatus(
 }
 
 /**
+ * Survey D bracket (the "Helper (bracket)" tab of the Scoring DVF - D
+ * sheet, 2026-11-17). The thresholds are configurable from the admin
+ * (Framework tab) and stored as a global setting; these are the
+ * defaults, matching the sheet's agreed values.
+ * - score2Min: unique respondents needed for survey score 2
+ *   (Helper B4, "Survei: skor 2 mulai dari"). Default 3 (1–2 = 1).
+ * - score3Min: unique respondents needed for survey score 3
+ *   (Helper B5, "Survei: skor 3 mulai dari"). Default 6.
+ * - zeroBehavior: what 0 respondents means (Helper B6). 2 = ignore
+ *   the survey (D from interview only); 1 = count survey score 1.
+ *   Default 2.
+ */
+export interface SurveyBracket {
+  score2Min: number;
+  score3Min: number;
+  zeroBehavior: 1 | 2;
+}
+
+export const DEFAULT_SURVEY_BRACKET: SurveyBracket = {
+  score2Min: 3,
+  score3Min: 6,
+  zeroBehavior: 2,
+};
+
+/** Normalize a stored bracket (anything missing/invalid falls back
+ *  to the sheet's agreed defaults). */
+export function normalizeSurveyBracket(raw: any): SurveyBracket {
+  const s2 = Number(raw?.score2Min);
+  const s3 = Number(raw?.score3Min);
+  const zb = Number(raw?.zeroBehavior);
+  return {
+    score2Min: Number.isFinite(s2) && s2 >= 1 ? Math.floor(s2) : DEFAULT_SURVEY_BRACKET.score2Min,
+    score3Min: Number.isFinite(s3) && s3 >= 1 ? Math.floor(s3) : DEFAULT_SURVEY_BRACKET.score3Min,
+    zeroBehavior: zb === 1 ? 1 : 2,
+  };
+}
+
+/**
  * Desirability from research counts (the user's rule, 2026-11-16 —
  * REPLACES the percentage rule of 2026-11-08). A "mention" is a user
  * mentioning this finding in that source. No basis N is used: the
@@ -156,8 +196,10 @@ export function getFindingScoringStatus(
  * - Interview: the count is the number of COMPANIES that
  *   mentioned this finding (Cash interviewed 3 companies).
  *   3 companies → 3 (Tinggi), 2 → 2 (Sedang), 1 → 1 (Rendah).
- * - Survey (open questions): the count is the number of respondents.
- *   ≥ 6 respondents → 3, 3–5 → 2, 1–2 → 1.
+ * - Survey (open questions): the count is the number of DISTINCT
+ *   respondents. Thresholds from the survey bracket (Helper tab):
+ *   ≥ score3Min → 3, ≥ score2Min → 2, 1+ → 1; 0 respondents is
+ *   ignored (survey not counted) unless zeroBehavior is 1.
  * - Internal is NOT a research source and is never counted.
  * - D = the average of the available source scores, rounded UP
  *   (2.5 → 3). With only one source, D is that source's score.
@@ -176,8 +218,10 @@ export function calculateDesirabilityFromResearch(
   interviewMentions: number | null | undefined,
   interviewN: number | null | undefined,
   surveyMentions: number | null | undefined,
-  surveyN: number | null | undefined
+  surveyN: number | null | undefined,
+  surveyBracket?: SurveyBracket | null
 ): DesirabilityResult {
+  const bracket = normalizeSurveyBracket(surveyBracket ?? DEFAULT_SURVEY_BRACKET);
   const countScore = (
     source: "Interview" | "Survei",
     mentions: number | null | undefined,
@@ -185,7 +229,15 @@ export function calculateDesirabilityFromResearch(
   ): ResearchSourceScore => {
     const m = mentions != null && Number.isFinite(Number(mentions)) ? Number(mentions) : null;
     const n = total != null && Number.isFinite(Number(total)) && Number(total) > 0 ? Number(total) : null;
-    if (m == null || m <= 0) {
+    if (m == null) {
+      return { source, mentions: m, total: n, percent: null, score: null };
+    }
+    if (m <= 0) {
+      // Survey with 0 respondents: Helper B6 decides — 1 counts it
+      // as score 1, 2 ignores it (D from interview only).
+      if (source === "Survei" && bracket.zeroBehavior === 1) {
+        return { source, mentions: m, total: n, percent: null, score: 1 };
+      }
       return { source, mentions: m, total: n, percent: null, score: null };
     }
     // Count-based thresholds (no basis N, no percentage).
@@ -196,9 +248,9 @@ export function calculateDesirabilityFromResearch(
           : m === 2
             ? 2
             : 1
-        : m >= 6
+        : m >= bracket.score3Min
           ? 3
-          : m >= 3
+          : m >= bracket.score2Min
             ? 2
             : 1;
     return { source, mentions: m, total: n, percent: null, score };
@@ -249,6 +301,10 @@ export interface LinkedFindingResearch {
   wikaGedung?: number | null;
   ipcTpk?: number | null;
   penyebutanSurvey?: number | null;
+  /** Distinct survey respondent IDs for this finding (from the
+   *  Matriks tab for interview findings; one ID per Mapping row for
+   *  survey findings). Empty/absent when unknown. */
+  surveyRespondents?: string[] | null;
 }
 
 export function calculateAutoInterviewMentions(
@@ -268,28 +324,36 @@ export function calculateAutoInterviewMentions(
 /**
  * Auto survey mentions for a pool item (idea), from its linked
  * findings — the D-from-linked-findings rule (Hitung D sheet): an
- * idea's survey count is the total respondents across its linked
- * findings, read from each finding's penyebutan_survey ("import angka
- * dari masing-masing findings tiap row", user 2026-11-17). Summed
- * across ALL linked findings, whatever their sumber — an interview
- * finding's survey mentions count too (the sheet's Matriks counts
- * respondents per finding the same way). Returns null when NO finding
- * is linked at all (no data — the field stays empty, not 0), else the
- * sum (which may be 0 when the linked findings have no survey
+ * idea's survey count is the number of DISTINCT respondents who
+ * mentioned at least one of its linked findings (the sheet's H8,
+ * "Responden unik", computed via the Matriks tab). Summed across ALL
+ * linked findings, whatever their sumber — an interview finding's
+ * survey mentions count too. A respondent who mentioned two linked
+ * findings is counted ONCE (union of the findings' respondent IDs).
+ * Findings without stored respondent IDs fall back to their
+ * penyebutanSurvey count (manual entries — the old sum behaviour,
+ * which can double-count). Returns null when NO finding is linked
+ * at all (no data — the field stays empty, not 0), else the distinct
+ * count (which may be 0 when the linked findings have no survey
  * mentions — that is the "sisanya otomatis jadi 0" case).
- * NOTE: a plain sum can double-count a respondent who mentioned two
- * linked findings; exact distinct-respondent dedup needs the
- * per-respondent matrix (Matriks tab), which enzi-ws does not store.
  */
 export function calculateAutoSurveyMentions(
   linkedFindings: LinkedFindingResearch[]
 ): number | null {
   if (!linkedFindings || linkedFindings.length === 0) return null;
-  let total = 0;
+  const distinct = new Set<string>();
+  let unknownCount = 0;
   for (const f of linkedFindings) {
-    total += f.penyebutanSurvey ?? 0;
+    const ids = Array.isArray(f.surveyRespondents) ? f.surveyRespondents : [];
+    if (ids.length > 0) {
+      for (const id of ids) distinct.add(String(id));
+    } else {
+      // No respondent identities stored (manual entry): fall back to
+      // the count. These cannot be deduped against the ID-based ones.
+      unknownCount += f.penyebutanSurvey ?? 0;
+    }
   }
-  return total;
+  return distinct.size + unknownCount;
 }
 
 /**

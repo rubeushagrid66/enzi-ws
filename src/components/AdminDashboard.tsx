@@ -247,6 +247,19 @@ export default function AdminDashboard() {
   const [weightSaveStatus, setWeightSaveStatus] = useState<string | null>(null);
   const [weightsSource, setWeightsSource] = useState<string | null>(null);
 
+  // Survey D bracket — GLOBAL (Helper (bracket) tab thresholds from
+  // the Scoring DVF - D sheet). score2Min = unique respondents for
+  // survey score 2 (default 3); score3Min = for score 3 (default 6);
+  // zeroBehavior: 2 = 0 respondents ignores the survey (D from
+  // interview only), 1 = 0 respondents counts as survey score 1.
+  const [bracketInputs, setBracketInputs] = useState<{ score2Min: number; score3Min: number; zeroBehavior: 1 | 2 }>({
+    score2Min: 3,
+    score3Min: 6,
+    zeroBehavior: 2,
+  });
+  const [bracketSaveStatus, setBracketSaveStatus] = useState<string | null>(null);
+  const [bracketSource, setBracketSource] = useState<string | null>(null);
+
   // Research basis N for Desirability (per selected project): total
   // users per source. Synced from the active project when it changes.
   const [interviewNInput, setInterviewNInput] = useState<string>("");
@@ -396,16 +409,25 @@ export default function AdminDashboard() {
   // by all projects and do not depend on the selected project.
   const loadGlobalData = async () => {
     try {
-      const [w, f, g, ideasRes, catsRes] = await Promise.all([
+      const [w, f, g, ideasRes, catsRes, br] = await Promise.all([
         apiCall("/api/global/weights"),
         apiCall("/api/global/findings"),
         apiCall("/api/global/groups"),
         apiCall("/api/global/ideas"),
         apiCall("/api/global/finding-categories").catch(() => ({ categories: [] })),
+        apiCall("/api/global/survey-bracket").catch(() => ({ bracket: null })),
       ]);
       if (w.weights) {
         setWeightInputs(w.weights.map((x: any) => ({ name: x.name, weight: x.weight })));
         setWeightsSource(w.source || null);
+      }
+      if (br.bracket) {
+        setBracketInputs({
+          score2Min: Number(br.bracket.score2Min) || 3,
+          score3Min: Number(br.bracket.score3Min) || 6,
+          zeroBehavior: Number(br.bracket.zeroBehavior) === 1 ? 1 : 2,
+        });
+        setBracketSource(br.source || null);
       }
       setPoolFindings(f.findings || []);
       setAllGroups(g.groups || []);
@@ -610,6 +632,27 @@ export default function AdminDashboard() {
     } catch (e: any) {
       setWeightSaveStatus("Failed to save weights");
       setError(e.message || "Failed to save weights");
+    }
+  };
+
+  // Survey D bracket — GLOBAL. The Helper (bracket) thresholds from
+  // the Scoring DVF - D sheet. Saved exactly as entered; D for every
+  // project uses them on the next load.
+  const handleSaveBracket = async () => {
+    try {
+      setError(null);
+      setBracketSaveStatus("Saving survey bracket...");
+      await apiCall("/api/global/survey-bracket", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bracket: bracketInputs }),
+      });
+      setBracketSaveStatus("Survey bracket saved — it now applies to all projects!");
+      await loadGlobalData();
+      setTimeout(() => setBracketSaveStatus(null), 3000);
+    } catch (e: any) {
+      setBracketSaveStatus("Failed to save survey bracket");
+      setError(e.message || "Failed to save survey bracket");
     }
   };
 
@@ -1905,6 +1948,96 @@ export default function AdminDashboard() {
                     {researchNSaveStatus && <span className="text-sm font-medium text-bsi-600">{researchNSaveStatus}</span>}
                   </div>
                   {isAdmin && (<button type="button" onClick={handleSaveResearchBasis} className="btn-primary">Save Research Basis</button>)}
+                </div>
+              </div>
+
+              <div className="card space-y-6 p-6">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    <Sparkles className="h-4 w-4" /> Survey Bracket (D)
+                  </div>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-900">Desirability — Survey Score Bracket</h2>
+                  <p className="mt-1 text-sm font-medium text-slate-500">Global — applies to all projects.</p>
+                  <p className="mt-1 text-sm text-slate-600">Thresholds from the &ldquo;Helper (bracket)&rdquo; tab of the Scoring DVF - D sheet. The survey score uses the number of DISTINCT respondents who mentioned the idea&apos;s linked findings: {bracketInputs.score3Min} or more &rarr; 3, {bracketInputs.score2Min} to {bracketInputs.score3Min - 1} &rarr; 2, 1 to {bracketInputs.score2Min - 1} &rarr; 1.</p>
+                  {bracketSource && bracketSource !== "global" && (
+                    <p className="mt-1 rounded-lg border border-gold-200 bg-gold-50 px-3 py-2 text-xs font-medium text-gold-800">
+                      Showing the sheet&apos;s agreed defaults for now (3 and 6, 0 respondents ignored). Save once to store them globally.
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="bracket-score2" className="field-label">Skor 2 mulai dari (responden unik)</label>
+                    {isAdmin ? (
+                      <input
+                        id="bracket-score2"
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={bracketInputs.score2Min}
+                        onChange={(e) => setBracketInputs({ ...bracketInputs, score2Min: Math.max(1, Math.floor(Number(e.target.value) || 1)) })}
+                        className="input w-full"
+                      />
+                    ) : (
+                      <span className="block py-2 text-sm font-semibold text-slate-900">{bracketInputs.score2Min}</span>
+                    )}
+                    <p className="mt-1 text-xs text-slate-500">1 sampai {bracketInputs.score2Min - 1} responden = skor 1.</p>
+                  </div>
+                  <div>
+                    <label htmlFor="bracket-score3" className="field-label">Skor 3 mulai dari (responden unik)</label>
+                    {isAdmin ? (
+                      <input
+                        id="bracket-score3"
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={bracketInputs.score3Min}
+                        onChange={(e) => setBracketInputs({ ...bracketInputs, score3Min: Math.max(1, Math.floor(Number(e.target.value) || 1)) })}
+                        className="input w-full"
+                      />
+                    ) : (
+                      <span className="block py-2 text-sm font-semibold text-slate-900">{bracketInputs.score3Min}</span>
+                    )}
+                    <p className="mt-1 text-xs text-slate-500">Skor 3 untuk {bracketInputs.score3Min} responden unik atau lebih.</p>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="field-label">Bila tidak ada penyebutan survei (0 responden)</span>
+                  {isAdmin ? (
+                    <div className="mt-1 space-y-2">
+                      <label className="flex items-start gap-2 text-sm text-slate-700">
+                        <input
+                          type="radio"
+                          name="bracket-zero"
+                          checked={bracketInputs.zeroBehavior === 2}
+                          onChange={() => setBracketInputs({ ...bracketInputs, zeroBehavior: 2 })}
+                          className="mt-0.5"
+                        />
+                        <span><span className="font-medium">Abaikan survei</span> — D memakai wawancara saja (disepakati, seperti sheet).</span>
+                      </label>
+                      <label className="flex items-start gap-2 text-sm text-slate-700">
+                        <input
+                          type="radio"
+                          name="bracket-zero"
+                          checked={bracketInputs.zeroBehavior === 1}
+                          onChange={() => setBracketInputs({ ...bracketInputs, zeroBehavior: 1 })}
+                          className="mt-0.5"
+                        />
+                        <span><span className="font-medium">Hitung skor 1</span> — 0 responden tetap memberi skor survei 1.</span>
+                      </label>
+                    </div>
+                  ) : (
+                    <span className="block py-2 text-sm font-semibold text-slate-900">{bracketInputs.zeroBehavior === 1 ? "Hitung skor 1" : "Abaikan survei (D dari wawancara saja)"}</span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                  <div>
+                    {bracketSaveStatus && <span className="text-sm font-medium text-bsi-600">{bracketSaveStatus}</span>}
+                  </div>
+                  {isAdmin && (<button type="button" onClick={handleSaveBracket} className="btn-primary">Save Survey Bracket</button>)}
                 </div>
               </div>
             </section>

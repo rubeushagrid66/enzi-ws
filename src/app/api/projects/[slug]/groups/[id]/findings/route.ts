@@ -28,6 +28,7 @@ export async function GET(
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
+    const surveyBracket = await dbService.getSurveyBracket().catch(() => null);
     const group = (project.groups || []).find((g: any) => g.id === params.id);
     if (!group) {
       return NextResponse.json({ error: "Group not found in this project" }, { status: 404 });
@@ -112,12 +113,13 @@ export async function GET(
 
     const findingsWithScores = findings.map((f: any) => {
       const { sumber, fitur, platform, tagsList } = parseFindingMeta(f.tags);
-      const scoringStatus = getFindingScoringStatus(f, project.viabilityAspects, researchN);
+      const scoringStatus = getFindingScoringStatus(f, project.viabilityAspects, researchN, surveyBracket);
       const desirabilityData = calculateDesirabilityFromResearch(
         f.interviewMentions ?? null,
         researchN.interviewN,
         f.surveyMentions ?? null,
-        researchN.surveyN
+        researchN.surveyN,
+        surveyBracket
       );
       const participantScores = calculateAllParticipantScores(
         f.viabilityVotes,

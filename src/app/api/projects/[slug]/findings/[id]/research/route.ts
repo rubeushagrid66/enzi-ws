@@ -45,7 +45,10 @@ export async function PUT(
 
     // Recompute D + status for this finding (same formula as the
     // project GET route) so the client can update in place.
-    const project = await dbService.getProjectBySlug(slug);
+    const [project, surveyBracket] = await Promise.all([
+      dbService.getProjectBySlug(slug),
+      dbService.getSurveyBracket().catch(() => null),
+    ]);
     const researchN = {
       interviewN:
         (project as any)?.interview_n != null
@@ -75,8 +78,8 @@ export async function PUT(
     // auto value from linked interview findings (same rule as the
     // project GET route) — so saving with the field cleared (null)
     // keeps the auto D instead of dropping it to unscored. Same for
-    // survey mentions (stored, otherwise the auto sum of linked
-    // findings' penyebutan_survey).
+    // survey mentions (stored, otherwise the auto distinct count of
+    // linked findings' survey respondents).
     const linkedIdeas = await dbService.getIdeasForFinding(id).catch(() => []);
     const autoInterviewMentions = calculateAutoInterviewMentions(linkedIdeas || []);
     const effectiveInterviewMentions = finding.interviewMentions ?? autoInterviewMentions;
@@ -86,12 +89,14 @@ export async function PUT(
       effectiveInterviewMentions,
       researchN.interviewN,
       effectiveSurveyMentions,
-      researchN.surveyN
+      researchN.surveyN,
+      surveyBracket
     );
     const scoringStatus = getFindingScoringStatus(
       { ...finding, interviewMentions: effectiveInterviewMentions, surveyMentions: effectiveSurveyMentions },
       project?.viabilityAspects,
-      researchN
+      researchN,
+      surveyBracket
     );
 
     revalidateProjectPages(slug);

@@ -461,6 +461,75 @@ export const dbService = {
     return clean;
   },
 
+  /** The survey D bracket (Helper (bracket) tab thresholds), or null
+   *  when not configured yet (callers fall back to the sheet's
+   *  agreed defaults in scoring.ts). */
+  async getSurveyBracket(): Promise<{ score2Min: number; score3Min: number; zeroBehavior: 1 | 2 } | null> {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from("global_settings")
+          .select("value")
+          .eq("key", "survey_bracket")
+          .maybeSingle();
+        if (error || !data) return null;
+        const v: any = data.value;
+        if (!v || typeof v !== "object") return null;
+        return {
+          score2Min: Number(v.score2Min),
+          score3Min: Number(v.score3Min),
+          zeroBehavior: Number(v.zeroBehavior) === 1 ? 1 : 2,
+        };
+      } catch {
+        return null;
+      }
+    }
+    try {
+      const row = await prisma.globalSetting.findUnique({ where: { key: "survey_bracket" } });
+      if (!row) return null;
+      const v: any = JSON.parse(String(row.value));
+      if (!v || typeof v !== "object") return null;
+      return {
+        score2Min: Number(v.score2Min),
+        score3Min: Number(v.score3Min),
+        zeroBehavior: Number(v.zeroBehavior) === 1 ? 1 : 2,
+      };
+    } catch {
+      return null;
+    }
+  },
+
+  /** Save the survey D bracket. Throws a clear error naming the
+   *  SQL file when the global_settings table does not exist yet. */
+  async updateSurveyBracket(bracket: { score2Min: number; score3Min: number; zeroBehavior: 1 | 2 }) {
+    const clean = {
+      score2Min: Math.max(1, Math.floor(Number(bracket.score2Min) || 3)),
+      score3Min: Math.max(1, Math.floor(Number(bracket.score3Min) || 6)),
+      zeroBehavior: Number(bracket.zeroBehavior) === 1 ? 1 : 2,
+    };
+    if (isSupabaseConfigured && supabase) {
+      const { error } = await supabase
+        .from("global_settings")
+        .upsert(
+          { key: "survey_bracket", value: clean, updated_at: new Date().toISOString() },
+          { onConflict: "key" }
+        );
+      if (error) {
+        if (/global_settings|relation .* does not exist|PGRST205/i.test(error.message || "")) {
+          throw new Error(GLOBAL_SQL_HINT);
+        }
+        throw error;
+      }
+      return clean;
+    }
+    await prisma.globalSetting.upsert({
+      where: { key: "survey_bracket" },
+      update: { value: JSON.stringify(clean) },
+      create: { key: "survey_bracket", value: JSON.stringify(clean) },
+    });
+    return clean;
+  },
+
   /** The global L1–L3 tree (project_id null rows), or [] when the
    *  global setup does not exist yet. Callers fall back to the
    *  project's own tree. */
@@ -729,6 +798,7 @@ export const dbService = {
         wikaGedung: i.wika_gedung ?? 0,
         ipcTpk: i.ipc_tpk ?? 0,
         penyebutanSurvey: i.penyebutan_survey ?? 0,
+        surveyRespondents: Array.isArray(i.survey_respondents) ? i.survey_respondents : [],
         findingIds: linkMap[i.id] || [],
         createdAt: i.created_at,
       }));
@@ -963,15 +1033,26 @@ export const dbService = {
    *  page. Returns the idea rows (id, title, description, imageUrl). */
   async getIdeasForFinding(findingId: string): Promise<any[]> {
     if (isSupabaseConfigured && supabase) {
+      const mapRows = (rows: any[]) =>
+        rows
+          .map((r: any) => r.idea)
+          .filter((i: any) => i && i.id)
+          .map((i: any) => ({ id: i.id, title: i.title, description: i.description || "", imageUrl: i.image_url || null, verbatimEvidence: i.verbatim_evidence || "", fitur: i.fitur || "", sumber: i.sumber || [], baznas: i.baznas ?? 0, wikaGedung: i.wika_gedung ?? 0, ipcTpk: i.ipc_tpk ?? 0, penyebutanSurvey: i.penyebutan_survey ?? 0, surveyRespondents: Array.isArray(i.survey_respondents) ? i.survey_respondents : [] }));
       const { data, error } = await supabase
         .from("idea_findings")
-        .select("idea:ideas(id, title, description, image_url, verbatim_evidence, fitur, sumber, baznas, wika_gedung, ipc_tpk, penyebutan_survey)")
+        .select("idea:ideas(id, title, description, image_url, verbatim_evidence, fitur, sumber, baznas, wika_gedung, ipc_tpk, penyebutan_survey, survey_respondents)")
         .eq("finding_id", findingId);
-      if (error || !data) return [];
-      return (data as any[])
-        .map((r: any) => r.idea)
-        .filter((i: any) => i && i.id)
-        .map((i: any) => ({ id: i.id, title: i.title, description: i.description || "", imageUrl: i.image_url || null, verbatimEvidence: i.verbatim_evidence || "", fitur: i.fitur || "", sumber: i.sumber || [], baznas: i.baznas ?? 0, wikaGedung: i.wika_gedung ?? 0, ipcTpk: i.ipc_tpk ?? 0, penyebutanSurvey: i.penyebutan_survey ?? 0 }));
+      if (!error && data) return mapRows(data as any[]);
+      // Fallback when the survey_respondents column does not exist
+      // yet (SQL not run): same rows without it.
+      if (error && /survey_respondents/i.test(error.message || "")) {
+        const retry = await supabase
+          .from("idea_findings")
+          .select("idea:ideas(id, title, description, image_url, verbatim_evidence, fitur, sumber, baznas, wika_gedung, ipc_tpk, penyebutan_survey)")
+          .eq("finding_id", findingId);
+        if (!retry.error && retry.data) return mapRows(retry.data as any[]);
+      }
+      return [];
     }
     try {
       const rows = await prisma.$queryRaw<Array<{ id: string; title: string; description: string }>>`

@@ -46,11 +46,13 @@ export async function GET(
         : {}
     );
     const categoriesP = dbService.getFindingCategories().catch(() => []);
-    const [project, allIdeas, subMap, categories] = await Promise.all([
+    const surveyBracketP = dbService.getSurveyBracket().catch(() => null);
+    const [project, allIdeas, subMap, categories, surveyBracket] = await Promise.all([
       projectP,
       ideasP,
       subMapP,
       categoriesP,
+      surveyBracketP,
     ]);
 
     if (!project) {
@@ -178,14 +180,15 @@ export async function GET(
     // local join, no extra query. Null when no interview finding is
     // linked. The stored interviewMentions (manual override) wins;
     // otherwise D uses this auto value.
-    // Auto survey mentions use the same linked findings: the sum of
-    // each finding's penyebutan_survey. Null when no finding is
-    // linked at all.
+    // Auto survey mentions use the same linked findings: the number
+    // of DISTINCT respondents across them (union of each finding's
+    // surveyRespondents — the sheet's "responden unik"). Null when no
+    // finding is linked at all.
     // Collect each pool item's linked findings, then count distinct
     // companies once per item.
     const autoInterviewByFindingId = new Map<string, number | null>();
     const autoSurveyByFindingId = new Map<string, number | null>();
-    const linkedResearchByFindingId = new Map<string, Array<{ sumber: string[]; baznas: number; wikaGedung: number; ipcTpk: number; penyebutanSurvey: number }>>();
+    const linkedResearchByFindingId = new Map<string, Array<{ sumber: string[]; baznas: number; wikaGedung: number; ipcTpk: number; penyebutanSurvey: number; surveyRespondents: string[] }>>();
     for (const idea of (allIdeas || [])) {
       const research = {
         sumber: idea.sumber || [],
@@ -193,6 +196,7 @@ export async function GET(
         wikaGedung: idea.wikaGedung ?? 0,
         ipcTpk: idea.ipcTpk ?? 0,
         penyebutanSurvey: idea.penyebutanSurvey ?? 0,
+        surveyRespondents: Array.isArray(idea.surveyRespondents) ? idea.surveyRespondents : [],
       };
       for (const fid of (idea.findingIds || [])) {
         if (!linkedResearchByFindingId.has(fid)) linkedResearchByFindingId.set(fid, []);
@@ -220,7 +224,8 @@ export async function GET(
       const scoringStatus = getFindingScoringStatus(
         { ...f, interviewMentions: effectiveInterviewMentions, surveyMentions: effectiveSurveyMentions },
         project.viabilityAspects,
-        researchN
+        researchN,
+        surveyBracket
       );
 
       // 1. Desirability — research mentions against the project's basis
@@ -231,7 +236,8 @@ export async function GET(
         effectiveInterviewMentions,
         researchN.interviewN,
         effectiveSurveyMentions,
-        researchN.surveyN
+        researchN.surveyN,
+        surveyBracket
       );
 
       // 2. Viability + Feasibility — per-participant 1–3 scores.

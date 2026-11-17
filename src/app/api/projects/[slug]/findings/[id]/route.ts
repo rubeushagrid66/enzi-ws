@@ -31,6 +31,7 @@ export async function GET(
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
+    const surveyBracket = await dbService.getSurveyBracket().catch(() => null);
     const found = await dbService.getFindingsByIds([params.id]);
     const f = found[0];
     if (!f) {
@@ -56,12 +57,13 @@ export async function GET(
         .map((a: any) => a.id);
     const vAspectIds = aspectIdsFor("Viability");
     const fAspectIds = aspectIdsFor("Feasibility");
-    const scoringStatus = getFindingScoringStatus(f, project.viabilityAspects, researchN);
+    const scoringStatus = getFindingScoringStatus(f, project.viabilityAspects, researchN, surveyBracket);
     const desirabilityData = calculateDesirabilityFromResearch(
       f.interviewMentions ?? null,
       researchN.interviewN,
       f.surveyMentions ?? null,
-      researchN.surveyN
+      researchN.surveyN,
+      surveyBracket
     );
     const participantScores = calculateAllParticipantScores(f.viabilityVotes, vAspectIds, fAspectIds);
     // Finding meta (Sumber / Fitur / Platform) for the detail view.
