@@ -188,9 +188,27 @@ export default function FindingDetailView({
   // N (Total) tidak lagi dipakai dalam perhitungan, jadi tidak ada
   // input Total di seksi ini. Total proyek masih tersimpan di database
   // dan bisa diubah dari dashboard (Framework & Weighting).
+  // NOTE (auto interview, 2026-11-17): the Interview count defaults
+  // to the auto value from linked interview findings (distinct
+  // companies — interviewMentionsAuto from the API, null when no
+  // interview finding is linked). The stored interviewMentions is the
+  // manual override and wins when set. The input shows the effective
+  // value (stored ?? auto); saving an untouched auto value keeps it
+  // automatic (null is sent), so it keeps following the links.
+  const autoInterviewMentions =
+    localFinding.interviewMentionsAuto != null
+      ? Number(localFinding.interviewMentionsAuto)
+      : null;
+  const effectiveInterviewMentions =
+    localFinding.interviewMentions != null
+      ? Number(localFinding.interviewMentions)
+      : autoInterviewMentions;
   const [interviewInput, setInterviewInput] = useState<string>(
-    localFinding.interviewMentions != null ? String(localFinding.interviewMentions) : ""
+    effectiveInterviewMentions != null ? String(effectiveInterviewMentions) : ""
   );
+  // True once the admin edits the Interview field — used on save so
+  // an untouched auto value is not locked in as a manual override.
+  const [interviewDirty, setInterviewDirty] = useState(false);
   const [surveyInput, setSurveyInput] = useState<string>(
     localFinding.surveyMentions != null ? String(localFinding.surveyMentions) : ""
   );
@@ -198,8 +216,13 @@ export default function FindingDetailView({
   const [researchStatus, setResearchStatus] = useState<string | null>(null);
   React.useEffect(() => {
     setInterviewInput(
-      localFinding.interviewMentions != null ? String(localFinding.interviewMentions) : ""
+      localFinding.interviewMentions != null
+        ? String(localFinding.interviewMentions)
+        : localFinding.interviewMentionsAuto != null
+          ? String(localFinding.interviewMentionsAuto)
+          : ""
     );
+    setInterviewDirty(false);
     setSurveyInput(
       localFinding.surveyMentions != null ? String(localFinding.surveyMentions) : ""
     );
@@ -379,18 +402,27 @@ export default function FindingDetailView({
   // (Aturan D baru, 2026-11-16: basis N / Total tidak lagi dipakai
   // dalam perhitungan D, jadi tidak disimpan dari sini.)
   // The response merges into local state like a vote save.
+  // Interview auto-keep: when the stored value is null and the admin
+  // never edited the field, the shown number is the auto value from
+  // linked findings — send null so it stays automatic instead of
+  // locking the auto number in as a manual override.
   const handleSaveResearch = async () => {
     setResearchSaving(true);
     setResearchStatus(null);
     try {
+      const interviewToSave =
+        !interviewDirty && localFinding.interviewMentions == null
+          ? null
+          : interviewInput.trim() === ""
+            ? null
+            : Math.floor(Number(interviewInput));
       const res = await fetch(
         `/api/projects/${project.slug}/findings/${localFinding.id}/research`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            interviewMentions:
-              interviewInput.trim() === "" ? null : Math.floor(Number(interviewInput)),
+            interviewMentions: interviewToSave,
             surveyMentions:
               surveyInput.trim() === "" ? null : Math.floor(Number(surveyInput)),
           }),
@@ -402,10 +434,13 @@ export default function FindingDetailView({
         setLocalFinding((prev: any) => ({
           ...prev,
           interviewMentions: data.finding.interviewMentions ?? null,
+          interviewMentionsAuto:
+            data.finding.interviewMentionsAuto ?? prev.interviewMentionsAuto ?? null,
           surveyMentions: data.finding.surveyMentions ?? null,
           scoringStatus: data.finding.scoringStatus ?? prev.scoringStatus,
           scores: { ...prev.scores, ...(data.finding.scores || {}) },
         }));
+        setInterviewDirty(false);
       }
       setResearchStatus("Research mentions saved — Desirability updated.");
     } catch (e: any) {
@@ -641,7 +676,7 @@ export default function FindingDetailView({
                   D dihitung hanya berdasarkan jumlah penyebutan dalam riset: perusahaan untuk Interview, responden untuk Survei. Tidak ada basis total — skor berasal dari angka mentahnya saja.
                 </p>
                 <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                  Angka diisi secara manual: jumlah perusahaan yang menyebut temuan ini dalam Interview, dan jumlah responden yang menyebutnya dalam Survei.
+                  Angka Interview terisi otomatis dari findings interview yang ter-link ke ide ini (jumlah perusahaan yang berbeda). Angka bisa diubah manual — mengosongkannya mengembalikan ke hitungan otomatis.
                 </p>
 
                 {/* Interview */}
@@ -660,7 +695,7 @@ export default function FindingDetailView({
                         min={0}
                         inputMode="numeric"
                         value={interviewInput}
-                        onChange={(e) => setInterviewInput(e.target.value)}
+                        onChange={(e) => { setInterviewInput(e.target.value); setInterviewDirty(true); }}
                         placeholder="e.g. 2"
                         disabled={!isAdmin}
                         title={
@@ -678,6 +713,11 @@ export default function FindingDetailView({
                       </span>
                     </span>
                   </div>
+                  {localFinding.interviewMentions == null && autoInterviewMentions != null && (
+                    <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                      Otomatis dari findings interview yang ter-link ke ide ini — ubah angkanya untuk override manual.
+                    </p>
+                  )}
                 </div>
 
                 {/* Survey */}

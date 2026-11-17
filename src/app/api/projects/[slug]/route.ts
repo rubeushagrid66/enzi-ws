@@ -13,6 +13,7 @@ function notFoundResponse() {
 }
 import {
   calculateDesirabilityFromResearch,
+  calculateAutoInterviewMentions,
   calculateAllParticipantScores,
   getFindingScoringStatus,
   normalizeFramework,
@@ -170,11 +171,43 @@ export async function GET(
       if (normalized.length === 0) return true;
       return normalized.includes(projectPlatform);
     };
+    // Auto interview mentions per pool item (D-from-linked-findings,
+    // 2026-11-17): distinct companies among the interview findings
+    // linked to the idea. Built from allIdeas (already fetched) — a
+    // local join, no extra query. Null when no interview finding is
+    // linked. The stored interviewMentions (manual override) wins;
+    // otherwise D uses this auto value.
+    // Collect each pool item's linked findings, then count distinct
+    // companies once per item.
+    const autoInterviewByFindingId = new Map<string, number | null>();
+    const linkedResearchByFindingId = new Map<string, Array<{ sumber: string[]; baznas: number; wikaGedung: number; ipcTpk: number }>>();
+    for (const idea of (allIdeas || [])) {
+      const research = {
+        sumber: idea.sumber || [],
+        baznas: idea.baznas ?? 0,
+        wikaGedung: idea.wikaGedung ?? 0,
+        ipcTpk: idea.ipcTpk ?? 0,
+      };
+      for (const fid of (idea.findingIds || [])) {
+        if (!linkedResearchByFindingId.has(fid)) linkedResearchByFindingId.set(fid, []);
+        linkedResearchByFindingId.get(fid)!.push(research);
+      }
+    }
+    linkedResearchByFindingId.forEach((linked, fid) => {
+      autoInterviewByFindingId.set(fid, calculateAutoInterviewMentions(linked));
+    });
+
     const findingsWithScores = (project.findings || [])
       .map((f: any) => {
       const { sumber, fitur, platform, tagsList } = parseFindingMeta(f.tags);
+
+      // Interview mentions are the stored value when the admin set
+      // one, otherwise the auto value from linked interview findings.
+      // Computed first: both the scoring status and D use it.
+      const autoInterviewMentions = autoInterviewByFindingId.get(f.id) ?? null;
+      const effectiveInterviewMentions = f.interviewMentions ?? autoInterviewMentions;
       const scoringStatus = getFindingScoringStatus(
-        f,
+        { ...f, interviewMentions: effectiveInterviewMentions },
         project.viabilityAspects,
         researchN
       );
@@ -184,7 +217,7 @@ export async function GET(
       // D = round-up average of the two source scores, or the single
       // source's score). Null when no source has data.
       const desirabilityData = calculateDesirabilityFromResearch(
-        f.interviewMentions ?? null,
+        effectiveInterviewMentions,
         researchN.interviewN,
         f.surveyMentions ?? null,
         researchN.surveyN
@@ -204,6 +237,12 @@ export async function GET(
         platform,
         tagsList,
         scoringStatus,
+        // Auto interview count from linked interview findings (null
+        // when none linked). The client shows stored interviewMentions
+        // when set, otherwise this auto value — and only sends a
+        // stored value when the admin actually changed the field, so
+        // an untouched auto value stays automatic.
+        interviewMentionsAuto: autoInterviewMentions,
         scores: {
           desirability: desirabilityData?.score ?? null,
           desirabilityDetails: desirabilityData,

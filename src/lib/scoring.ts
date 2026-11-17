@@ -232,6 +232,39 @@ export function calculateDesirabilityFromResearch(
 }
 
 /**
+ * Auto interview mentions for a pool item (idea), from its linked
+ * interview findings — the D-from-linked-findings rule the user
+ * confirmed 2026-11-17 (Hitung D sheet): an idea's interview count is
+ * the number of DISTINCT companies that mentioned at least one of its
+ * linked findings. Only findings whose sumber includes "Wawancara"
+ * contribute; a finding counts for a company when that company's flag
+ * (baznas / wikaGedung / ipcTpk) is > 0. Returns null when NO
+ * interview finding is linked (no interview data — the field stays
+ * empty, not 0), else 0–3. Survey is NOT computed here: the survey
+ * D formula is still to be shared by the user (2026-11-17).
+ */
+export interface LinkedFindingResearch {
+  sumber?: string[] | null;
+  baznas?: number | null;
+  wikaGedung?: number | null;
+  ipcTpk?: number | null;
+}
+
+export function calculateAutoInterviewMentions(
+  linkedFindings: LinkedFindingResearch[]
+): number | null {
+  const interviewFindings = (linkedFindings || []).filter(
+    (f) => Array.isArray(f.sumber) && f.sumber.includes("Wawancara")
+  );
+  if (interviewFindings.length === 0) return null;
+  let count = 0;
+  if (interviewFindings.some((f) => (f.baznas ?? 0) > 0)) count++;
+  if (interviewFindings.some((f) => (f.wikaGedung ?? 0) > 0)) count++;
+  if (interviewFindings.some((f) => (f.ipcTpk ?? 0) > 0)) count++;
+  return count;
+}
+
+/**
  * Per-participant V and F (1–3 scale), the auto-calculation the user
  * defined 2026-11-07. There is NO composite score and NO averaging
  * across participants: each participant has their own V and F, and the

@@ -4,6 +4,7 @@ import { getSession, requireAdminOrFacilitator } from "@/lib/auth";
 import { revalidateProjectPages } from "@/lib/revalidate";
 import {
   calculateDesirabilityFromResearch,
+  calculateAutoInterviewMentions,
   getFindingScoringStatus,
 } from "@/lib/scoring";
 
@@ -69,14 +70,21 @@ export async function PUT(
     if (!finding) {
       return NextResponse.json({ error: "Finding not found" }, { status: 404 });
     }
+    // Interview mentions are the stored value when set, otherwise the
+    // auto value from linked interview findings (same rule as the
+    // project GET route) — so saving with the field cleared (null)
+    // keeps the auto D instead of dropping it to unscored.
+    const linkedIdeas = await dbService.getIdeasForFinding(id).catch(() => []);
+    const autoInterviewMentions = calculateAutoInterviewMentions(linkedIdeas || []);
+    const effectiveInterviewMentions = finding.interviewMentions ?? autoInterviewMentions;
     const desirabilityData = calculateDesirabilityFromResearch(
-      finding.interviewMentions ?? null,
+      effectiveInterviewMentions,
       researchN.interviewN,
       finding.surveyMentions ?? null,
       researchN.surveyN
     );
     const scoringStatus = getFindingScoringStatus(
-      finding,
+      { ...finding, interviewMentions: effectiveInterviewMentions },
       project?.viabilityAspects,
       researchN
     );
@@ -86,6 +94,7 @@ export async function PUT(
       success: true,
       finding: {
         ...finding,
+        interviewMentionsAuto: autoInterviewMentions,
         scoringStatus,
         scores: {
           desirability: desirabilityData.score,

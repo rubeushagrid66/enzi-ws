@@ -965,13 +965,13 @@ export const dbService = {
     if (isSupabaseConfigured && supabase) {
       const { data, error } = await supabase
         .from("idea_findings")
-        .select("idea:ideas(id, title, description, image_url, verbatim_evidence, fitur, baznas, wika_gedung, ipc_tpk, penyebutan_survey)")
+        .select("idea:ideas(id, title, description, image_url, verbatim_evidence, fitur, sumber, baznas, wika_gedung, ipc_tpk, penyebutan_survey)")
         .eq("finding_id", findingId);
       if (error || !data) return [];
       return (data as any[])
         .map((r: any) => r.idea)
         .filter((i: any) => i && i.id)
-        .map((i: any) => ({ id: i.id, title: i.title, description: i.description || "", imageUrl: i.image_url || null, verbatimEvidence: i.verbatim_evidence || "", fitur: i.fitur || "", baznas: i.baznas ?? 0, wikaGedung: i.wika_gedung ?? 0, ipcTpk: i.ipc_tpk ?? 0, penyebutanSurvey: i.penyebutan_survey ?? 0 }));
+        .map((i: any) => ({ id: i.id, title: i.title, description: i.description || "", imageUrl: i.image_url || null, verbatimEvidence: i.verbatim_evidence || "", fitur: i.fitur || "", sumber: i.sumber || [], baznas: i.baznas ?? 0, wikaGedung: i.wika_gedung ?? 0, ipcTpk: i.ipc_tpk ?? 0, penyebutanSurvey: i.penyebutan_survey ?? 0 }));
     }
     try {
       const rows = await prisma.$queryRaw<Array<{ id: string; title: string; description: string }>>`
