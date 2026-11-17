@@ -42,6 +42,11 @@ export default function FindingPopup({
               <span className="rounded-full bg-bsi-50 px-2.5 py-0.5 font-bold text-bsi-700">
                 {finding.categoryName || "Uncategorized"}
               </span>
+              {Array.isArray(finding.sumber) && finding.sumber.map((s: string) => (
+                <span key={s} className="rounded-full bg-slate-100 px-2.5 py-0.5 font-bold text-slate-700">
+                  {s}
+                </span>
+              ))}
               {(finding.linkedIdeas || []).length > 0 && (
                 <span>Linked to {(finding.linkedIdeas || []).length} {(finding.linkedIdeas || []).length === 1 ? "idea" : "ideas"}</span>
               )}
@@ -69,18 +74,6 @@ export default function FindingPopup({
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Fitur</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">{finding.fitur}</p>
-            </div>
-          )}
-          {Array.isArray(finding.sumber) && finding.sumber.length > 0 && (
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Sumber</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {finding.sumber.map((s: string) => (
-                  <span key={s} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-700">
-                    {s}
-                  </span>
-                ))}
-              </div>
             </div>
           )}
           {((Array.isArray(finding.sumber) && finding.sumber.includes("Wawancara")) ||
