@@ -262,6 +262,11 @@ export async function GET(
           verbatimEvidence: idea.verbatimEvidence || "",
           fitur: idea.fitur || "",
           projectId: idea.projectId ?? null,
+          sumber: idea.sumber || [],
+          baznas: idea.baznas ?? 0,
+          wikaGedung: idea.wikaGedung ?? 0,
+          ipcTpk: idea.ipcTpk ?? 0,
+          penyebutanSurvey: idea.penyebutanSurvey ?? 0,
           subFindings: subMap[idea.id] || [],
           linkedIdeas: linkedIds.map((fid: string) => ({ id: fid, title: poolTitleById.get(fid) || "Untitled" })),
         };
