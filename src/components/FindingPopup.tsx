@@ -71,6 +71,18 @@ export default function FindingPopup({
               <p className="mt-1 text-sm font-semibold text-slate-800">{finding.fitur}</p>
             </div>
           )}
+          {Array.isArray(finding.sumber) && finding.sumber.length > 0 && (
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Sumber</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {finding.sumber.map((s: string) => (
+                  <span key={s} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-700">
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           {((Array.isArray(finding.sumber) && finding.sumber.includes("Wawancara")) ||
             (finding.baznas || 0) > 0 || (finding.wikaGedung || 0) > 0 ||
             (finding.ipcTpk || 0) > 0 || (finding.penyebutanSurvey || 0) > 0) && (
