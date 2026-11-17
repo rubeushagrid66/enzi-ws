@@ -2273,7 +2273,11 @@ export default function AdminDashboard() {
                 ))}
               </div>
             </fieldset>
-            <fieldset>
+            {/* min-w-0: a fieldset defaults to min-width min-content,
+                so the long finding descriptions forced this whole
+                section wider than the other fields. Constraining it
+                keeps it the same width as the rest of the form. */}
+            <fieldset className="min-w-0">
               <legend className="field-label">Findings</legend>
               <p className="mb-2 text-xs text-slate-500">Tick the findings this idea relates to. An idea can be linked to one or many findings.</p>
               {ideas.length === 0 ? (
@@ -2310,7 +2314,7 @@ export default function AdminDashboard() {
                             />
                             <span className="min-w-0">
                               <span className="block font-medium leading-snug text-slate-900">{i.title}</span>
-                              {i.description && <span className="mt-0.5 block truncate text-xs text-slate-500">{i.description}</span>}
+                              {i.description && <span className="mt-0.5 block text-xs leading-relaxed text-slate-500">{i.description}</span>}
                             </span>
                           </label>
                         ))}
