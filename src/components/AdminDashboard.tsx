@@ -2628,7 +2628,7 @@ export default function AdminDashboard() {
             {ideaForm.sumber.includes("Wawancara") && (
               <fieldset>
                 <legend className="field-label">Penyebutan dalam Riset</legend>
-                <p className="mb-2 text-xs text-slate-500">Jumlah perusahaan yang menyebut finding ini dalam interview, dan jumlah responden yang menyebutkannya dalam survei. Informasional saja — angka ini tampil di daftar Findings dan popup, dan tidak dipakai untuk menghitung skor.</p>
+                <p className="mb-2 text-xs text-slate-500">Jumlah perusahaan yang menyebut finding ini dalam interview, dan jumlah responden yang menyebutkannya dalam survei. Angka ini dipakai untuk menghitung skor Desirability (D) otomatis ketika finding ini ter-link ke sebuah ide — perusahaan dihitung dari Baznas / WIKA Gedung / IPC TPK, responden dari Penyebutan Survey.</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label htmlFor="idea-baznas" className="field-label">Baznas</label>

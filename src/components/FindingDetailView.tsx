@@ -167,10 +167,11 @@ export default function FindingDetailView({
   // The idea's values. V/F are the average of all participants who
   // scored that dimension (1 decimal); a dimension nobody scored is
   // null. D is the finding's research score — it comes from the
-  // research mentions and the project's basis N, NOT from any group's
-  // votes, so it is the same for every viewer. A role's V/F only
-  // reflects the aspects its members may score (their group's assigned
-  // role), because the vote API only lets them vote on those aspects.
+  // research mention counts alone (count-based, no basis N), NOT from
+  // any group's votes, so it is the same for every viewer. A role's
+  // V/F only reflects the aspects its members may score (their
+  // group's assigned role), because the vote API only lets them vote
+  // on those aspects.
   const groupVF = groupAverageScores(
     localFinding.scores?.participantScores,
     groupParticipantIds
