@@ -393,22 +393,14 @@ export default function AdminDashboard() {
     }
   };
 
-  // Global setup: weights, findings pool, ideas. These are shared
-  // by all projects and do not depend on the selected project.
-  const loadGlobalData = async () => {
+  // Survey D bracket — PER PROJECT (2026-11-17). The Helper (bracket)
+  // thresholds from that project's Scoring DVF - D sheet. Loaded for
+  // the active project; saving stores it under that project's key.
+  const loadBracket = async (slug: string) => {
     try {
-      const [w, f, g, ideasRes, catsRes, br] = await Promise.all([
-        apiCall("/api/global/weights"),
-        apiCall("/api/global/findings"),
-        apiCall("/api/global/groups"),
-        apiCall("/api/global/ideas"),
-        apiCall("/api/global/finding-categories").catch(() => ({ categories: [] })),
-        apiCall("/api/global/survey-bracket").catch(() => ({ bracket: null })),
-      ]);
-      if (w.weights) {
-        setWeightInputs(w.weights.map((x: any) => ({ name: x.name, weight: x.weight })));
-        setWeightsSource(w.source || null);
-      }
+      const br = await apiCall(
+        `/api/global/survey-bracket?project=${encodeURIComponent(slug)}`
+      ).catch(() => ({ bracket: null }));
       if (br.bracket) {
         setBracketInputs({
           score2Min: Number(br.bracket.score2Min) || 3,
@@ -416,6 +408,26 @@ export default function AdminDashboard() {
           zeroBehavior: Number(br.bracket.zeroBehavior) === 1 ? 1 : 2,
         });
         setBracketSource(br.source || null);
+      }
+    } catch {
+      // A failed bracket fetch keeps the defaults.
+    }
+  };
+
+  // Global setup: weights, findings pool, ideas. These are shared
+  // by all projects and do not depend on the selected project.
+  const loadGlobalData = async () => {
+    try {
+      const [w, f, g, ideasRes, catsRes] = await Promise.all([
+        apiCall("/api/global/weights"),
+        apiCall("/api/global/findings"),
+        apiCall("/api/global/groups"),
+        apiCall("/api/global/ideas"),
+        apiCall("/api/global/finding-categories").catch(() => ({ categories: [] })),
+      ]);
+      if (w.weights) {
+        setWeightInputs(w.weights.map((x: any) => ({ name: x.name, weight: x.weight })));
+        setWeightsSource(w.source || null);
       }
       setPoolFindings(f.findings || []);
       setAllGroups(g.groups || []);
@@ -472,6 +484,7 @@ export default function AdminDashboard() {
       if (firstSlug) setSelectedProjectSlug(firstSlug);
       await Promise.all([
         firstSlug ? loadProjectDetails(firstSlug) : Promise.resolve(),
+        firstSlug ? loadBracket(firstSlug) : Promise.resolve(),
         loadGlobalData(),
         userData.user.role === "ADMIN" ? reloadUsers() : Promise.resolve(),
       ]);
@@ -496,6 +509,7 @@ export default function AdminDashboard() {
     // would show — and let the user act on — the previous project.
     setActiveProject(null);
     loadProjectDetails(slug);
+    loadBracket(slug);
   };
 
   // Sign out from the sidebar user card (same flow as the site navbar).
@@ -623,9 +637,9 @@ export default function AdminDashboard() {
     }
   };
 
-  // Survey D bracket — GLOBAL. The Helper (bracket) thresholds from
-  // the Scoring DVF - D sheet. Saved exactly as entered; D for every
-  // project uses them on the next load.
+  // Survey D bracket — PER PROJECT. The Helper (bracket) thresholds
+  // from this project's Scoring DVF - D sheet. Saved under the active
+  // project's key; D for this project uses them on the next load.
   const handleSaveBracket = async () => {
     try {
       setError(null);
@@ -633,10 +647,10 @@ export default function AdminDashboard() {
       await apiCall("/api/global/survey-bracket", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bracket: bracketInputs }),
+        body: JSON.stringify({ bracket: bracketInputs, projectSlug: selectedProjectSlug }),
       });
-      setBracketSaveStatus("Survey bracket saved — it now applies to all projects!");
-      await loadGlobalData();
+      setBracketSaveStatus(`Survey bracket saved for ${activeProject?.name ?? selectedProjectSlug}!`);
+      await loadBracket(selectedProjectSlug);
       setTimeout(() => setBracketSaveStatus(null), 3000);
     } catch (e: any) {
       setBracketSaveStatus("Failed to save survey bracket");
@@ -1862,11 +1876,11 @@ export default function AdminDashboard() {
                     <Sparkles className="h-4 w-4" /> Survey Bracket (D)
                   </div>
                   <h2 className="mt-1 text-xl font-semibold text-slate-900">Desirability — Survey Score Bracket</h2>
-                  <p className="mt-1 text-sm font-medium text-slate-500">Global — applies to all projects.</p>
+                  <p className="mt-1 text-sm font-medium text-slate-500">Per project — {activeProject?.name ?? selectedProjectSlug}.</p>
                   <p className="mt-1 text-sm text-slate-600">Thresholds from the &ldquo;Helper (bracket)&rdquo; tab of the Scoring DVF - D sheet. The survey score uses the number of DISTINCT respondents who mentioned the idea&apos;s linked findings: {bracketInputs.score3Min} or more &rarr; 3, {bracketInputs.score2Min} to {bracketInputs.score3Min - 1} &rarr; 2, 1 to {bracketInputs.score2Min - 1} &rarr; 1.</p>
-                  {bracketSource && bracketSource !== "global" && (
+                  {bracketSource === "default" && (
                     <p className="mt-1 rounded-lg border border-gold-200 bg-gold-50 px-3 py-2 text-xs font-medium text-gold-800">
-                      Showing the sheet&apos;s agreed defaults for now (3 and 6, 0 respondents ignored). Save once to store them globally.
+                      Showing the sheet&apos;s agreed defaults for now (3 and 6, 0 respondents ignored). Save once to store them for this project.
                     </p>
                   )}
                 </div>

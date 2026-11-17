@@ -47,7 +47,7 @@ export async function PUT(
     // project GET route) so the client can update in place.
     const [project, surveyBracket] = await Promise.all([
       dbService.getProjectBySlug(slug),
-      dbService.getSurveyBracket().catch(() => null),
+      dbService.getSurveyBracket(slug).catch(() => null),
     ]);
     const researchN = {
       interviewN:

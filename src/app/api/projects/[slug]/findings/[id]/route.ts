@@ -33,7 +33,7 @@ export async function GET(
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
-    const surveyBracket = await dbService.getSurveyBracket().catch(() => null);
+    const surveyBracket = await dbService.getSurveyBracket(params.slug).catch(() => null);
     const found = await dbService.getFindingsByIds([params.id]);
     const f = found[0];
     if (!f) {

@@ -461,19 +461,38 @@ export const dbService = {
     return clean;
   },
 
-  /** The survey D bracket (Helper (bracket) tab thresholds), or null
-   *  when not configured yet (callers fall back to the sheet's
-   *  agreed defaults in scoring.ts). */
-  async getSurveyBracket(): Promise<{ score2Min: number; score3Min: number; zeroBehavior: 1 | 2 } | null> {
-    if (isSupabaseConfigured && supabase) {
+  /** The survey D bracket for a project (Helper (bracket) tab
+   *  thresholds), or null when not configured yet (callers fall back
+   *  to the sheet's agreed defaults in scoring.ts). Brackets are
+   *  per-project (2026-11-17): the key is
+   *  `survey_bracket_<project-slug>`; when a project has no stored
+   *  bracket, the global `survey_bracket` key is used, then the
+   *  defaults. Without a project slug, the global key is read. */
+  async getSurveyBracket(projectSlug?: string | null): Promise<{ score2Min: number; score3Min: number; zeroBehavior: 1 | 2 } | null> {
+    const readKey = async (key: string): Promise<{ score2Min: number; score3Min: number; zeroBehavior: 1 | 2 } | null> => {
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { data, error } = await supabase
+            .from("global_settings")
+            .select("value")
+            .eq("key", key)
+            .maybeSingle();
+          if (error || !data) return null;
+          const v: any = data.value;
+          if (!v || typeof v !== "object") return null;
+          return {
+            score2Min: Number(v.score2Min),
+            score3Min: Number(v.score3Min),
+            zeroBehavior: Number(v.zeroBehavior) === 1 ? 1 : 2,
+          };
+        } catch {
+          return null;
+        }
+      }
       try {
-        const { data, error } = await supabase
-          .from("global_settings")
-          .select("value")
-          .eq("key", "survey_bracket")
-          .maybeSingle();
-        if (error || !data) return null;
-        const v: any = data.value;
+        const row = await prisma.globalSetting.findUnique({ where: { key } });
+        if (!row) return null;
+        const v: any = JSON.parse(String(row.value));
         if (!v || typeof v !== "object") return null;
         return {
           score2Min: Number(v.score2Min),
@@ -483,35 +502,29 @@ export const dbService = {
       } catch {
         return null;
       }
+    };
+    if (projectSlug) {
+      const projectBracket = await readKey(`survey_bracket_${projectSlug}`);
+      if (projectBracket) return projectBracket;
     }
-    try {
-      const row = await prisma.globalSetting.findUnique({ where: { key: "survey_bracket" } });
-      if (!row) return null;
-      const v: any = JSON.parse(String(row.value));
-      if (!v || typeof v !== "object") return null;
-      return {
-        score2Min: Number(v.score2Min),
-        score3Min: Number(v.score3Min),
-        zeroBehavior: Number(v.zeroBehavior) === 1 ? 1 : 2,
-      };
-    } catch {
-      return null;
-    }
+    return readKey("survey_bracket");
   },
 
-  /** Save the survey D bracket. Throws a clear error naming the
-   *  SQL file when the global_settings table does not exist yet. */
-  async updateSurveyBracket(bracket: { score2Min: number; score3Min: number; zeroBehavior: 1 | 2 }) {
+  /** Save the survey D bracket for a project (per-project key
+   *  `survey_bracket_<project-slug>`). Throws a clear error naming
+   *  the SQL file when the global_settings table does not exist yet. */
+  async updateSurveyBracket(projectSlug: string, bracket: { score2Min: number; score3Min: number; zeroBehavior: 1 | 2 }) {
     const clean = {
       score2Min: Math.max(1, Math.floor(Number(bracket.score2Min) || 3)),
       score3Min: Math.max(1, Math.floor(Number(bracket.score3Min) || 6)),
       zeroBehavior: Number(bracket.zeroBehavior) === 1 ? 1 : 2,
     };
+    const key = `survey_bracket_${projectSlug}`;
     if (isSupabaseConfigured && supabase) {
       const { error } = await supabase
         .from("global_settings")
         .upsert(
-          { key: "survey_bracket", value: clean, updated_at: new Date().toISOString() },
+          { key, value: clean, updated_at: new Date().toISOString() },
           { onConflict: "key" }
         );
       if (error) {
@@ -523,9 +536,9 @@ export const dbService = {
       return clean;
     }
     await prisma.globalSetting.upsert({
-      where: { key: "survey_bracket" },
+      where: { key },
       update: { value: JSON.stringify(clean) },
-      create: { key: "survey_bracket", value: JSON.stringify(clean) },
+      create: { key, value: JSON.stringify(clean) },
     });
     return clean;
   },

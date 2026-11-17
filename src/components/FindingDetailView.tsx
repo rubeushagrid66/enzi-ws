@@ -59,7 +59,8 @@ export default function FindingDetailView({
   // ── Survey D bracket (global, from the Framework tab) ──────────
   // The live preview below must use the same thresholds as the server.
   // Defaults match the Scoring DVF - D sheet (3 / 6 / ignore-0) until
-  // the fetch returns; a failed fetch keeps the defaults.
+  // the fetch returns; a failed fetch keeps the defaults. The bracket
+  // is per-project (2026-11-17), so it is fetched for this project.
   const [surveyBracket, setSurveyBracket] = useState<{ score2Min: number; score3Min: number; zeroBehavior: 1 | 2 }>({
     score2Min: 3,
     score3Min: 6,
@@ -67,7 +68,7 @@ export default function FindingDetailView({
   });
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/global/survey-bracket", { cache: "no-store" })
+    fetch(`/api/global/survey-bracket?project=${encodeURIComponent(project.slug)}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!cancelled && data?.bracket) {
@@ -80,7 +81,7 @@ export default function FindingDetailView({
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, []);
+  }, [project.slug]);
 
   // ── Related ideas ────────────────────────────────────────────────
   // Ideas linked to this finding (assigned in the admin Ideas tab).

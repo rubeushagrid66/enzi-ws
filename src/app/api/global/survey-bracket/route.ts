@@ -7,16 +7,21 @@ import { DEFAULT_SURVEY_BRACKET, normalizeSurveyBracket } from "@/lib/scoring";
 /**
  * Survey D bracket — the "Helper (bracket)" thresholds from the
  * Scoring DVF - D sheet, configurable from the admin (Framework tab).
- * GET returns the stored bracket, or the sheet's agreed defaults when
- * nothing is stored yet. POST (admin only) saves a new bracket.
+ * Brackets are PER-PROJECT (2026-11-17): GET accepts
+ * `?project=<slug>` and returns that project's bracket (falling back
+ * to the global bracket, then the sheet's defaults); without it, the
+ * global bracket is returned. POST (admin only) saves a bracket for
+ * the project named in the body's `projectSlug` (or `project`).
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const stored = await dbService.getSurveyBracket();
+    const projectSlug = new URL(request.url).searchParams.get("project");
+    const stored = await dbService.getSurveyBracket(projectSlug);
     const bracket = normalizeSurveyBracket(stored ?? DEFAULT_SURVEY_BRACKET);
     return NextResponse.json({
       bracket,
-      source: stored ? "global" : "default",
+      source: stored ? (projectSlug ? "project" : "global") : "default",
+      projectSlug: projectSlug ?? null,
     });
   } catch (error) {
     console.error("Failed to fetch survey bracket:", error);
@@ -32,6 +37,13 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const raw = body.bracket ?? body;
+    const projectSlug = String(body.projectSlug ?? body.project ?? "").trim();
+    if (!projectSlug) {
+      return NextResponse.json(
+        { error: "projectSlug is required" },
+        { status: 400 }
+      );
+    }
 
     const score2Min = Number(raw?.score2Min);
     const score3Min = Number(raw?.score3Min);
@@ -53,7 +65,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const bracket = await dbService.updateSurveyBracket({
+    const bracket = await dbService.updateSurveyBracket(projectSlug, {
       score2Min: Math.floor(score2Min),
       score3Min: Math.floor(score3Min),
       zeroBehavior: zeroBehavior as 1 | 2,
@@ -63,7 +75,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       bracket,
-      message: "Survey bracket saved — it now applies to all projects",
+      projectSlug,
+      message: `Survey bracket saved for ${projectSlug}`,
     });
   } catch (error: any) {
     console.error("Failed to update survey bracket:", error);

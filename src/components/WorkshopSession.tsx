@@ -60,7 +60,9 @@ export default function WorkshopSession({
 
   // Survey score bracket (live from the server, same as the detail
   // page). Defaults match the Scoring DVF - D sheet (3 / 6 / ignore-0)
-  // until the fetch returns; a failed fetch keeps the defaults.
+  // until the fetch returns; a failed fetch keeps the defaults. The
+  // bracket is per-project (2026-11-17), so it is fetched for this
+  // project.
   const [surveyBracket, setSurveyBracket] = useState<{ score2Min: number; score3Min: number; zeroBehavior: 1 | 2 }>({
     score2Min: 3,
     score3Min: 6,
@@ -68,7 +70,7 @@ export default function WorkshopSession({
   });
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/global/survey-bracket", { cache: "no-store" })
+    fetch(`/api/global/survey-bracket?project=${encodeURIComponent(slug)}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!cancelled && data?.bracket) {
@@ -81,7 +83,7 @@ export default function WorkshopSession({
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, []);
+  }, [slug]);
 
   // Step 3 (Feasibility) consensus: last position saved by a drag.
   const [lastPos, setLastPos] = useState<{ x: number; y: number } | null>(null);

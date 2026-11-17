@@ -30,7 +30,7 @@ export async function GET(
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
-    const surveyBracket = await dbService.getSurveyBracket().catch(() => null);
+    const surveyBracket = await dbService.getSurveyBracket(params.slug).catch(() => null);
     // Linked findings for the auto D (D-from-linked-findings,
     // 2026-11-17): the stored mentions are the manual override; when
     // they are null the auto values from linked findings apply — the

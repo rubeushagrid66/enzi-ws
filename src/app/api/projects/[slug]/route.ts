@@ -46,7 +46,7 @@ export async function GET(
         : {}
     );
     const categoriesP = dbService.getFindingCategories().catch(() => []);
-    const surveyBracketP = dbService.getSurveyBracket().catch(() => null);
+    const surveyBracketP = dbService.getSurveyBracket(params.slug).catch(() => null);
     const [project, allIdeas, subMap, categories, surveyBracket] = await Promise.all([
       projectP,
       ideasP,
