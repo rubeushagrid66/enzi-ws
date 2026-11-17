@@ -642,7 +642,16 @@ function FindingsByCategoryView({
                       className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-bsi-50/50 sm:px-5"
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold text-slate-900 group-hover:text-bsi-700">{f.title}</span>
+                        <span className="flex items-start justify-between gap-2">
+                          <span className="min-w-0 flex-1 text-sm font-semibold text-slate-900 group-hover:text-bsi-700">{f.title}</span>
+                          {Array.isArray(f.sumber) && f.sumber.length > 0 && (
+                            <span className="flex shrink-0 flex-wrap justify-end gap-1">
+                              {f.sumber.map((s: string) => (
+                                <span key={s} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-700">{s}</span>
+                              ))}
+                            </span>
+                          )}
+                        </span>
                         {f.description && String(f.description).trim() !== "" && (
                           <span className="mt-0.5 block truncate text-xs text-slate-500">{f.description}</span>
                         )}
