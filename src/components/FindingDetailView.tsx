@@ -418,9 +418,12 @@ export default function FindingDetailView({
   // perusahaan → 3, 2 → 2, 1 → 1; Survei ≥score3Min responden → 3,
   // ≥score2Min → 2, 1+ → 1 (0 counts as 1 only when the bracket's
   // zeroBehavior is 1). A blank count means that source does not
-  // score D.
+  // score D. The count is read as a float (not floored): the CMS
+  // auto survey value is a porsi-weighted count and can be fractional
+  // (e.g. 2.5), and the bracket thresholds are integers, so the float
+  // scores exactly like the server does.
   const previewSource = (raw: string, source: "Interview" | "Survei") => {
-    const n = raw.trim() === "" ? null : Math.floor(Number(raw));
+    const n = raw.trim() === "" ? null : Number(raw);
     if (n == null || !Number.isFinite(n)) {
       return { mentions: n, score: null as number | null };
     }
@@ -450,7 +453,9 @@ export default function FindingDetailView({
     const ss = [interviewPreview, surveyPreview].filter((s) => s.score != null);
     if (ss.length === 0) return null;
     if (ss.length === 1) return ss[0].score;
-    return Math.ceil(((ss[0].score as number) + (ss[1].score as number)) / 2);
+    const avg = Math.ceil(((ss[0].score as number) + (ss[1].score as number)) / 2);
+    // CMS sheet-model D (Bracket B8=1): the survey can only raise D.
+    return isCashProject ? Math.max(ss[0].score as number, avg) : avg;
   })();
 
   // Save the research numbers: this finding's mention counts only.
@@ -738,9 +743,15 @@ export default function FindingDetailView({
                 <p className="mt-1 text-sm leading-relaxed text-slate-600">
                   D dihitung hanya berdasarkan jumlah penyebutan dalam riset: perusahaan untuk Interview, responden untuk Survei. Tidak ada basis total — skor berasal dari angka mentahnya saja.
                 </p>
-                <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                  Angka Interview terisi otomatis dari findings interview yang ter-link ke ide ini (jumlah perusahaan yang berbeda). Angka Survei terisi otomatis dari jumlah penyebutan survei findings yang ter-link. Angka bisa diubah manual — mengosongkannya mengembalikan ke hitungan otomatis.
-                </p>
+                {isCashProject ? (
+                  <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                    Angka Interview terisi otomatis dari findings interview yang ter-link ke ide ini — dihitung per kartu yang disentuh: satu pain point yang ter-link menghitung semua perusahaan yang menyebut kartu tersebut. Angka Survei terisi otomatis dari responden survei yang menyebut tema dari findings interview yang ter-link, dibobot porsi (responden bisa bernilai pecahan, mis. 2,5). Angka bisa diubah manual — mengosongkannya mengembalikan ke hitungan otomatis.
+                  </p>
+                ) : (
+                  <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                    Angka Interview terisi otomatis dari findings interview yang ter-link ke ide ini (jumlah perusahaan yang berbeda). Angka Survei terisi otomatis dari jumlah penyebutan survei findings yang ter-link. Angka bisa diubah manual — mengosongkannya mengembalikan ke hitungan otomatis.
+                  </p>
+                )}
 
                 {/* Interview */}
                 <div className="mt-4 rounded-lg border border-slate-200 p-4">
@@ -778,7 +789,9 @@ export default function FindingDetailView({
                   </div>
                   {localFinding.interviewMentions == null && autoInterviewMentions != null && (
                     <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                      Otomatis dari findings interview yang ter-link ke ide ini — ubah angkanya untuk override manual.
+                      {isCashProject
+                        ? "Otomatis dari findings interview yang ter-link ke ide ini, dihitung per kartu yang disentuh — ubah angkanya untuk override manual."
+                        : "Otomatis dari findings interview yang ter-link ke ide ini — ubah angkanya untuk override manual."}
                     </p>
                   )}
                 </div>
@@ -809,7 +822,7 @@ export default function FindingDetailView({
                       />
                     </label>
                     <span className="ml-auto flex items-baseline gap-2 pb-2">
-                      <span className="text-sm text-slate-600">survey respondents</span>
+                      <span className="text-sm text-slate-600">{isCashProject ? "responden berbobot porsi" : "survey respondents"}</span>
                       <span className="text-sm font-bold text-bsi-700">
                         {surveyPreview.score != null ? `Score ${surveyPreview.score} / 3` : "—"}
                       </span>
@@ -817,7 +830,9 @@ export default function FindingDetailView({
                   </div>
                   {localFinding.surveyMentions == null && autoSurveyMentions != null && (
                     <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                      Otomatis dari jumlah penyebutan survei findings yang ter-link ke ide ini — ubah angkanya untuk override manual.
+                      {isCashProject
+                        ? "Otomatis dari responden survei yang menyebut tema findings interview yang ter-link, dibobot porsi tema — ubah angkanya untuk override manual."
+                        : "Otomatis dari jumlah penyebutan survei findings yang ter-link ke ide ini — ubah angkanya untuk override manual."}
                     </p>
                   )}
                 </div>
@@ -858,12 +873,19 @@ export default function FindingDetailView({
 
               {/* Aturan D (dari gambar Scoring DVF - D) */}
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
-                <span className="font-bold">Aturan D: </span>
-                D = rata-rata skor Interview dan Survey, lalu dibulatkan ke atas. Contoh: 2,5 dibulatkan menjadi 3. Jika hanya ada satu sumber data, gunakan skor dari sumber tersebut.
-                {isCashProject && (
-                  <span className="mt-2 block">
-                    Contoh dari temuan Cash: Pada inisiatif &ldquo;Tooltip penjelasan istilah&rdquo;, 2 perusahaan menyebutkan masalah tersebut dalam interview (skor 2), sementara 4 responden menyebutkannya dalam survei (skor 2). Rata-rata skor adalah 2, sehingga D = 2.
-                  </span>
+                {isCashProject ? (
+                  <>
+                    <span className="font-bold">Aturan D: </span>
+                    Interview dihitung per kartu yang disentuh — satu pain point yang ter-link menghitung semua perusahaan yang menyebut kartu tersebut. Survei dihitung dari responden yang menyebut tema findings interview yang ter-link, dibobot porsi tema (responden bisa bernilai pecahan). Survei hanya bisa menaikkan D: D = nilai tertinggi antara skor Interview dan rata-rata yang dibulatkan ke atas. Jika hanya ada satu sumber data, gunakan skor dari sumber tersebut.
+                    <span className="mt-2 block">
+                      Contoh dari sheet: inisiatif yang menyelesaikan 1 pain point C42-1 — pain point-nya sendiri hanya disebut BAZNAS, tapi kartunya (C42) disentuh 2 perusahaan, jadi skor Interview = 2. Responden survei yang menyebut tema RPT-P01 dihitung 0,5 (porsi 1 dari 2 pain point di tema itu), total 1,0 responden berbobot, jadi skor Survei = 1. D = nilai tertinggi antara 2 dan rata-rata (2 + 1) / 2 = 1,5 yang dibulatkan ke atas menjadi 2, jadi D = 2.
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-bold">Aturan D: </span>
+                    D = rata-rata skor Interview dan Survey, lalu dibulatkan ke atas. Contoh: 2,5 dibulatkan menjadi 3. Jika hanya ada satu sumber data, gunakan skor dari sumber tersebut.
+                  </>
                 )}
               </div>
             </div>

@@ -817,6 +817,11 @@ export const dbService = {
         bf: i.bf ?? 0,
         penyebutanSurvey: i.penyebutan_survey ?? 0,
         surveyRespondents: Array.isArray(i.survey_respondents) ? i.survey_respondents : [],
+        // CMS sheet-model D: Buat Enzi kartu (C01–C46) and Kode tema
+        // (e.g. DSH-P01). Null for findings without them (all DVC
+        // findings, survey findings, admin-created findings).
+        kartu: i.kartu ?? null,
+        temaCode: i.tema_code ?? null,
         findingIds: linkMap[i.id] || [],
         createdAt: i.created_at,
       }));
@@ -1064,15 +1069,16 @@ export const dbService = {
         rows
           .map((r: any) => r.idea)
           .filter((i: any) => i && i.id)
-          .map((i: any) => ({ id: i.id, title: i.title, description: i.description || "", imageUrl: i.image_url || null, verbatimEvidence: i.verbatim_evidence || "", fitur: i.fitur || "", sumber: i.sumber || [], baznas: i.baznas ?? 0, wikaGedung: i.wika_gedung ?? 0, ipcTpk: i.ipc_tpk ?? 0, sf: i.sf ?? 0, df: i.df ?? 0, bf: i.bf ?? 0, penyebutanSurvey: i.penyebutan_survey ?? 0, surveyRespondents: Array.isArray(i.survey_respondents) ? i.survey_respondents : [] }));
+          .map((i: any) => ({ id: i.id, title: i.title, description: i.description || "", imageUrl: i.image_url || null, verbatimEvidence: i.verbatim_evidence || "", fitur: i.fitur || "", sumber: i.sumber || [], baznas: i.baznas ?? 0, wikaGedung: i.wika_gedung ?? 0, ipcTpk: i.ipc_tpk ?? 0, sf: i.sf ?? 0, df: i.df ?? 0, bf: i.bf ?? 0, penyebutanSurvey: i.penyebutan_survey ?? 0, surveyRespondents: Array.isArray(i.survey_respondents) ? i.survey_respondents : [], kartu: i.kartu ?? null, temaCode: i.tema_code ?? null }));
       const { data, error } = await supabase
         .from("idea_findings")
-        .select("idea:ideas(id, title, description, image_url, verbatim_evidence, fitur, sumber, baznas, wika_gedung, ipc_tpk, sf, df, bf, penyebutan_survey, survey_respondents)")
+        .select("idea:ideas(id, title, description, image_url, verbatim_evidence, fitur, sumber, baznas, wika_gedung, ipc_tpk, sf, df, bf, penyebutan_survey, survey_respondents, kartu, tema_code)")
         .eq("finding_id", findingId);
       if (!error && data) return mapRows(data as any[]);
-      // Fallback when the survey_respondents or sf/df/bf columns do
-      // not exist yet (SQL not run): same rows without them.
-      if (error && /survey_respondents|\bsf\b|\bdf\b|\bbf\b/i.test(error.message || "")) {
+      // Fallback when the survey_respondents, sf/df/bf, kartu or
+      // tema_code columns do not exist yet (SQL not run): same rows
+      // without them.
+      if (error && /survey_respondents|\bsf\b|\bdf\b|\bbf\b|kartu|tema_code/i.test(error.message || "")) {
         const retry = await supabase
           .from("idea_findings")
           .select("idea:ideas(id, title, description, image_url, verbatim_evidence, fitur, sumber, baznas, wika_gedung, ipc_tpk, penyebutan_survey)")

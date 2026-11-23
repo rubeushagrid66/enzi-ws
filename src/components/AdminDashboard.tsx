@@ -1877,7 +1877,11 @@ export default function AdminDashboard() {
                   </div>
                   <h2 className="mt-1 text-xl font-semibold text-slate-900">Desirability — Survey Score Bracket</h2>
                   <p className="mt-1 text-sm font-medium text-slate-500">Per project — {activeProject?.name ?? selectedProjectSlug}.</p>
-                  <p className="mt-1 text-sm text-slate-600">Thresholds from the &ldquo;Helper (bracket)&rdquo; tab of the Scoring DVF - D sheet. The survey score uses the number of DISTINCT respondents who mentioned the idea&apos;s linked findings: {bracketInputs.score3Min} or more &rarr; 3, {bracketInputs.score2Min} to {bracketInputs.score3Min - 1} &rarr; 2, 1 to {bracketInputs.score2Min - 1} &rarr; 1.</p>
+                  {selectedProjectSlug === "cash-management-system" ? (
+                    <p className="mt-1 text-sm text-slate-600">Thresholds from the &ldquo;Bracket&rdquo; tab of the updated Hitung DVF - Cash - D sheet. The survey score uses the PORSI-WEIGHTED respondent count: respondents who mentioned a tema the idea&apos;s linked interview findings touch, each weighted by that tema&apos;s porsi (linked pain points / all pain points in the tema), capped at 1 per respondent: {bracketInputs.score3Min} or more &rarr; 3, {bracketInputs.score2Min} to {bracketInputs.score3Min - 1} &rarr; 2, above 0 to {bracketInputs.score2Min - 1} &rarr; 1. The survey can only raise D, never lower it.</p>
+                  ) : (
+                    <p className="mt-1 text-sm text-slate-600">Thresholds from the &ldquo;Helper (bracket)&rdquo; tab of the Scoring DVF - D sheet. The survey score uses the number of DISTINCT respondents who mentioned the idea&apos;s linked findings: {bracketInputs.score3Min} or more &rarr; 3, {bracketInputs.score2Min} to {bracketInputs.score3Min - 1} &rarr; 2, 1 to {bracketInputs.score2Min - 1} &rarr; 1.</p>
+                  )}
                   {bracketSource === "default" && (
                     <p className="mt-1 rounded-lg border border-gold-200 bg-gold-50 px-3 py-2 text-xs font-medium text-gold-800">
                       Showing the sheet&apos;s agreed defaults for now (3 and 6, 0 respondents ignored). Save once to store them for this project.
@@ -1887,7 +1891,7 @@ export default function AdminDashboard() {
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="bracket-score2" className="field-label">Skor 2 mulai dari (responden unik)</label>
+                    <label htmlFor="bracket-score2" className="field-label">Skor 2 mulai dari (responden {selectedProjectSlug === "cash-management-system" ? "berbobot porsi" : "unik"})</label>
                     {isAdmin ? (
                       <input
                         id="bracket-score2"
@@ -1904,7 +1908,7 @@ export default function AdminDashboard() {
                     <p className="mt-1 text-xs text-slate-500">1 sampai {bracketInputs.score2Min - 1} responden = skor 1.</p>
                   </div>
                   <div>
-                    <label htmlFor="bracket-score3" className="field-label">Skor 3 mulai dari (responden unik)</label>
+                    <label htmlFor="bracket-score3" className="field-label">Skor 3 mulai dari (responden {selectedProjectSlug === "cash-management-system" ? "berbobot porsi" : "unik"})</label>
                     {isAdmin ? (
                       <input
                         id="bracket-score3"

@@ -5,10 +5,13 @@ import { revalidateProjectPages } from "@/lib/revalidate";
 import {
   calculateAutoInterviewMentions,
   calculateAutoSurveyMentions,
+  calculateAutoInterviewMentionsCMS,
+  calculateAutoSurveyMentionsCMS,
   calculateDesirabilityFromResearch,
   calculateAllParticipantScores,
   getFindingScoringStatus,
   normalizeFramework,
+  usesSheetDModel,
 } from "@/lib/scoring";
 
 /**
@@ -65,9 +68,19 @@ export async function GET(
     const vAspectIds = aspectIdsFor("Viability");
     const fAspectIds = aspectIdsFor("Feasibility");
     const linkedIdeas = await dbService.getIdeasForFinding(f.id).catch(() => []);
-    const autoInterviewMentions = calculateAutoInterviewMentions(linkedIdeas || []);
+    // CMS sheet-model D needs the whole project's findings (kartu
+    // unions + tema totals); DVC uses the old per-finding logic.
+    const isSheetD = usesSheetDModel(params.slug);
+    const projectIdeas = isSheetD
+      ? (await dbService.getIdeas().catch(() => [])).filter((i: any) => i.projectId === project.id)
+      : [];
+    const autoInterviewMentions = isSheetD
+      ? calculateAutoInterviewMentionsCMS(linkedIdeas || [], projectIdeas)
+      : calculateAutoInterviewMentions(linkedIdeas || []);
     const effectiveInterviewMentions = f.interviewMentions ?? autoInterviewMentions;
-    const autoSurveyMentions = calculateAutoSurveyMentions(linkedIdeas || []);
+    const autoSurveyMentions = isSheetD
+      ? calculateAutoSurveyMentionsCMS(linkedIdeas || [], projectIdeas)
+      : calculateAutoSurveyMentions(linkedIdeas || []);
     const effectiveSurveyMentions = f.surveyMentions ?? autoSurveyMentions;
     const scoringStatus = getFindingScoringStatus(
       { ...f, interviewMentions: effectiveInterviewMentions, surveyMentions: effectiveSurveyMentions },
@@ -80,7 +93,8 @@ export async function GET(
       researchN.interviewN,
       effectiveSurveyMentions,
       researchN.surveyN,
-      surveyBracket
+      surveyBracket,
+      { surveyOnlyRaises: isSheetD }
     );
     const participantScores = calculateAllParticipantScores(f.viabilityVotes, vAspectIds, fAspectIds);
     // Finding meta (Sumber / Fitur / Platform) for the detail view.

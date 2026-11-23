@@ -3,10 +3,13 @@ import { dbService } from "@/lib/db-service";
 import {
   calculateAutoInterviewMentions,
   calculateAutoSurveyMentions,
+  calculateAutoInterviewMentionsCMS,
+  calculateAutoSurveyMentionsCMS,
   calculateDesirabilityFromResearch,
   calculateAllParticipantScores,
   getFindingScoringStatus,
   normalizeFramework,
+  usesSheetDModel,
 } from "@/lib/scoring";
 
 /**
@@ -124,10 +127,13 @@ export async function GET(
     // Auto interview/survey mentions per pool item, from its linked
     // findings (same as the project page): distinct companies for
     // interview, distinct respondents (union) for survey. Null when
-    // nothing is linked.
+    // nothing is linked. CMS uses the sheet-model D instead (interview
+    // per kartu touched, survey porsi-weighted per tema touched).
+    const isSheetD = usesSheetDModel(params.slug);
+    const projectIdeas = (allIdeas || []).filter((i: any) => i.projectId === project.id);
     const autoInterviewByFindingId = new Map<string, number | null>();
     const autoSurveyByFindingId = new Map<string, number | null>();
-    const linkedResearchByFindingId = new Map<string, Array<{ sumber: string[]; baznas: number; wikaGedung: number; ipcTpk: number; sf: number; df: number; bf: number; penyebutanSurvey: number; surveyRespondents: string[] }>>();
+    const linkedResearchByFindingId = new Map<string, Array<{ sumber: string[]; baznas: number; wikaGedung: number; ipcTpk: number; sf: number; df: number; bf: number; penyebutanSurvey: number; surveyRespondents: string[]; kartu: string | null; temaCode: string | null }>>();
     for (const idea of (allIdeas || [])) {
       const research = {
         sumber: idea.sumber || [],
@@ -139,6 +145,8 @@ export async function GET(
         bf: idea.bf ?? 0,
         penyebutanSurvey: idea.penyebutanSurvey ?? 0,
         surveyRespondents: Array.isArray(idea.surveyRespondents) ? idea.surveyRespondents : [],
+        kartu: idea.kartu ?? null,
+        temaCode: idea.temaCode ?? null,
       };
       for (const fid of (idea.findingIds || [])) {
         if (!linkedResearchByFindingId.has(fid)) linkedResearchByFindingId.set(fid, []);
@@ -146,8 +154,13 @@ export async function GET(
       }
     }
     linkedResearchByFindingId.forEach((linked, fid) => {
-      autoInterviewByFindingId.set(fid, calculateAutoInterviewMentions(linked));
-      autoSurveyByFindingId.set(fid, calculateAutoSurveyMentions(linked));
+      if (isSheetD) {
+        autoInterviewByFindingId.set(fid, calculateAutoInterviewMentionsCMS(linked, projectIdeas));
+        autoSurveyByFindingId.set(fid, calculateAutoSurveyMentionsCMS(linked, projectIdeas));
+      } else {
+        autoInterviewByFindingId.set(fid, calculateAutoInterviewMentions(linked));
+        autoSurveyByFindingId.set(fid, calculateAutoSurveyMentions(linked));
+      }
     });
 
     const findingsWithScores = findings.map((f: any) => {
@@ -170,7 +183,8 @@ export async function GET(
         researchN.interviewN,
         effectiveSurveyMentions,
         researchN.surveyN,
-        surveyBracket
+        surveyBracket,
+        { surveyOnlyRaises: isSheetD }
       );
       const participantScores = calculateAllParticipantScores(
         f.viabilityVotes,

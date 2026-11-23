@@ -1,3 +1,5 @@
+import { CMS_SURVEY_RESPONDENT_TEMAS } from "./cms-survey-respondent-temas";
+
 export interface WeightInput {
   name: string;
   weight: number;
@@ -213,13 +215,19 @@ export function normalizeSurveyBracket(raw: any): SurveyBracket {
  *
  * Example: "Tooltip penjelasan istilah" — interview 2 companies = 2,
  * survey 4 respondents = 2, so D = 2.
+ *
+ * `options.surveyOnlyRaises` (CMS sheet-model D, Bracket B8=1): the
+ * survey can only RAISE D, never lower it — D is the max of the
+ * interview score and the rounded-up average, instead of the average
+ * alone. Example: interview 3 + survey 1 → D = 3, not 2.
  */
 export function calculateDesirabilityFromResearch(
   interviewMentions: number | null | undefined,
   interviewN: number | null | undefined,
   surveyMentions: number | null | undefined,
   surveyN: number | null | undefined,
-  surveyBracket?: SurveyBracket | null
+  surveyBracket?: SurveyBracket | null,
+  options?: { surveyOnlyRaises?: boolean }
 ): DesirabilityResult {
   const bracket = normalizeSurveyBracket(surveyBracket ?? DEFAULT_SURVEY_BRACKET);
   const countScore = (
@@ -277,8 +285,18 @@ export function calculateDesirabilityFromResearch(
         : `Hanya satu sumber: D = Survei ${s.score} (${s.mentions} responden menyebut).`;
   } else {
     const sum = (available[0].score as number) + (available[1].score as number);
-    score = Math.ceil(sum / 2);
-    formulaExplanation = `Rata-rata skor Interview dan Survei, dibulatkan ke atas: (${available[0].score} + ${available[1].score}) / 2 = ${score}.`;
+    const avg = Math.ceil(sum / 2);
+    if (options?.surveyOnlyRaises) {
+      // CMS sheet-model D (Bracket B8=1): the survey can only raise
+      // D. D is the interview score when the average would pull it
+      // down, else the rounded-up average.
+      const interviewScore = interview.score as number;
+      score = Math.max(interviewScore, avg);
+      formulaExplanation = `Survei hanya bisa menaikkan D: D = nilai tertinggi antara skor Interview (${interviewScore}) dan rata-rata yang dibulatkan ke atas ((${available[0].score} + ${available[1].score}) / 2 = ${avg}), jadi D = ${score}.`;
+    } else {
+      score = avg;
+      formulaExplanation = `Rata-rata skor Interview dan Survei, dibulatkan ke atas: (${available[0].score} + ${available[1].score}) / 2 = ${score}.`;
+    }
   }
   return { score, interview, survey, formulaExplanation, inputs };
 }
@@ -310,6 +328,23 @@ export interface LinkedFindingResearch {
    *  Matriks tab for interview findings; one ID per Mapping row for
    *  survey findings). Empty/absent when unknown. */
   surveyRespondents?: string[] | null;
+  /** CMS sheet-model D only: the Buat Enzi kartu this finding belongs
+   *  to (C01–C46) and its "Kode tema" from the Hitung D sheet
+   *  (e.g. DSH-P01). Null for non-Buat-Enzi findings, which fall back
+   *  to the old per-finding behaviour. */
+  kartu?: string | null;
+  temaCode?: string | null;
+}
+
+/**
+ * CMS uses the sheet-model D from the "Hitung DVF - Cash - D
+ * (updated)" sheet (2026-11-23): interview counts companies per
+ * KARTU touched (Bracket B7=1), survey counts porsi-weighted
+ * respondents per TEMA touched, and survey can only raise D
+ * (Bracket B8=1). DVC keeps the old per-finding logic.
+ */
+export function usesSheetDModel(projectSlug: string | null | undefined): boolean {
+  return projectSlug === "cash-management-system";
 }
 
 export function calculateAutoInterviewMentions(
@@ -364,6 +399,109 @@ export function calculateAutoSurveyMentions(
     }
   }
   return distinct.size + unknownCount;
+}
+
+/**
+ * CMS sheet-model D, auto interview mentions (Bracket B7=1 — "Dasar
+ * skor wawancara: perusahaan di seluruh kartu yang disentuh").
+ *
+ * The count is the number of DISTINCT companies across all KARTU
+ * touched by the pool item's linked Wawancara findings — not just the
+ * companies of the linked pain points themselves. Checking one pain
+ * point of a kartu counts every company that mentioned ANY pain point
+ * of that kartu. A kartu's companies are the union of the company
+ * flags over ALL of the project's Wawancara findings in that kartu
+ * (from `allProjectFindings`, already scoped to this project), so an
+ * admin edit to a finding's flags stays consistent.
+ *
+ * A linked Wawancara finding without a kartu falls back to its own
+ * flags (the old per-finding behaviour). Returns null when NO
+ * interview finding is linked, else 0–3.
+ */
+export function calculateAutoInterviewMentionsCMS(
+  linkedFindings: LinkedFindingResearch[],
+  allProjectFindings: LinkedFindingResearch[]
+): number | null {
+  const interviewFindings = (linkedFindings || []).filter(
+    (f) => Array.isArray(f.sumber) && f.sumber.includes("Wawancara")
+  );
+  if (interviewFindings.length === 0) return null;
+  const companies = new Set<string>();
+  const kartus = new Set<string>();
+  for (const f of interviewFindings) {
+    if (f.kartu) kartus.add(f.kartu);
+  }
+  // Companies of every touched kartu, from ALL of the project's
+  // Wawancara findings in that kartu.
+  for (const f of allProjectFindings || []) {
+    if (!f.kartu || !kartus.has(f.kartu)) continue;
+    if (!Array.isArray(f.sumber) || !f.sumber.includes("Wawancara")) continue;
+    if ((f.baznas ?? 0) > 0) companies.add("baznas");
+    if ((f.wikaGedung ?? 0) > 0) companies.add("wika");
+    if ((f.ipcTpk ?? 0) > 0) companies.add("ipc");
+  }
+  // Linked findings without a kartu: their own flags, as before.
+  for (const f of interviewFindings) {
+    if (f.kartu) continue;
+    if ((f.baznas ?? 0) > 0) companies.add("baznas");
+    if ((f.wikaGedung ?? 0) > 0) companies.add("wika");
+    if ((f.ipcTpk ?? 0) > 0) companies.add("ipc");
+  }
+  return companies.size;
+}
+
+/**
+ * CMS sheet-model D, auto survey mentions — "Responden unik berbobot
+ * porsi" (the sheet's Hitung D R8). This is a FRACTIONAL count, not a
+ * whole number of people.
+ *
+ * The survey is derived from the linked Wawancara findings alone —
+ * no survey finding needs to be linked. Each tema (Kode tema) the
+ * linked findings touch has a porsi: linked pain points in that tema
+ * divided by ALL of the project's Wawancara pain points in that tema.
+ * Each survey respondent (Mapping Survey tab) counts in proportion to
+ * the temas they mentioned that the initiative touches — the sum of
+ * those temas' porsi, capped at 1 per respondent — and the total is
+ * the sum over all respondents. A respondent who mentioned no touched
+ * tema counts 0.
+ *
+ * Returns null when NO interview finding is linked (no interview
+ * data, so no derived survey either), else the weighted count rounded
+ * to 2 decimals (0 when the linked findings touch no surveyed tema).
+ */
+export function calculateAutoSurveyMentionsCMS(
+  linkedFindings: LinkedFindingResearch[],
+  allProjectFindings: LinkedFindingResearch[]
+): number | null {
+  const interviewFindings = (linkedFindings || []).filter(
+    (f) => Array.isArray(f.sumber) && f.sumber.includes("Wawancara")
+  );
+  if (interviewFindings.length === 0) return null;
+  // Porsi per tema: linked pain points / all pain points in the tema.
+  const linkedPerTema = new Map<string, number>();
+  for (const f of interviewFindings) {
+    if (!f.temaCode) continue;
+    linkedPerTema.set(f.temaCode, (linkedPerTema.get(f.temaCode) ?? 0) + 1);
+  }
+  if (linkedPerTema.size === 0) return 0;
+  const totalPerTema = new Map<string, number>();
+  for (const f of allProjectFindings || []) {
+    if (!f.temaCode) continue;
+    if (!Array.isArray(f.sumber) || !f.sumber.includes("Wawancara")) continue;
+    totalPerTema.set(f.temaCode, (totalPerTema.get(f.temaCode) ?? 0) + 1);
+  }
+  const porsi = new Map<string, number>();
+  linkedPerTema.forEach((linked, tema) => {
+    const total = totalPerTema.get(tema) ?? 0;
+    porsi.set(tema, total > 0 ? linked / total : 0);
+  });
+  let weighted = 0;
+  for (const temas of Object.values(CMS_SURVEY_RESPONDENT_TEMAS)) {
+    let w = 0;
+    for (const tema of temas) w += porsi.get(tema) ?? 0;
+    weighted += Math.min(1, w);
+  }
+  return Math.round(weighted * 100) / 100;
 }
 
 /**

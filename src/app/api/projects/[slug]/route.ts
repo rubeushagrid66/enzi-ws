@@ -15,9 +15,12 @@ import {
   calculateDesirabilityFromResearch,
   calculateAutoInterviewMentions,
   calculateAutoSurveyMentions,
+  calculateAutoInterviewMentionsCMS,
+  calculateAutoSurveyMentionsCMS,
   calculateAllParticipantScores,
   getFindingScoringStatus,
   normalizeFramework,
+  usesSheetDModel,
 } from "@/lib/scoring";
 import { slugify } from "@/lib/slugify";
 
@@ -184,11 +187,16 @@ export async function GET(
     // of DISTINCT respondents across them (union of each finding's
     // surveyRespondents — the sheet's "responden unik"). Null when no
     // finding is linked at all.
-    // Collect each pool item's linked findings, then count distinct
-    // companies once per item.
+    // CMS sheet-model D (2026-11-23): interview counts companies per
+    // KARTU touched and survey counts porsi-weighted respondents per
+    // TEMA touched, both derived from the linked Wawancara findings
+    // against the whole project's findings (projectIdeas, scoped to
+    // this project). DVC keeps the old per-finding logic.
+    const isSheetD = usesSheetDModel(slug);
+    const projectIdeas = (allIdeas || []).filter((i: any) => i.projectId === project.id);
     const autoInterviewByFindingId = new Map<string, number | null>();
     const autoSurveyByFindingId = new Map<string, number | null>();
-    const linkedResearchByFindingId = new Map<string, Array<{ sumber: string[]; baznas: number; wikaGedung: number; ipcTpk: number; sf: number; df: number; bf: number; penyebutanSurvey: number; surveyRespondents: string[] }>>();
+    const linkedResearchByFindingId = new Map<string, Array<{ sumber: string[]; baznas: number; wikaGedung: number; ipcTpk: number; sf: number; df: number; bf: number; penyebutanSurvey: number; surveyRespondents: string[]; kartu: string | null; temaCode: string | null }>>();
     for (const idea of (allIdeas || [])) {
       const research = {
         sumber: idea.sumber || [],
@@ -200,6 +208,8 @@ export async function GET(
         bf: idea.bf ?? 0,
         penyebutanSurvey: idea.penyebutanSurvey ?? 0,
         surveyRespondents: Array.isArray(idea.surveyRespondents) ? idea.surveyRespondents : [],
+        kartu: idea.kartu ?? null,
+        temaCode: idea.temaCode ?? null,
       };
       for (const fid of (idea.findingIds || [])) {
         if (!linkedResearchByFindingId.has(fid)) linkedResearchByFindingId.set(fid, []);
@@ -207,8 +217,13 @@ export async function GET(
       }
     }
     linkedResearchByFindingId.forEach((linked, fid) => {
-      autoInterviewByFindingId.set(fid, calculateAutoInterviewMentions(linked));
-      autoSurveyByFindingId.set(fid, calculateAutoSurveyMentions(linked));
+      if (isSheetD) {
+        autoInterviewByFindingId.set(fid, calculateAutoInterviewMentionsCMS(linked, projectIdeas));
+        autoSurveyByFindingId.set(fid, calculateAutoSurveyMentionsCMS(linked, projectIdeas));
+      } else {
+        autoInterviewByFindingId.set(fid, calculateAutoInterviewMentions(linked));
+        autoSurveyByFindingId.set(fid, calculateAutoSurveyMentions(linked));
+      }
     });
 
     const findingsWithScores = (project.findings || [])
@@ -236,12 +251,16 @@ export async function GET(
       // counts DISTINCT respondents against the bracket; no basis N,
       // no percentage. D = round-up average of the two source scores,
       // or the single source's score). Null when no source has data.
+      // CMS sheet-model D (2026-11-23): interview counts companies
+      // per kartu touched, survey is porsi-weighted, and the survey
+      // can only raise D (never lower it).
       const desirabilityData = calculateDesirabilityFromResearch(
         effectiveInterviewMentions,
         researchN.interviewN,
         effectiveSurveyMentions,
         researchN.surveyN,
-        surveyBracket
+        surveyBracket,
+        { surveyOnlyRaises: isSheetD }
       );
 
       // 2. Viability + Feasibility — per-participant 1–3 scores.
