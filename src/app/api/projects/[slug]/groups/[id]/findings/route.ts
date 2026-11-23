@@ -3,8 +3,8 @@ import { dbService } from "@/lib/db-service";
 import {
   calculateAutoInterviewMentions,
   calculateAutoSurveyMentions,
-  calculateAutoInterviewMentionsCMS,
-  calculateAutoSurveyMentionsCMS,
+  calculateAutoInterviewMentionsSheetD,
+  calculateAutoSurveyMentionsSheetD,
   calculateDesirabilityFromResearch,
   calculateAllParticipantScores,
   getFindingScoringStatus,
@@ -127,8 +127,9 @@ export async function GET(
     // Auto interview/survey mentions per pool item, from its linked
     // findings (same as the project page): distinct companies for
     // interview, distinct respondents (union) for survey. Null when
-    // nothing is linked. CMS uses the sheet-model D instead (interview
-    // per kartu touched, survey porsi-weighted per tema touched).
+    // nothing is linked. Sheet-model D projects use the sheet model
+    // instead (interview per kartu touched, survey porsi-weighted
+    // per tema touched).
     const isSheetD = usesSheetDModel(params.slug);
     const projectIdeas = (allIdeas || []).filter((i: any) => i.projectId === project.id);
     const autoInterviewByFindingId = new Map<string, number | null>();
@@ -155,8 +156,8 @@ export async function GET(
     }
     linkedResearchByFindingId.forEach((linked, fid) => {
       if (isSheetD) {
-        autoInterviewByFindingId.set(fid, calculateAutoInterviewMentionsCMS(linked, projectIdeas));
-        autoSurveyByFindingId.set(fid, calculateAutoSurveyMentionsCMS(linked, projectIdeas));
+        autoInterviewByFindingId.set(fid, calculateAutoInterviewMentionsSheetD(linked, projectIdeas, params.slug));
+        autoSurveyByFindingId.set(fid, calculateAutoSurveyMentionsSheetD(linked, projectIdeas, params.slug));
       } else {
         autoInterviewByFindingId.set(fid, calculateAutoInterviewMentions(linked));
         autoSurveyByFindingId.set(fid, calculateAutoSurveyMentions(linked));

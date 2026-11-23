@@ -6,8 +6,8 @@ import {
   calculateDesirabilityFromResearch,
   calculateAutoInterviewMentions,
   calculateAutoSurveyMentions,
-  calculateAutoInterviewMentionsCMS,
-  calculateAutoSurveyMentionsCMS,
+  calculateAutoInterviewMentionsSheetD,
+  calculateAutoSurveyMentionsSheetD,
   getFindingScoringStatus,
   usesSheetDModel,
 } from "@/lib/scoring";
@@ -84,18 +84,18 @@ export async function PUT(
     // survey mentions (stored, otherwise the auto distinct count of
     // linked findings' survey respondents).
     const linkedIdeas = await dbService.getIdeasForFinding(id).catch(() => []);
-    // CMS sheet-model D needs the whole project's findings (kartu
-    // unions + tema totals); DVC uses the old per-finding logic.
+    // Sheet-model D needs the whole project's findings (kartu
+    // unions + tema totals) for the per-kartu / per-tema math.
     const isSheetD = usesSheetDModel(slug);
     const projectIdeas = isSheetD
       ? (await dbService.getIdeas().catch(() => [])).filter((i: any) => i.projectId === project?.id)
       : [];
     const autoInterviewMentions = isSheetD
-      ? calculateAutoInterviewMentionsCMS(linkedIdeas || [], projectIdeas)
+      ? calculateAutoInterviewMentionsSheetD(linkedIdeas || [], projectIdeas, slug)
       : calculateAutoInterviewMentions(linkedIdeas || []);
     const effectiveInterviewMentions = finding.interviewMentions ?? autoInterviewMentions;
     const autoSurveyMentions = isSheetD
-      ? calculateAutoSurveyMentionsCMS(linkedIdeas || [], projectIdeas)
+      ? calculateAutoSurveyMentionsSheetD(linkedIdeas || [], projectIdeas, slug)
       : calculateAutoSurveyMentions(linkedIdeas || []);
     const effectiveSurveyMentions = finding.surveyMentions ?? autoSurveyMentions;
     const desirabilityData = calculateDesirabilityFromResearch(

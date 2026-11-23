@@ -1,4 +1,5 @@
 import { CMS_SURVEY_RESPONDENT_TEMAS } from "./cms-survey-respondent-temas";
+import { DVC_SURVEY_RESPONDENT_TEMAS } from "./dvc-survey-respondent-temas";
 
 export interface WeightInput {
   name: string;
@@ -216,10 +217,10 @@ export function normalizeSurveyBracket(raw: any): SurveyBracket {
  * Example: "Tooltip penjelasan istilah" — interview 2 companies = 2,
  * survey 4 respondents = 2, so D = 2.
  *
- * `options.surveyOnlyRaises` (CMS sheet-model D, Bracket B8=1): the
- * survey can only RAISE D, never lower it — D is the max of the
- * interview score and the rounded-up average, instead of the average
- * alone. Example: interview 3 + survey 1 → D = 3, not 2.
+ * `options.surveyOnlyRaises` (sheet-model D, Bracket B8=1 — CMS and
+ * DVC): the survey can only RAISE D, never lower it — D is the max of
+ * the interview score and the rounded-up average, instead of the
+ * average alone. Example: interview 3 + survey 1 → D = 3, not 2.
  */
 export function calculateDesirabilityFromResearch(
   interviewMentions: number | null | undefined,
@@ -287,9 +288,9 @@ export function calculateDesirabilityFromResearch(
     const sum = (available[0].score as number) + (available[1].score as number);
     const avg = Math.ceil(sum / 2);
     if (options?.surveyOnlyRaises) {
-      // CMS sheet-model D (Bracket B8=1): the survey can only raise
-      // D. D is the interview score when the average would pull it
-      // down, else the rounded-up average.
+      // Sheet-model D (Bracket B8=1, CMS and DVC): the survey can only
+      // raise D. D is the interview score when the average would pull
+      // it down, else the rounded-up average.
       const interviewScore = interview.score as number;
       score = Math.max(interviewScore, avg);
       formulaExplanation = `Survei hanya bisa menaikkan D: D = nilai tertinggi antara skor Interview (${interviewScore}) dan rata-rata yang dibulatkan ke atas ((${available[0].score} + ${available[1].score}) / 2 = ${avg}), jadi D = ${score}.`;
@@ -328,23 +329,25 @@ export interface LinkedFindingResearch {
    *  Matriks tab for interview findings; one ID per Mapping row for
    *  survey findings). Empty/absent when unknown. */
   surveyRespondents?: string[] | null;
-  /** CMS sheet-model D only: the Buat Enzi kartu this finding belongs
-   *  to (C01–C46) and its "Kode tema" from the Hitung D sheet
-   *  (e.g. DSH-P01). Null for non-Buat-Enzi findings, which fall back
-   *  to the old per-finding behaviour. */
+  /** Sheet-model D only: the Buat Enzi kartu this finding belongs
+   *  to (CMS C01–C46, DVC V01–V39) and its "Kode tema" from the
+   *  project's Hitung D sheet (CMS e.g. DSH-P01, DVC e.g. D-STS-P01).
+   *  Null for non-Buat-Enzi findings, which fall back to the old
+   *  per-finding behaviour. */
   kartu?: string | null;
   temaCode?: string | null;
 }
 
 /**
- * CMS uses the sheet-model D from the "Hitung DVF - Cash - D
- * (updated)" sheet (2026-11-23): interview counts companies per
- * KARTU touched (Bracket B7=1), survey counts porsi-weighted
- * respondents per TEMA touched, and survey can only raise D
- * (Bracket B8=1). DVC keeps the old per-finding logic.
+ * CMS and DVC both use the sheet-model D from their "Hitung DVF - D
+ * (updated)" sheet (CMS 2026-11-23, DVC 2026-11-23): interview counts
+ * companies per KARTU touched (Bracket B7=1), survey counts
+ * porsi-weighted respondents per TEMA touched, and survey can only
+ * raise D (Bracket B8=1). Each project keeps its own bracket
+ * (CMS {3,6,2}, DVC {2,3,2}) and its own respondent→tema map.
  */
 export function usesSheetDModel(projectSlug: string | null | undefined): boolean {
-  return projectSlug === "cash-management-system";
+  return projectSlug === "cash-management-system" || projectSlug === "digital-value-chain";
 }
 
 export function calculateAutoInterviewMentions(
@@ -502,6 +505,118 @@ export function calculateAutoSurveyMentionsCMS(
     weighted += Math.min(1, w);
   }
   return Math.round(weighted * 100) / 100;
+}
+
+/**
+ * DVC sheet-model D, auto interview mentions (Bracket B7=1) — the
+ * DVC twin of calculateAutoInterviewMentionsCMS. Same kartu rule,
+ * but the companies are the Value Chain ones (RSIA Sayyidah SF /
+ * Elnusa DF / Brantas BF, flags sf / df / bf) and the kartus are
+ * V01–V39. A linked Wawancara finding without a kartu falls back to
+ * its own flags. Returns null when NO interview finding is linked,
+ * else 0–3.
+ */
+export function calculateAutoInterviewMentionsDVC(
+  linkedFindings: LinkedFindingResearch[],
+  allProjectFindings: LinkedFindingResearch[]
+): number | null {
+  const interviewFindings = (linkedFindings || []).filter(
+    (f) => Array.isArray(f.sumber) && f.sumber.includes("Wawancara")
+  );
+  if (interviewFindings.length === 0) return null;
+  const companies = new Set<string>();
+  const kartus = new Set<string>();
+  for (const f of interviewFindings) {
+    if (f.kartu) kartus.add(f.kartu);
+  }
+  // Companies of every touched kartu, from ALL of the project's
+  // Wawancara findings in that kartu.
+  for (const f of allProjectFindings || []) {
+    if (!f.kartu || !kartus.has(f.kartu)) continue;
+    if (!Array.isArray(f.sumber) || !f.sumber.includes("Wawancara")) continue;
+    if ((f.sf ?? 0) > 0) companies.add("sf");
+    if ((f.df ?? 0) > 0) companies.add("df");
+    if ((f.bf ?? 0) > 0) companies.add("bf");
+  }
+  // Linked findings without a kartu: their own flags, as before.
+  for (const f of interviewFindings) {
+    if (f.kartu) continue;
+    if ((f.sf ?? 0) > 0) companies.add("sf");
+    if ((f.df ?? 0) > 0) companies.add("df");
+    if ((f.bf ?? 0) > 0) companies.add("bf");
+  }
+  return companies.size;
+}
+
+/**
+ * DVC sheet-model D, auto survey mentions — "Responden unik berbobot
+ * porsi" (the sheet's Hitung D R8). The DVC twin of
+ * calculateAutoSurveyMentionsCMS: same porsi rule, but the temas are
+ * the DVC "Kode tema" values (D-XXX-PXX) and the respondents come
+ * from the DVC Mapping Survey tab (25 rows, 11 mapped). Returns null
+ * when NO interview finding is linked, else the weighted count
+ * rounded to 2 decimals (0 when the linked findings touch no
+ * surveyed tema).
+ */
+export function calculateAutoSurveyMentionsDVC(
+  linkedFindings: LinkedFindingResearch[],
+  allProjectFindings: LinkedFindingResearch[]
+): number | null {
+  const interviewFindings = (linkedFindings || []).filter(
+    (f) => Array.isArray(f.sumber) && f.sumber.includes("Wawancara")
+  );
+  if (interviewFindings.length === 0) return null;
+  // Porsi per tema: linked pain points / all pain points in the tema.
+  const linkedPerTema = new Map<string, number>();
+  for (const f of interviewFindings) {
+    if (!f.temaCode) continue;
+    linkedPerTema.set(f.temaCode, (linkedPerTema.get(f.temaCode) ?? 0) + 1);
+  }
+  if (linkedPerTema.size === 0) return 0;
+  const totalPerTema = new Map<string, number>();
+  for (const f of allProjectFindings || []) {
+    if (!f.temaCode) continue;
+    if (!Array.isArray(f.sumber) || !f.sumber.includes("Wawancara")) continue;
+    totalPerTema.set(f.temaCode, (totalPerTema.get(f.temaCode) ?? 0) + 1);
+  }
+  const porsi = new Map<string, number>();
+  linkedPerTema.forEach((linked, tema) => {
+    const total = totalPerTema.get(tema) ?? 0;
+    porsi.set(tema, total > 0 ? linked / total : 0);
+  });
+  let weighted = 0;
+  for (const temas of Object.values(DVC_SURVEY_RESPONDENT_TEMAS)) {
+    let w = 0;
+    for (const tema of temas) w += porsi.get(tema) ?? 0;
+    weighted += Math.min(1, w);
+  }
+  return Math.round(weighted * 100) / 100;
+}
+
+/**
+ * Sheet-model D dispatchers: pick the project's own interview/survey
+ * functions (CMS vs DVC) by slug. The routes call these when
+ * usesSheetDModel(slug) is true, so each project gets its own kartu
+ * companies and respondent→tema map.
+ */
+export function calculateAutoInterviewMentionsSheetD(
+  linkedFindings: LinkedFindingResearch[],
+  allProjectFindings: LinkedFindingResearch[],
+  projectSlug: string | null | undefined
+): number | null {
+  return projectSlug === "digital-value-chain"
+    ? calculateAutoInterviewMentionsDVC(linkedFindings, allProjectFindings)
+    : calculateAutoInterviewMentionsCMS(linkedFindings, allProjectFindings);
+}
+
+export function calculateAutoSurveyMentionsSheetD(
+  linkedFindings: LinkedFindingResearch[],
+  allProjectFindings: LinkedFindingResearch[],
+  projectSlug: string | null | undefined
+): number | null {
+  return projectSlug === "digital-value-chain"
+    ? calculateAutoSurveyMentionsDVC(linkedFindings, allProjectFindings)
+    : calculateAutoSurveyMentionsCMS(linkedFindings, allProjectFindings);
 }
 
 /**

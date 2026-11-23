@@ -406,10 +406,15 @@ export default function FindingDetailView({
     (localFinding.tujuanBisnis && String(localFinding.tujuanBisnis).trim());
 
   // Interview basis: Cash interviewed 3 companies (per the D-rule
-  // image, "Interview (Cash, 3 perusahaan)"). DVC's interview basis
-  // is TBD — the label there shows just "Interview". The 3/2/1 scale
-  // is the same in both projects (it is what the server computes).
+  // image, "Interview (Cash, 3 perusahaan)"); DVC interviewed 3
+  // companies too (RSIA Sayyidah / Elnusa / Brantas), shown as
+  // "Interview (VC, 3 perusahaan)". The 3/2/1 scale is the same in
+  // both projects (it is what the server computes). Both projects
+  // use the sheet-model D (interview per kartu, survey porsi-weighted,
+  // survey only raises D) since 2026-11-23.
   const isCashProject = project.slug === "cash-management-system";
+  const isDvcProject = project.slug === "digital-value-chain";
+  const isSheetDProject = isCashProject || isDvcProject;
 
   // Live preview of a source score from a typed count — same rules as
   // the server (aturan D baru, 2026-11-16, count-based, tanpa basis
@@ -454,8 +459,9 @@ export default function FindingDetailView({
     if (ss.length === 0) return null;
     if (ss.length === 1) return ss[0].score;
     const avg = Math.ceil(((ss[0].score as number) + (ss[1].score as number)) / 2);
-    // CMS sheet-model D (Bracket B8=1): the survey can only raise D.
-    return isCashProject ? Math.max(ss[0].score as number, avg) : avg;
+    // Sheet-model D (Bracket B8=1, CMS and DVC): the survey can only
+    // raise D.
+    return isSheetDProject ? Math.max(ss[0].score as number, avg) : avg;
   })();
 
   // Save the research numbers: this finding's mention counts only.
@@ -743,7 +749,7 @@ export default function FindingDetailView({
                 <p className="mt-1 text-sm leading-relaxed text-slate-600">
                   D dihitung hanya berdasarkan jumlah penyebutan dalam riset: perusahaan untuk Interview, responden untuk Survei. Tidak ada basis total — skor berasal dari angka mentahnya saja.
                 </p>
-                {isCashProject ? (
+                {isSheetDProject ? (
                   <p className="mt-1 text-sm leading-relaxed text-slate-600">
                     Angka Interview terisi otomatis dari findings interview yang ter-link ke ide ini — dihitung per kartu yang disentuh: satu pain point yang ter-link menghitung semua perusahaan yang menyebut kartu tersebut. Angka Survei terisi otomatis dari responden survei yang menyebut tema dari findings interview yang ter-link, dibobot porsi (responden bisa bernilai pecahan, mis. 2,5). Angka bisa diubah manual — mengosongkannya mengembalikan ke hitungan otomatis.
                   </p>
@@ -789,7 +795,7 @@ export default function FindingDetailView({
                   </div>
                   {localFinding.interviewMentions == null && autoInterviewMentions != null && (
                     <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                      {isCashProject
+                      {isSheetDProject
                         ? "Otomatis dari findings interview yang ter-link ke ide ini, dihitung per kartu yang disentuh — ubah angkanya untuk override manual."
                         : "Otomatis dari findings interview yang ter-link ke ide ini — ubah angkanya untuk override manual."}
                     </p>
@@ -822,7 +828,7 @@ export default function FindingDetailView({
                       />
                     </label>
                     <span className="ml-auto flex items-baseline gap-2 pb-2">
-                      <span className="text-sm text-slate-600">{isCashProject ? "responden berbobot porsi" : "survey respondents"}</span>
+                      <span className="text-sm text-slate-600">{isSheetDProject ? "responden berbobot porsi" : "survey respondents"}</span>
                       <span className="text-sm font-bold text-bsi-700">
                         {surveyPreview.score != null ? `Score ${surveyPreview.score} / 3` : "—"}
                       </span>
@@ -830,7 +836,7 @@ export default function FindingDetailView({
                   </div>
                   {localFinding.surveyMentions == null && autoSurveyMentions != null && (
                     <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                      {isCashProject
+                      {isSheetDProject
                         ? "Otomatis dari responden survei yang menyebut tema findings interview yang ter-link, dibobot porsi tema — ubah angkanya untuk override manual."
                         : "Otomatis dari jumlah penyebutan survei findings yang ter-link ke ide ini — ubah angkanya untuk override manual."}
                     </p>
@@ -879,6 +885,14 @@ export default function FindingDetailView({
                     Interview dihitung per kartu yang disentuh — satu pain point yang ter-link menghitung semua perusahaan yang menyebut kartu tersebut. Survei dihitung dari responden yang menyebut tema findings interview yang ter-link, dibobot porsi tema (responden bisa bernilai pecahan). Survei hanya bisa menaikkan D: D = nilai tertinggi antara skor Interview dan rata-rata yang dibulatkan ke atas. Jika hanya ada satu sumber data, gunakan skor dari sumber tersebut.
                     <span className="mt-2 block">
                       Contoh dari sheet: inisiatif yang menyelesaikan 1 pain point C42-1 — pain point-nya sendiri hanya disebut BAZNAS, tapi kartunya (C42) disentuh 2 perusahaan, jadi skor Interview = 2. Responden survei yang menyebut tema RPT-P01 dihitung 0,5 (porsi 1 dari 2 pain point di tema itu), total 1,0 responden berbobot, jadi skor Survei = 1. D = nilai tertinggi antara 2 dan rata-rata (2 + 1) / 2 = 1,5 yang dibulatkan ke atas menjadi 2, jadi D = 2.
+                    </span>
+                  </>
+                ) : isDvcProject ? (
+                  <>
+                    <span className="font-bold">Aturan D: </span>
+                    Interview dihitung per kartu yang disentuh — satu pain point yang ter-link menghitung semua perusahaan yang menyebut kartu tersebut. Survei dihitung dari responden yang menyebut tema findings interview yang ter-link, dibobot porsi tema (responden bisa bernilai pecahan). Survei hanya bisa menaikkan D: D = nilai tertinggi antara skor Interview dan rata-rata yang dibulatkan ke atas. Jika hanya ada satu sumber data, gunakan skor dari sumber tersebut.
+                    <span className="mt-2 block">
+                      Contoh dari sheet: inisiatif yang menyelesaikan 1 pain point V30-1 — pain point-nya sendiri hanya disebut RSIA Sayyidah, tapi kartunya (V30) disentuh 2 perusahaan, jadi skor Interview = 2. Responden survei yang menyebut tema D-STS-P01 dihitung 1/6 (porsi 1 dari 6 pain point di tema itu), total 0,2 responden berbobot, jadi skor Survei = 1. D = nilai tertinggi antara 2 dan rata-rata (2 + 1) / 2 = 1,5 yang dibulatkan ke atas menjadi 2, jadi D = 2.
                     </span>
                   </>
                 ) : (

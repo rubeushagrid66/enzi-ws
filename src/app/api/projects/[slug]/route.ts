@@ -15,8 +15,8 @@ import {
   calculateDesirabilityFromResearch,
   calculateAutoInterviewMentions,
   calculateAutoSurveyMentions,
-  calculateAutoInterviewMentionsCMS,
-  calculateAutoSurveyMentionsCMS,
+  calculateAutoInterviewMentionsSheetD,
+  calculateAutoSurveyMentionsSheetD,
   calculateAllParticipantScores,
   getFindingScoringStatus,
   normalizeFramework,
@@ -187,11 +187,11 @@ export async function GET(
     // of DISTINCT respondents across them (union of each finding's
     // surveyRespondents — the sheet's "responden unik"). Null when no
     // finding is linked at all.
-    // CMS sheet-model D (2026-11-23): interview counts companies per
-    // KARTU touched and survey counts porsi-weighted respondents per
-    // TEMA touched, both derived from the linked Wawancara findings
-    // against the whole project's findings (projectIdeas, scoped to
-    // this project). DVC keeps the old per-finding logic.
+    // Sheet-model D (2026-11-23, CMS and DVC): interview counts
+    // companies per KARTU touched and survey counts porsi-weighted
+    // respondents per TEMA touched, both derived from the linked
+    // Wawancara findings against the whole project's findings
+    // (projectIdeas, scoped to this project).
     const isSheetD = usesSheetDModel(slug);
     const projectIdeas = (allIdeas || []).filter((i: any) => i.projectId === project.id);
     const autoInterviewByFindingId = new Map<string, number | null>();
@@ -218,8 +218,8 @@ export async function GET(
     }
     linkedResearchByFindingId.forEach((linked, fid) => {
       if (isSheetD) {
-        autoInterviewByFindingId.set(fid, calculateAutoInterviewMentionsCMS(linked, projectIdeas));
-        autoSurveyByFindingId.set(fid, calculateAutoSurveyMentionsCMS(linked, projectIdeas));
+        autoInterviewByFindingId.set(fid, calculateAutoInterviewMentionsSheetD(linked, projectIdeas, slug));
+        autoSurveyByFindingId.set(fid, calculateAutoSurveyMentionsSheetD(linked, projectIdeas, slug));
       } else {
         autoInterviewByFindingId.set(fid, calculateAutoInterviewMentions(linked));
         autoSurveyByFindingId.set(fid, calculateAutoSurveyMentions(linked));
@@ -251,9 +251,9 @@ export async function GET(
       // counts DISTINCT respondents against the bracket; no basis N,
       // no percentage. D = round-up average of the two source scores,
       // or the single source's score). Null when no source has data.
-      // CMS sheet-model D (2026-11-23): interview counts companies
-      // per kartu touched, survey is porsi-weighted, and the survey
-      // can only raise D (never lower it).
+      // Sheet-model D (2026-11-23, CMS and DVC): interview counts
+      // companies per kartu touched, survey is porsi-weighted, and
+      // the survey can only raise D (never lower it).
       const desirabilityData = calculateDesirabilityFromResearch(
         effectiveInterviewMentions,
         researchN.interviewN,

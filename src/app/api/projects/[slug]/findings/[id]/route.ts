@@ -5,8 +5,8 @@ import { revalidateProjectPages } from "@/lib/revalidate";
 import {
   calculateAutoInterviewMentions,
   calculateAutoSurveyMentions,
-  calculateAutoInterviewMentionsCMS,
-  calculateAutoSurveyMentionsCMS,
+  calculateAutoInterviewMentionsSheetD,
+  calculateAutoSurveyMentionsSheetD,
   calculateDesirabilityFromResearch,
   calculateAllParticipantScores,
   getFindingScoringStatus,
@@ -68,18 +68,18 @@ export async function GET(
     const vAspectIds = aspectIdsFor("Viability");
     const fAspectIds = aspectIdsFor("Feasibility");
     const linkedIdeas = await dbService.getIdeasForFinding(f.id).catch(() => []);
-    // CMS sheet-model D needs the whole project's findings (kartu
-    // unions + tema totals); DVC uses the old per-finding logic.
+    // Sheet-model D needs the whole project's findings (kartu
+    // unions + tema totals) for the per-kartu / per-tema math.
     const isSheetD = usesSheetDModel(params.slug);
     const projectIdeas = isSheetD
       ? (await dbService.getIdeas().catch(() => [])).filter((i: any) => i.projectId === project.id)
       : [];
     const autoInterviewMentions = isSheetD
-      ? calculateAutoInterviewMentionsCMS(linkedIdeas || [], projectIdeas)
+      ? calculateAutoInterviewMentionsSheetD(linkedIdeas || [], projectIdeas, params.slug)
       : calculateAutoInterviewMentions(linkedIdeas || []);
     const effectiveInterviewMentions = f.interviewMentions ?? autoInterviewMentions;
     const autoSurveyMentions = isSheetD
-      ? calculateAutoSurveyMentionsCMS(linkedIdeas || [], projectIdeas)
+      ? calculateAutoSurveyMentionsSheetD(linkedIdeas || [], projectIdeas, params.slug)
       : calculateAutoSurveyMentions(linkedIdeas || []);
     const effectiveSurveyMentions = f.surveyMentions ?? autoSurveyMentions;
     const scoringStatus = getFindingScoringStatus(

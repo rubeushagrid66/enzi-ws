@@ -817,9 +817,10 @@ export const dbService = {
         bf: i.bf ?? 0,
         penyebutanSurvey: i.penyebutan_survey ?? 0,
         surveyRespondents: Array.isArray(i.survey_respondents) ? i.survey_respondents : [],
-        // CMS sheet-model D: Buat Enzi kartu (C01–C46) and Kode tema
-        // (e.g. DSH-P01). Null for findings without them (all DVC
-        // findings, survey findings, admin-created findings).
+        // Sheet-model D (CMS and DVC): Buat Enzi kartu (CMS C01–C46,
+        // DVC V01–V39) and Kode tema (e.g. DSH-P01 / D-STS-P01). Null
+        // for findings without them (survey findings, admin-created
+        // findings, pre-Buat-Enzi findings).
         kartu: i.kartu ?? null,
         temaCode: i.tema_code ?? null,
         findingIds: linkMap[i.id] || [],
