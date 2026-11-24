@@ -1442,8 +1442,8 @@ export default function AdminDashboard() {
   // Findings tab + its sidebar count follow the open project:
   // only this project's findings (plus unassigned ones, projectId
   // null, so a finding can never silently disappear from the list).
-  // The global `ideas` array stays untouched — the linked-ideas
-  // checklist and category counts still use the whole pool.
+  // While the new project loads (no active project yet), the tab
+  // shows a loading state instead — see projectDataLoading below.
   const projectIdeas = activeProject?.id
     ? ideas.filter((i: any) => !i.projectId || i.projectId === activeProject.id)
     : ideas;
@@ -1455,6 +1455,14 @@ export default function AdminDashboard() {
     ? poolFindings.filter((f: any) => !f.projectId || f.projectId === activeProject.id)
     : poolFindings;
 
+  // While the newly selected project's details are loading, the
+  // dashboard has no active project — and these three lists must
+  // NOT fall back to the global pool in that window (switching
+  // projects flashed the combined 226 / 11 / 61 counts until the
+  // fetch settled). Instead the sidebar shows "…" and the tabs show
+  // a loading state, the same pattern Groups/Aspects already use.
+  const projectDataLoading = projectLoading && !activeProject;
+
   // Categories have no project of their own, so the tab shows the
   // ones this project's findings use, plus ones no finding uses yet
   // (so a category created here stays visible until it is assigned).
@@ -1465,9 +1473,10 @@ export default function AdminDashboard() {
   // The pool-item modal's Findings checklist: this project's
   // findings, plus any already linked (so an existing link can
   // always be seen and removed, even if it points elsewhere).
+  // While the new project loads, only the already-linked rows show.
   const linkableIdeas = (() => {
     const checked = new Set(findingIdeaIds);
-    const base = new Map(projectIdeas.map((i: any) => [i.id, i]));
+    const base = new Map((projectDataLoading ? [] : projectIdeas).map((i: any) => [i.id, i]));
     ideas.forEach((i: any) => {
       if (checked.has(i.id)) base.set(i.id, i);
     });
@@ -1477,9 +1486,10 @@ export default function AdminDashboard() {
   const sidebarCounts: Record<string, number | undefined> = {
     // Findings, Ideas & Tags and Categories counts all follow the
     // selected project; the pool and category lists below match.
-    findings: projectPoolFindings.length,
-    ideas: projectIdeas.length,
-    categories: projectCategories.length,
+    // Undefined while the new project loads → the sidebar shows "…".
+    findings: projectDataLoading ? undefined : projectPoolFindings.length,
+    ideas: projectDataLoading ? undefined : projectIdeas.length,
+    categories: projectDataLoading ? undefined : projectCategories.length,
     groups: activeProject?.groups?.length,
     aspects: activeProject?.viabilityAspects?.length,
     projects: projects.length,
@@ -1618,7 +1628,16 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {projectPoolFindings.length > 0 ? (
+                      {projectDataLoading ? (
+                        <tr>
+                          <td colSpan={3} className="py-8 text-center text-sm text-slate-500">
+                            <span className="inline-flex items-center gap-2">
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-bsi-600 border-t-transparent" aria-hidden />
+                              Loading project…
+                            </span>
+                          </td>
+                        </tr>
+                      ) : projectPoolFindings.length > 0 ? (
                         newestFirst(projectPoolFindings).map((f: any) => {
                           const meta = findingMeta(f);
                           const isPool = !f.projectId;
@@ -1718,7 +1737,16 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {projectIdeas.length > 0 ? (
+                      {projectDataLoading ? (
+                        <tr>
+                          <td colSpan={5} className="py-8 text-center text-sm text-slate-500">
+                            <span className="inline-flex items-center gap-2">
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-bsi-600 border-t-transparent" aria-hidden />
+                              Loading project…
+                            </span>
+                          </td>
+                        </tr>
+                      ) : projectIdeas.length > 0 ? (
                         newestFirst(projectIdeas).map((idea: any) => {
                           const linked = (idea.findingIds || [])
                             .map((fid: string) => poolFindings.find((f: any) => f.id === fid))
@@ -1796,7 +1824,12 @@ export default function AdminDashboard() {
                   </button>
                 </form>
 
-                {projectCategories.length > 0 ? (
+                {projectDataLoading ? (
+                  <div className="flex items-center gap-2 py-4 text-sm text-slate-500">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-bsi-600 border-t-transparent" aria-hidden />
+                    Loading project…
+                  </div>
+                ) : projectCategories.length > 0 ? (
                   <ul className="divide-y divide-slate-100">
                     {newestFirst(projectCategories).map((c: any) => {
                       const usedBy = projectIdeas.filter((i: any) => i.categoryId === c.id).length;

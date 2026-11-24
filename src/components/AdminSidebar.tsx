@@ -151,7 +151,7 @@ export default function AdminSidebar({
                         >
                           <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${active ? "text-bsi-700" : "text-slate-500"}`} />
                           <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">{item.label}</span>
-                          {(count !== undefined || (projectLoading && (item.id === "groups" || item.id === "aspects"))) && (
+                          {(count !== undefined || (projectLoading && (item.id === "groups" || item.id === "aspects" || item.id === "findings" || item.id === "ideas" || item.id === "categories"))) && (
                             <span className={`shrink-0 text-xs font-medium tabular-nums ${active ? "text-bsi-700" : "text-slate-500"}`}>
                               {count !== undefined ? count : "…"}
                             </span>
