@@ -408,6 +408,61 @@ export const dbService = {
     return project;
   },
 
+  /**
+   * Slim project context for the vote route: everything one vote POST
+   * needs to authorize and record the vote — project id, aspects
+   * (framework + label), groups + participants — WITHOUT the full
+   * project load (all findings with all their votes + the L1 tree,
+   * ~2.4s). A vote used to pay for that whole load on every click,
+   * which is what made the "Saving…" indicator hang for seconds
+   * (longer on a cold function) even though the vote itself had
+   * already landed. Shape matches the fields the vote route reads
+   * off a full project (id, viabilityAspects, groups), with the same
+   * camelCase mapping, so resolveMeParticipant + the label gate work
+   * unchanged. Local (Prisma) fallback is the full load — fine off
+   * production.
+   */
+  async getProjectVoteContext(slug: string) {
+    if (isSupabaseConfigured && supabase) {
+      const { data: project, error } = await supabase
+        .from("projects")
+        .select("id, slug")
+        .eq("slug", slug)
+        .single();
+      if (error || !project) return null;
+      const [aspectsRes, groupsRes] = await Promise.all([
+        supabase.from("viability_aspects").select("*").eq("project_id", project.id).order("created_at", { ascending: true }),
+        supabase.from("groups").select("*, participants(*)").eq("project_id", project.id).order("created_at", { ascending: true }),
+      ]);
+      return {
+        id: project.id,
+        slug: project.slug,
+        viabilityAspects: (aspectsRes.data || []).map((a: any) => ({
+          id: a.id,
+          name: a.name,
+          framework: a.framework ?? "Viability",
+          label: a.label ?? null,
+          description: a.description,
+          isActive: a.is_active,
+        })),
+        groups: (groupsRes.data || []).map((g: any) => ({
+          id: g.id,
+          name: g.name,
+          label: g.label ?? null,
+          isActive: g.is_active,
+          participants: (g.participants || []).map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            roleTitle: p.role_title,
+            userId: p.user_id ?? null,
+            isActive: p.is_active,
+          })),
+        })),
+      };
+    }
+    return dbService.getProjectBySlug(slug);
+  },
+
   // ── Global settings (weights / parameters / findings pool) ────────────────
 
   /** The global D/V/F weights, or null when the global setup does not

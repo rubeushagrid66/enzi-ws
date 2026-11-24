@@ -37,6 +37,14 @@ async function apiCall(url: string, options?: RequestInit) {
 const SUMBER_OPTIONS = ["Wawancara", "Survey", "Internal"];
 const PLATFORM_OPTIONS = ["CMS", "DVC"];
 
+// Platform tag for a project slug: a new idea created under a project
+// defaults to that project's platform, so it never saves with empty
+// tags (a create form that starts with platform [] is what left the
+// 12 stress-test items tag-less). Pool items (shared library) get no
+// default — the admin picks, or leaves it blank.
+const platformForSlug = (slug: string | null | undefined): string[] =>
+  slug === "cash-management-system" ? ["CMS"] : slug === "digital-value-chain" ? ["DVC"] : [];
+
 // Aspect → framework linkage: which DVF dimension an aspect's votes feed.
 const FRAMEWORK_OPTIONS = ["Desirability", "Viability", "Feasibility"] as const;
 const FRAMEWORK_BADGE_CLASS: Record<string, string> = {
@@ -666,7 +674,7 @@ export default function AdminDashboard() {
   const openCreateFinding = () => {
     setEditingFindingId(null);
     setFindingTarget("project");
-    setFindingForm({ title: "", description: "", sumber: [], fitur: "", platform: [], tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", roleUsersTidakTermasuk: "", stepFeatureScreen: "", stepTidakTermasuk: "", apaYangBerubah: "", apaYangBerubahTidakTermasuk: "", outputKeberhasilan: "", tujuanBisnis: "" });
+    setFindingForm({ title: "", description: "", sumber: [], fitur: "", platform: platformForSlug(selectedProjectSlug), tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", roleUsersTidakTermasuk: "", stepFeatureScreen: "", stepTidakTermasuk: "", apaYangBerubah: "", apaYangBerubahTidakTermasuk: "", outputKeberhasilan: "", tujuanBisnis: "" });
     setFindingIdeaIds([]);
     setFindingIdeaSearch("");
     setFindingModalOpen(true);
@@ -2313,7 +2321,7 @@ export default function AdminDashboard() {
                 <legend className="field-label">Where should this idea live?</legend>
                 <div className="flex flex-wrap gap-4">
                   <label className="flex cursor-pointer items-center gap-1.5">
-                    <input type="radio" name="finding-target" checked={findingTarget === "project"} onChange={() => setFindingTarget("project")} className="h-4 w-4 accent-bsi-600" />
+                    <input type="radio" name="finding-target" checked={findingTarget === "project"} onChange={() => { setFindingTarget("project"); setFindingForm((f) => ({ ...f, platform: f.platform.length === 0 ? platformForSlug(selectedProjectSlug) : f.platform })); }} className="h-4 w-4 accent-bsi-600" />
                     <span className="text-sm text-slate-700">This project only ({activeProject?.name || "selected project"})</span>
                   </label>
                   <label className="flex cursor-pointer items-center gap-1.5">

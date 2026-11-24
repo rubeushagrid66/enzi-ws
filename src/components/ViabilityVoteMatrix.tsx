@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Users2 } from "lucide-react";
-import { normalizeFramework } from "@/lib/scoring";
+import { groupAverageScores, normalizeFramework } from "@/lib/scoring";
 
 /**
  * Group-aware viability scoring (1-3) with an Alasan (reason) per aspect.
@@ -396,23 +396,35 @@ export default function ViabilityVoteMatrix({
     );
   };
 
-  // Summary scores for the whole finding (all roles combined), shown
-  // under each framework group — same style as the Desirability
-  // "Perhitungan D" note. V = average of the Viability aspects'
-  // overall averages; F = 4 − average of the Feasibility (Effort)
-  // aspects' overall averages. Null when no aspect in the group has
-  // a score yet.
-  const frameworkSummary = (fw: string): { avgs: number[]; avg: number } | null => {
-    const aspects = allAspects.filter((a: any) => normalizeFramework(a.framework) === fw);
-    const avgs = aspects
-      .map((a: any) => groupAspectAverage(a.id))
-      .filter((x: number | null): x is number => x != null);
-    if (avgs.length === 0) return null;
-    return { avgs, avg: Number((avgs.reduce((s: number, x: number) => s + x, 0) / avgs.length).toFixed(1)) };
-  };
-  const viabilitySummary = frameworkSummary("Viability");
-  const feasibilitySummary = frameworkSummary("Feasibility");
-  const fScore = feasibilitySummary != null ? Number((4 - feasibilitySummary.avg).toFixed(1)) : null;
+  // Final V/F for this finding — the SAME numbers the detail header,
+  // the group cards and DVF use: the average of each participant's
+  // own V (resp. F), over every scorer in the project (all groups,
+  // admin/facilitator excluded, me included). NOT the average of the
+  // per-aspect averages — that pooled number disagreed with the
+  // header whenever roles had different aspect counts (e.g. Biz 2
+  // Viability aspects vs Product 1: pooled 2.7 vs final 2.5), which
+  // is why the table's "Skor V/F" and the header showed different
+  // values for the same idea. The per-aspect averages still show in
+  // the table rows above; only the summary boxes below use the final
+  // scoring.
+  const finalParticipantIds: string[] = [
+    ...groups
+      .flatMap((g: any) => (g.participants || []))
+      .filter((p: any) => p.isActive !== false && p.roleTitle !== "ADMIN" && p.roleTitle !== "FACILITATOR")
+      .map((p: any) => p.id),
+    ...(meId ? [meId] : []),
+  ];
+  const finalVF = groupAverageScores(finding.scores?.participantScores, finalParticipantIds);
+  const finalV = finalVF.viability;
+  const finalF = finalVF.feasibility;
+  // The participant V/F values behind the final averages, so the
+  // "Perhitungan" note can show its work.
+  const finalVInputs = (finding.scores?.participantScores || [])
+    .filter((p: any) => finalParticipantIds.includes(p.participantId) && p.viability != null)
+    .map((p: any) => p.viability);
+  const finalFInputs = (finding.scores?.participantScores || [])
+    .filter((p: any) => finalParticipantIds.includes(p.participantId) && p.feasibility != null)
+    .map((p: any) => p.feasibility);
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
@@ -427,7 +439,7 @@ export default function ViabilityVoteMatrix({
               Beri skor 1-3 pada setiap aspek untuk kelompok Anda sendiri (ditandai dengan label &quot;Me&quot;). Anda hanya bisa melihat hasil penilaian kelompok lain, tanpa mengubah atau memberikan skor.
             </p>
             <p>
-              V dihitung dari rata-rata skor seluruh aspek Viability, sedangkan F dihitung dari 4 dikurangi rata-rata skor seluruh aspek Effort. Skor dan alasan penilaian dapat dilihat oleh semua kelompok.
+              V dihitung dari rata-rata V tiap peserta (V tiap peserta = rata-rata skor aspek Viability-nya), sedangkan F dihitung dari rata-rata F tiap peserta (F tiap peserta = 4 dikurangi rata-rata skor aspek Effort-nya). Angka yang sama tampil di header, di kartu group, dan dipakai DVF. Skor dan alasan penilaian dapat dilihat oleh semua kelompok.
               {isAdmin
                 ? " You are signed in as Admin — you score each aspect as yourself, in any group."
                 : ""}
@@ -624,9 +636,9 @@ export default function ViabilityVoteMatrix({
                     <tr>
                       <td colSpan={3} className="px-3 py-3">
                         <div role="note" className="rounded-xl border border-bsi-200 bg-bsi-50 p-4 text-sm text-bsi-800">
-                          <span className="font-bold">Skor V: {viabilitySummary != null ? `${viabilitySummary.avg} / 3` : "N/A"}</span>
-                          {viabilitySummary != null && (
-                            <> Perhitungan V: Rata-rata skor dari seluruh aspek Viability: ({viabilitySummary.avgs.join(" + ")}) / {viabilitySummary.avgs.length} = {viabilitySummary.avg}</>
+                          <span className="font-bold">Skor V: {finalV != null ? `${finalV} / 3` : "N/A"}</span>
+                          {finalV != null && (
+                            <> Perhitungan V: rata-rata V tiap peserta yang menilai: ({finalVInputs.join(" + ")}) / {finalVInputs.length} = {finalV}. V tiap peserta = rata-rata skor aspek Viability-nya. Sama dengan V di header dan yang dipakai DVF.</>
                           )}
                         </div>
                       </td>
@@ -636,9 +648,9 @@ export default function ViabilityVoteMatrix({
                     <tr>
                       <td colSpan={3} className="px-3 py-3">
                         <div role="note" className="rounded-xl border border-bsi-200 bg-bsi-50 p-4 text-sm text-bsi-800">
-                          <span className="font-bold">Skor F: {fScore != null ? `${fScore} / 3` : "N/A"}</span>
-                          {feasibilitySummary != null && fScore != null && (
-                            <> Perhitungan F: 4 dikurangi rata-rata skor dari seluruh aspek Effort: 4 - [(({feasibilitySummary.avgs.join(" + ")}) / {feasibilitySummary.avgs.length})] = {fScore}</>
+                          <span className="font-bold">Skor F: {finalF != null ? `${finalF} / 3` : "N/A"}</span>
+                          {finalF != null && (
+                            <> Perhitungan F: rata-rata F tiap peserta yang menilai: ({finalFInputs.join(" + ")}) / {finalFInputs.length} = {finalF}. F tiap peserta = 4 dikurangi rata-rata skor aspek Effort-nya. Sama dengan F di header dan yang dipakai DVF.</>
                           )}
                         </div>
                       </td>

@@ -49,7 +49,11 @@ export async function POST(
       return NextResponse.json({ error: "reason must be text of at most 500 characters" }, { status: 400 });
     }
 
-    const project = await dbService.getProjectBySlug(params.slug);
+    // Slim context, not the full project load: the vote only needs the
+    // aspect, the voter + label gate inputs (groups + participants).
+    // getProjectBySlug pulls every finding with every vote + the L1
+    // tree (~2.4s) on every click, which is what made saves hang.
+    const project = await dbService.getProjectVoteContext(params.slug);
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
@@ -59,8 +63,8 @@ export async function POST(
     }
 
     // Resolve who is voting. Label-role users always vote as themselves.
-    // The project is loaded once here and passed to resolveMeParticipant
-    // so the vote does not pay for two full project loads per save.
+    // The slim context above is passed to resolveMeParticipant so the
+    // vote does not pay for a second project load per save.
     const me = await dbService.resolveMeParticipant(params.slug, session, project);
     if (!me) {
       // Label-role user assigned to another project: no participant row

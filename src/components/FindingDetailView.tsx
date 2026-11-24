@@ -946,8 +946,8 @@ export default function FindingDetailView({
         <p>Semua skor D, V, dan F menggunakan skala 1–3.</p>
         <ul className="mt-1 list-disc pl-5">
           <li>D (Desirability): Berdasarkan jumlah penyebutan dalam riset (Interview dan Survei), dengan rata-rata dibulatkan ke atas.</li>
-          <li>V (Viability): Rata-rata skor dari seluruh aspek Viability yang dinilai kelompok Anda.</li>
-          <li>F (Feasibility): 4 dikurangi rata-rata skor dari seluruh aspek Effort yang dinilai kelompok Anda.</li>
+          <li>V (Viability): Rata-rata V tiap peserta (V tiap peserta = rata-rata skor aspek Viability-nya). Angka yang sama di header, tabel scoring, kartu group, dan DVF.</li>
+          <li>F (Feasibility): Rata-rata F tiap peserta (F tiap peserta = 4 dikurangi rata-rata skor aspek Effort-nya). Angka yang sama di header, tabel scoring, kartu group, dan DVF.</li>
         </ul>
       </div>
 
