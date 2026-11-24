@@ -1448,12 +1448,38 @@ export default function AdminDashboard() {
     ? ideas.filter((i: any) => !i.projectId || i.projectId === activeProject.id)
     : ideas;
 
+  // Ideas Pool tab + its sidebar count follow the open project too:
+  // only this project's pool items (plus shared pool items with no
+  // project, which belong to no project and stay visible everywhere).
+  const projectPoolFindings = activeProject?.id
+    ? poolFindings.filter((f: any) => !f.projectId || f.projectId === activeProject.id)
+    : poolFindings;
+
+  // Categories have no project of their own, so the tab shows the
+  // ones this project's findings use, plus ones no finding uses yet
+  // (so a category created here stays visible until it is assigned).
+  const projectCategoryIds = new Set(projectIdeas.map((i: any) => i.categoryId).filter(Boolean));
+  const globallyUsedCategoryIds = new Set(ideas.map((i: any) => i.categoryId).filter(Boolean));
+  const projectCategories = categories.filter((c: any) => projectCategoryIds.has(c.id) || !globallyUsedCategoryIds.has(c.id));
+
+  // The pool-item modal's Findings checklist: this project's
+  // findings, plus any already linked (so an existing link can
+  // always be seen and removed, even if it points elsewhere).
+  const linkableIdeas = (() => {
+    const checked = new Set(findingIdeaIds);
+    const base = new Map(projectIdeas.map((i: any) => [i.id, i]));
+    ideas.forEach((i: any) => {
+      if (checked.has(i.id)) base.set(i.id, i);
+    });
+    return Array.from(base.values());
+  })();
+
   const sidebarCounts: Record<string, number | undefined> = {
-    // Pool findings ("Ideas & Tags") stay global; the Findings
-    // count below follows the selected project instead.
-    findings: poolFindings.length,
+    // Findings, Ideas & Tags and Categories counts all follow the
+    // selected project; the pool and category lists below match.
+    findings: projectPoolFindings.length,
     ideas: projectIdeas.length,
-    categories: categories.length,
+    categories: projectCategories.length,
     groups: activeProject?.groups?.length,
     aspects: activeProject?.viabilityAspects?.length,
     projects: projects.length,
@@ -1566,7 +1592,10 @@ export default function AdminDashboard() {
             <section aria-labelledby="findings-heading" className="space-y-6">
               <div>
                 <h2 id="findings-heading" className="section-title">Ideas Pool</h2>
-                <p className="section-sub">Shared library for all projects. An idea is copied into a project before scoring — the copy is scored independently, so moving it in one workshop never moves it in another.</p>
+                <p className="section-sub">
+                  {activeProject ? `Showing ideas for ${activeProject.name} — ${projectPoolFindings.length} of ${poolFindings.length} total. ` : ""}
+                  An idea is copied into a project before scoring — the copy is scored independently, so moving it in one workshop never moves it in another.
+                </p>
                 {globalSetupNote && (
                   <p className="mt-1 rounded-lg border border-gold-200 bg-gold-50 px-3 py-2 text-xs font-medium text-gold-800">{globalSetupNote}</p>
                 )}
@@ -1575,7 +1604,7 @@ export default function AdminDashboard() {
               <div className="card overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-                    <caption className="sr-only">All ideas: the shared pool and every project&apos;s ideas</caption>
+                    <caption className="sr-only">Ideas for the active project, including shared pool ideas</caption>
                     <colgroup>
                       <col className="w-[38%]" />
                       <col className="w-[34%]" />
@@ -1589,8 +1618,8 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {poolFindings.length > 0 ? (
-                        newestFirst(poolFindings).map((f: any) => {
+                      {projectPoolFindings.length > 0 ? (
+                        newestFirst(projectPoolFindings).map((f: any) => {
                           const meta = findingMeta(f);
                           const isPool = !f.projectId;
                           return (
@@ -1753,7 +1782,10 @@ export default function AdminDashboard() {
             <section aria-labelledby="categories-heading" className="max-w-3xl space-y-6">
               <div>
                 <h2 id="categories-heading" className="section-title">Findings Category</h2>
-                <p className="section-sub">Categories group findings — create one here, then assign a finding to it from the Create/Edit Finding form. Categories are shared by both projects.</p>
+                <p className="section-sub">
+                  {activeProject ? `Showing categories used by ${activeProject.name}'s findings, plus unused ones — ${projectCategories.length} of ${categories.length} total. ` : ""}
+                  Create one here, then assign a finding to it from the Create/Edit Finding form.
+                </p>
               </div>
 
               <div className="card space-y-5 p-5">
@@ -1764,10 +1796,10 @@ export default function AdminDashboard() {
                   </button>
                 </form>
 
-                {categories.length > 0 ? (
+                {projectCategories.length > 0 ? (
                   <ul className="divide-y divide-slate-100">
-                    {newestFirst(categories).map((c: any) => {
-                      const usedBy = ideas.filter((i: any) => i.categoryId === c.id).length;
+                    {newestFirst(projectCategories).map((c: any) => {
+                      const usedBy = projectIdeas.filter((i: any) => i.categoryId === c.id).length;
                       const isEditing = editingCategory?.id === c.id;
                       const editing = isEditing ? editingCategory : null;
                       return (
@@ -2355,7 +2387,7 @@ export default function AdminDashboard() {
             <fieldset className="min-w-0">
               <legend className="field-label">Findings</legend>
               <p className="mb-2 text-xs text-slate-500">Tick the findings this idea relates to. An idea can be linked to one or many findings.</p>
-              {ideas.length === 0 ? (
+              {linkableIdeas.length === 0 ? (
                 <p className="text-sm italic text-slate-500">No findings yet — add a finding first (Findings tab).</p>
               ) : (
                 <>
@@ -2370,10 +2402,10 @@ export default function AdminDashboard() {
                   {(() => {
                     const q = findingIdeaSearch.trim().toLowerCase();
                     const shown = q
-                      ? ideas.filter((i: any) =>
+                      ? linkableIdeas.filter((i: any) =>
                           `${i.title || ""} ${i.description || ""}`.toLowerCase().includes(q)
                         )
-                      : ideas;
+                      : linkableIdeas;
                     if (shown.length === 0) {
                       return <p className="rounded-xl border border-slate-200 px-3 py-3 text-sm italic text-slate-500">No findings match “{findingIdeaSearch.trim()}”.</p>;
                     }
