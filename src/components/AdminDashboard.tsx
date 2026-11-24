@@ -996,7 +996,12 @@ export default function AdminDashboard() {
     setSavingIdea(true);
     try {
       setError(null);
-      const body = JSON.stringify({ ...ideaForm, findingIds: ideaFindingIds });
+      // New findings belong to the open project, so they show up in
+      // the project-filtered Findings tab right away. Edits never move
+      // a finding between projects.
+      const payload: any = { ...ideaForm, findingIds: ideaFindingIds };
+      if (!editingIdeaId && activeProject?.id) payload.projectId = activeProject.id;
+      const body = JSON.stringify(payload);
       let saved: any = null;
       let ideaId = editingIdeaId;
       if (editingIdeaId) {
@@ -1026,7 +1031,7 @@ export default function AdminDashboard() {
           ideaId = idea.id;
           setIdeas((rows: any[]) => [
             ...rows,
-            { id: idea.id, title: idea.title, description: idea.description || "", imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? null, categoryId: (idea as any).category_id ?? ideaForm.categoryId ?? null, verbatimEvidence: (idea as any).verbatim_evidence ?? ideaForm.verbatimEvidence ?? "", fitur: (idea as any).fitur ?? ideaForm.fitur ?? "", baznas: (idea as any).baznas ?? ideaForm.baznas ?? 0, wikaGedung: (idea as any).wika_gedung ?? ideaForm.wikaGedung ?? 0, ipcTpk: (idea as any).ipc_tpk ?? ideaForm.ipcTpk ?? 0, sf: (idea as any).sf ?? ideaForm.sf ?? 0, df: (idea as any).df ?? ideaForm.df ?? 0, bf: (idea as any).bf ?? ideaForm.bf ?? 0, penyebutanSurvey: (idea as any).penyebutan_survey ?? ideaForm.penyebutanSurvey ?? 0, createdAt: (idea as any).created_at ?? new Date().toISOString(), findingIds: ideaFindingIds },
+            { id: idea.id, title: idea.title, description: idea.description || "", projectId: (idea as any).project_id ?? activeProject?.id ?? null, imageUrl: (idea as any).image_url ?? ideaForm.imageUrl ?? null, categoryId: (idea as any).category_id ?? ideaForm.categoryId ?? null, verbatimEvidence: (idea as any).verbatim_evidence ?? ideaForm.verbatimEvidence ?? "", fitur: (idea as any).fitur ?? ideaForm.fitur ?? "", baznas: (idea as any).baznas ?? ideaForm.baznas ?? 0, wikaGedung: (idea as any).wika_gedung ?? ideaForm.wikaGedung ?? 0, ipcTpk: (idea as any).ipc_tpk ?? ideaForm.ipcTpk ?? 0, sf: (idea as any).sf ?? ideaForm.sf ?? 0, df: (idea as any).df ?? ideaForm.df ?? 0, bf: (idea as any).bf ?? ideaForm.bf ?? 0, penyebutanSurvey: (idea as any).penyebutan_survey ?? ideaForm.penyebutanSurvey ?? 0, createdAt: (idea as any).created_at ?? new Date().toISOString(), findingIds: ideaFindingIds },
           ]);
         }
       }
@@ -1434,11 +1439,20 @@ export default function AdminDashboard() {
     });
   };
 
+  // Findings tab + its sidebar count follow the open project:
+  // only this project's findings (plus unassigned ones, projectId
+  // null, so a finding can never silently disappear from the list).
+  // The global `ideas` array stays untouched — the linked-ideas
+  // checklist and category counts still use the whole pool.
+  const projectIdeas = activeProject?.id
+    ? ideas.filter((i: any) => !i.projectId || i.projectId === activeProject.id)
+    : ideas;
+
   const sidebarCounts: Record<string, number | undefined> = {
-    // Findings are a global pool: count the whole pool,
-    // not just the selected project's slice.
+    // Pool findings ("Ideas & Tags") stay global; the Findings
+    // count below follows the selected project instead.
     findings: poolFindings.length,
-    ideas: ideas.length,
+    ideas: projectIdeas.length,
     categories: categories.length,
     groups: activeProject?.groups?.length,
     aspects: activeProject?.viabilityAspects?.length,
@@ -1645,7 +1659,10 @@ export default function AdminDashboard() {
             <section aria-labelledby="ideas-heading" className="space-y-6">
               <div>
                 <h2 id="ideas-heading" className="section-title">Findings</h2>
-                <p className="section-sub">Findings are linked to one or many ideas. Open an idea to see the findings related to it.</p>
+                <p className="section-sub">
+                  {activeProject ? `Showing findings for ${activeProject.name} — ${projectIdeas.length} of ${ideas.length} total. ` : ""}
+                  Findings are linked to one or many ideas. Open an idea to see the findings related to it.
+                </p>
                 {globalSetupNote && (
                   <p className="mt-1 rounded-lg border border-gold-200 bg-gold-50 px-3 py-2 text-xs font-medium text-gold-800">{globalSetupNote}</p>
                 )}
@@ -1654,7 +1671,7 @@ export default function AdminDashboard() {
               <div className="card overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-                    <caption className="sr-only">All findings and the ideas they are linked to</caption>
+                    <caption className="sr-only">Findings for the active project and the ideas they are linked to</caption>
                     <colgroup>
                       <col className="w-[26%]" />
                       <col className="w-[26%]" />
@@ -1672,8 +1689,8 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {ideas.length > 0 ? (
-                        newestFirst(ideas).map((idea: any) => {
+                      {projectIdeas.length > 0 ? (
+                        newestFirst(projectIdeas).map((idea: any) => {
                           const linked = (idea.findingIds || [])
                             .map((fid: string) => poolFindings.find((f: any) => f.id === fid))
                             .filter(Boolean);
