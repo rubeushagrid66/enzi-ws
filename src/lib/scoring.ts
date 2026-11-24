@@ -479,7 +479,12 @@ export function calculateAutoSurveyMentionsCMS(
   const interviewFindings = (linkedFindings || []).filter(
     (f) => Array.isArray(f.sumber) && f.sumber.includes("Wawancara")
   );
-  if (interviewFindings.length === 0) return null;
+  // No Wawancara finding linked: this item is survey-only (or has
+  // no research at all). Fall back to the linked Survey findings'
+  // own respondent union — the empty Interview is excluded from the
+  // calculation and the survey number stands alone as D (user rule
+  // 2026-11-24). Returns null when nothing is linked at all.
+  if (interviewFindings.length === 0) return calculateAutoSurveyMentions(linkedFindings);
   // Porsi per tema: linked pain points / all pain points in the tema.
   const linkedPerTema = new Map<string, number>();
   for (const f of interviewFindings) {
@@ -565,7 +570,10 @@ export function calculateAutoSurveyMentionsDVC(
   const interviewFindings = (linkedFindings || []).filter(
     (f) => Array.isArray(f.sumber) && f.sumber.includes("Wawancara")
   );
-  if (interviewFindings.length === 0) return null;
+  // No Wawancara finding linked: survey-only item — same fallback
+  // as CMS (user rule 2026-11-24): the linked Survey findings'
+  // respondent union stands alone as D, Interview excluded.
+  if (interviewFindings.length === 0) return calculateAutoSurveyMentions(linkedFindings);
   // Porsi per tema: linked pain points / all pain points in the tema.
   const linkedPerTema = new Map<string, number>();
   for (const f of interviewFindings) {
