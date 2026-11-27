@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, description, sumber, fitur, platform, tujuan, scopeTermasuk, scopeTidakTermasuk, roleUsers, roleUsersTidakTermasuk, stepFeatureScreen, stepTidakTermasuk, apaYangBerubah, apaYangBerubahTidakTermasuk, outputKeberhasilan, tujuanBisnis, tujuanBisnisIds } = body;
+    const { title, description, sumber, fitur, platform, tujuan, scopeTermasuk, scopeTidakTermasuk, roleUsers, roleUsersTidakTermasuk, stepFeatureScreen, stepTidakTermasuk, apaYangBerubah, apaYangBerubahTidakTermasuk, outputKeberhasilan, impactDiharapkan, catatanBatasan, tujuanBisnis, tujuanBisnisIds } = body;
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -48,6 +48,8 @@ export async function POST(request: Request) {
       apaYangBerubah,
       apaYangBerubahTidakTermasuk,
       outputKeberhasilan,
+      impactDiharapkan,
+      catatanBatasan,
       tujuanBisnis,
       tujuanBisnisIds,
     });

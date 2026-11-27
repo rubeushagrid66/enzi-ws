@@ -31,6 +31,8 @@ export async function PUT(
       apaYangBerubah: body.apaYangBerubah,
       apaYangBerubahTidakTermasuk: body.apaYangBerubahTidakTermasuk,
       outputKeberhasilan: body.outputKeberhasilan,
+      impactDiharapkan: body.impactDiharapkan,
+      catatanBatasan: body.catatanBatasan,
       tujuanBisnis: body.tujuanBisnis,
       tujuanBisnisIds: body.tujuanBisnisIds,
     });

@@ -1383,10 +1383,10 @@ export default function ProjectResultViewer({
 
       {/* Idea-detail popup for the Ideas table. Shows the idea's own
           fields — the same ones the admin dashboard Idea form holds
-          (Tujuan, Scope, Role/Users, Step, Apa Yang Berubah, Output,
-          Tujuan Bisnis, Fitur, Platform, linked findings). Fields left
-          empty are hidden. Responsive: full-width with margins on
-          phones, capped at 2xl on desktop, scrolls when taller than
+          (Cara/Alur Kerja, Impact, Catatan/Batasan, Tujuan Bisnis,
+          Fitur, Platform, linked findings). Fields left empty are
+          hidden. Responsive: full-width with margins on phones,
+          capped at 2xl on desktop, scrolls when taller than
           the viewport. */}
       {ideaDetail && (
         <div
@@ -1428,58 +1428,25 @@ export default function ProjectResultViewer({
               ) : (
                 <p className="text-sm text-slate-500">No description yet.</p>
               )}
-              {ideaDetail.tujuan && String(ideaDetail.tujuan).trim() !== "" && (
-                <section>
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Tujuan</p>
-                  <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.tujuan}</p>
-                </section>
-              )}
-              {(() => {
-                // Scope table — one row per aspect (Siapa, Di mana, Apa
-                // yang berubah), one column per side (Termasuk / Tidak
-                // Termasuk). A row shows when either side has a value;
-                // an empty side reads "—". There is no scope description
-                // row: the scope is expressed through these three rows.
-                const has = (v: any) => v && String(v).trim() !== "";
-                const rows = [
-                  { label: "Siapa", sub: "Peran atau pengguna", a: ideaDetail.roleUsers, b: ideaDetail.roleUsersTidakTermasuk },
-                  { label: "Di mana", sub: "Langkah, fitur, layar", a: ideaDetail.stepFeatureScreen, b: ideaDetail.stepTidakTermasuk },
-                  { label: "Apa yang berubah", sub: "Tampilan, alur, sistem", a: ideaDetail.apaYangBerubah, b: ideaDetail.apaYangBerubahTidakTermasuk },
-                ].filter((r) => has(r.a) || has(r.b));
-                if (rows.length === 0) return null;
-                return (
-                  <section>
-                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Scope</p>
-                    <div className="mt-2 overflow-hidden rounded-xl border border-slate-200">
-                      <div className="hidden grid-cols-[140px_1fr_1fr] bg-slate-50 sm:grid">
-                        <div className="px-3 py-2" />
-                        <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-bsi-700">Termasuk</div>
-                        <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gold-700">Tidak Termasuk</div>
-                      </div>
-                      {rows.map((r) => (
-                        <div key={r.label} className="grid grid-cols-1 gap-1 border-t border-slate-100 px-3 py-3 sm:grid-cols-[140px_1fr_1fr] sm:gap-0 sm:px-0 sm:py-0">
-                          <div className="sm:px-3 sm:py-3">
-                            <p className="text-sm font-bold text-slate-800">{r.label}</p>
-                            <p className="text-xs text-slate-500">{r.sub}</p>
-                          </div>
-                          <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                            <span className="mb-0.5 block text-xs font-semibold text-bsi-700 sm:hidden">Termasuk</span>
-                            <p className="text-sm leading-relaxed text-slate-700">{has(r.a) ? r.a : "—"}</p>
-                          </div>
-                          <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                            <span className="mb-0.5 block text-xs font-semibold text-gold-700 sm:hidden">Tidak Termasuk</span>
-                            <p className="text-sm leading-relaxed text-slate-700">{has(r.b) ? r.b : "—"}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                );
-              })()}
+              {/* Tujuan + Scope were removed from the idea form
+                  2026-11-27; legacy rows keep their values in the
+                  database but nothing renders them anymore. */}
               {ideaDetail.outputKeberhasilan && String(ideaDetail.outputKeberhasilan).trim() !== "" && (
                 <section>
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Output Keberhasilan</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Cara/Alur Kerja</p>
                   <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.outputKeberhasilan}</p>
+                </section>
+              )}
+              {ideaDetail.impactDiharapkan && String(ideaDetail.impactDiharapkan).trim() !== "" && (
+                <section>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Impact yang diharapkan dari inisiatif</p>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.impactDiharapkan}</p>
+                </section>
+              )}
+              {ideaDetail.catatanBatasan && String(ideaDetail.catatanBatasan).trim() !== "" && (
+                <section>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Catatan/Batasan</p>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.catatanBatasan}</p>
                 </section>
               )}
               {Array.isArray(ideaDetail.tujuanBisnisNames) && ideaDetail.tujuanBisnisNames.length > 0 ? (

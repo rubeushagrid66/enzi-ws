@@ -374,38 +374,20 @@ export default function FindingDetailView({
   );
 
   // ── About this idea ────────────────────────────────────────────
-  // The idea's content (Tujuan, Scope table, Output, Tujuan Bisnis)
-  // — the same detail fields the admin form collects and the popup
-  // shows. The detail page never showed them, so a reader only had
-  // the title + description. Only filled fields render; the whole
-  // section hides when the idea has no detail yet.
-  const scopeRows = [
-    {
-      label: "Siapa",
-      hint: "Peran atau pengguna",
-      termasuk: localFinding.roleUsers,
-      tidak: localFinding.roleUsersTidakTermasuk,
-    },
-    {
-      label: "Di mana",
-      hint: "Langkah, fitur, layar",
-      termasuk: localFinding.stepFeatureScreen,
-      tidak: localFinding.stepTidakTermasuk,
-    },
-    {
-      label: "Apa yang berubah",
-      hint: "Tampilan, alur, sistem",
-      termasuk: localFinding.apaYangBerubah,
-      tidak: localFinding.apaYangBerubahTidakTermasuk,
-    },
-  ].filter((r) => (r.termasuk && String(r.termasuk).trim()) || (r.tidak && String(r.tidak).trim()));
+  // The idea's content (Cara/Alur Kerja, Impact, Catatan/Batasan,
+  // Tujuan Bisnis) — the same detail fields the admin form collects
+  // and the popup shows. The detail page never showed them, so a
+  // reader only had the title + description. Only filled fields
+  // render; the whole section hides when the idea has no detail yet.
+  // (Tujuan + Scope were removed from the form 2026-11-27; legacy
+  // rows keep their values in the database but nothing renders them.)
   const objectiveNames: string[] = Array.isArray(localFinding.tujuanBisnisNames)
     ? localFinding.tujuanBisnisNames.filter((n: any) => typeof n === "string" && n.trim())
     : [];
   const hasDetailContent =
-    (localFinding.tujuan && String(localFinding.tujuan).trim()) ||
-    scopeRows.length > 0 ||
     (localFinding.outputKeberhasilan && String(localFinding.outputKeberhasilan).trim()) ||
+    (localFinding.impactDiharapkan && String(localFinding.impactDiharapkan).trim()) ||
+    (localFinding.catatanBatasan && String(localFinding.catatanBatasan).trim()) ||
     objectiveNames.length > 0 ||
     (localFinding.tujuanBisnis && String(localFinding.tujuanBisnis).trim());
 
@@ -635,46 +617,24 @@ export default function FindingDetailView({
           {aboutOpen && (
           <div className="border-t border-slate-200 px-5 pb-5 pt-4 sm:px-7 sm:pb-7">
 
-            {localFinding.tujuan && String(localFinding.tujuan).trim() && (
-              <div>
-                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-600">Tujuan</h4>
-                <p className="mt-1 text-sm leading-relaxed text-slate-700">{localFinding.tujuan}</p>
-              </div>
-            )}
-
-            {scopeRows.length > 0 && (
-              <div className="mt-5">
-                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-600">Scope</h4>
-                <div className="mt-2 overflow-hidden rounded-xl border border-slate-200">
-                  <div className="hidden sm:grid sm:grid-cols-[7rem_1fr_1fr] bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-600">
-                    <div className="px-3 py-2" />
-                    <div className="px-3 py-2 text-bsi-700">Termasuk</div>
-                    <div className="px-3 py-2 border-l border-slate-200 text-gold-700">Tidak Termasuk</div>
-                  </div>
-                  {scopeRows.map((row) => (
-                    <div key={row.label} className="grid border-t border-slate-200 first:border-t-0 sm:grid-cols-[7rem_1fr_1fr]">
-                      <div className="px-3 pt-2.5 sm:py-3">
-                        <p className="text-sm font-semibold text-slate-800">{row.label}</p>
-                        <p className="text-sm leading-relaxed text-slate-600">{row.hint}</p>
-                      </div>
-                      <div className="px-3 pt-1 pb-2.5 sm:py-3">
-                        <p className="text-xs font-bold uppercase tracking-wider text-bsi-700 sm:hidden">Termasuk</p>
-                        <p className="text-sm leading-relaxed text-slate-700">{row.termasuk || "—"}</p>
-                      </div>
-                      <div className="px-3 pb-2.5 sm:py-3 sm:border-l sm:border-slate-200">
-                        <p className="text-xs font-bold uppercase tracking-wider text-gold-700 sm:hidden">Tidak Termasuk</p>
-                        <p className="text-sm leading-relaxed text-slate-700">{row.tidak || "—"}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {localFinding.outputKeberhasilan && String(localFinding.outputKeberhasilan).trim() && (
-              <div className="mt-5">
-                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-600">Output Keberhasilan</h4>
+              <div>
+                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-600">Cara/Alur Kerja</h4>
                 <p className="mt-1 text-sm leading-relaxed text-slate-700">{localFinding.outputKeberhasilan}</p>
+              </div>
+            )}
+
+            {localFinding.impactDiharapkan && String(localFinding.impactDiharapkan).trim() && (
+              <div className="mt-5">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-600">Impact yang diharapkan dari inisiatif</h4>
+                <p className="mt-1 text-sm leading-relaxed text-slate-700">{localFinding.impactDiharapkan}</p>
+              </div>
+            )}
+
+            {localFinding.catatanBatasan && String(localFinding.catatanBatasan).trim() && (
+              <div className="mt-5">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-600">Catatan/Batasan</h4>
+                <p className="mt-1 text-sm leading-relaxed text-slate-700">{localFinding.catatanBatasan}</p>
               </div>
             )}
 

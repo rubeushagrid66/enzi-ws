@@ -283,7 +283,7 @@ export default function AdminDashboard() {
   const [editingFindingId, setEditingFindingId] = useState<string | null>(null);
   // Where a new finding goes: the shared pool, or the selected project.
   const [findingTarget, setFindingTarget] = useState<"pool" | "project">("project");
-  const [findingForm, setFindingForm] = useState({ title: "", description: "", sumber: [] as string[], fitur: "", platform: [] as string[], tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", roleUsersTidakTermasuk: "", stepFeatureScreen: "", stepTidakTermasuk: "", apaYangBerubah: "", apaYangBerubahTidakTermasuk: "", outputKeberhasilan: "", tujuanBisnisIds: [] as string[] });
+  const [findingForm, setFindingForm] = useState({ title: "", description: "", sumber: [] as string[], fitur: "", platform: [] as string[], outputKeberhasilan: "", impactDiharapkan: "", catatanBatasan: "", tujuanBisnisIds: [] as string[] });
   // Finding ids (the linked "Findings" tab items) ticked for this pool
   // idea in its modal — the reverse of an idea's Linked Ideas list.
   const [findingIdeaIds, setFindingIdeaIds] = useState<string[]>([]);
@@ -688,7 +688,7 @@ export default function AdminDashboard() {
     setEditingFindingId(null);
     setFindingTarget("project");
     setObjectivesDropdownOpen(false);
-    setFindingForm({ title: "", description: "", sumber: [], fitur: "", platform: platformForSlug(selectedProjectSlug), tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", roleUsersTidakTermasuk: "", stepFeatureScreen: "", stepTidakTermasuk: "", apaYangBerubah: "", apaYangBerubahTidakTermasuk: "", outputKeberhasilan: "", tujuanBisnisIds: [] });
+    setFindingForm({ title: "", description: "", sumber: [], fitur: "", platform: platformForSlug(selectedProjectSlug), outputKeberhasilan: "", impactDiharapkan: "", catatanBatasan: "", tujuanBisnisIds: [] });
     setFindingIdeaIds([]);
     setFindingIdeaSearch("");
     setFindingModalOpen(true);
@@ -705,16 +705,9 @@ export default function AdminDashboard() {
       sumber: meta.sumber,
       fitur: meta.fitur,
       platform: meta.platform,
-      tujuan: f.tujuan || "",
-      scopeTermasuk: f.scopeTermasuk || "",
-      scopeTidakTermasuk: f.scopeTidakTermasuk || "",
-      roleUsers: f.roleUsers || "",
-      roleUsersTidakTermasuk: f.roleUsersTidakTermasuk || "",
-      stepFeatureScreen: f.stepFeatureScreen || "",
-      stepTidakTermasuk: f.stepTidakTermasuk || "",
-      apaYangBerubah: f.apaYangBerubah || "",
-      apaYangBerubahTidakTermasuk: f.apaYangBerubahTidakTermasuk || "",
       outputKeberhasilan: f.outputKeberhasilan || "",
+      impactDiharapkan: f.impactDiharapkan || "",
+      catatanBatasan: f.catatanBatasan || "",
       tujuanBisnisIds: Array.isArray(f.tujuanBisnisIds) ? [...f.tujuanBisnisIds] : [],
     });
     // Pre-tick the findings already linked to this idea.
@@ -787,6 +780,8 @@ export default function AdminDashboard() {
                     apaYangBerubah: f.apa_yang_berubah ?? x.apaYangBerubah ?? "",
                     apaYangBerubahTidakTermasuk: f.apa_yang_berubah_tidak_termasuk ?? x.apaYangBerubahTidakTermasuk ?? "",
                     outputKeberhasilan: f.output_keberhasilan ?? x.outputKeberhasilan ?? "",
+                    impactDiharapkan: f.impact_diharapkan ?? x.impactDiharapkan ?? "",
+                    catatanBatasan: f.catatan_batasan ?? x.catatanBatasan ?? "",
                     tujuanBisnis: f.tujuan_bisnis ?? x.tujuanBisnis ?? "",
                     tujuanBisnisIds: Array.isArray(f.tujuan_bisnis_ids) ? f.tujuan_bisnis_ids : (x.tujuanBisnisIds || []),
                   }
@@ -820,6 +815,8 @@ export default function AdminDashboard() {
               apaYangBerubah: f.apa_yang_berubah ?? "",
               apaYangBerubahTidakTermasuk: f.apa_yang_berubah_tidak_termasuk ?? "",
               outputKeberhasilan: f.output_keberhasilan ?? "",
+              impactDiharapkan: f.impact_diharapkan ?? "",
+              catatanBatasan: f.catatan_batasan ?? "",
               tujuanBisnis: f.tujuan_bisnis ?? "",
               tujuanBisnisIds: Array.isArray(f.tujuan_bisnis_ids) ? f.tujuan_bisnis_ids : [],
               feasibilityX: null,
@@ -858,6 +855,8 @@ export default function AdminDashboard() {
               apaYangBerubah: f.apa_yang_berubah ?? "",
               apaYangBerubahTidakTermasuk: f.apa_yang_berubah_tidak_termasuk ?? "",
               outputKeberhasilan: f.output_keberhasilan ?? "",
+              impactDiharapkan: f.impact_diharapkan ?? "",
+              catatanBatasan: f.catatan_batasan ?? "",
               tujuanBisnis: f.tujuan_bisnis ?? "",
               tujuanBisnisIds: Array.isArray(f.tujuan_bisnis_ids) ? f.tujuan_bisnis_ids : [],
               feasibilityX: null,
@@ -2505,68 +2504,22 @@ export default function AdminDashboard() {
               <label htmlFor="finding-desc" className="field-label">Description</label>
               <textarea id="finding-desc" rows={2} placeholder="Elaborate on participant feedback..." value={findingForm.description} onChange={(e) => setFindingForm((f) => ({ ...f, description: e.target.value }))} className="input w-full" />
             </div>
+            {/* The Tujuan and Scope fields were removed 2026-11-27
+                (user request): an idea no longer collects a goal or a
+                Termasuk / Tidak Termasuk scope table. The old columns
+                stay in the database for legacy rows, but nothing in
+                the UI reads or writes them anymore. */}
             <div>
-              <label htmlFor="finding-tujuan" className="field-label">Tujuan</label>
-              <textarea id="finding-tujuan" rows={2} placeholder="What is this idea trying to achieve?" value={findingForm.tujuan} onChange={(e) => setFindingForm((f) => ({ ...f, tujuan: e.target.value }))} className="input w-full" />
+              <label htmlFor="finding-output-keberhasilan" className="field-label">Cara/Alur Kerja</label>
+              <textarea id="finding-output-keberhasilan" rows={2} placeholder="How does this idea work, step by step?" value={findingForm.outputKeberhasilan} onChange={(e) => setFindingForm((f) => ({ ...f, outputKeberhasilan: e.target.value }))} className="input w-full" />
             </div>
-            {/* Scope table — Termasuk and Tidak Termasuk are the two
-                columns; each has its own Siapa (role), Di mana (step)
-                and Apa yang berubah. There is no scope description box:
-                the scope is expressed through these three rows. On
-                phones the columns stack under each row label. */}
-            <fieldset className="overflow-hidden rounded-xl border border-slate-200">
-              <legend className="field-label px-1">Scope</legend>
-              <div className="hidden grid-cols-[150px_1fr_1fr] bg-slate-50 sm:grid">
-                <div className="px-3 py-2" />
-                <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-bsi-700">Termasuk</div>
-                <div className="border-l border-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-wide text-gold-700">Tidak Termasuk</div>
-              </div>
-              <div className="grid grid-cols-1 gap-2 border-t border-slate-100 px-3 py-3 first:border-t-0 sm:grid-cols-[150px_1fr_1fr] sm:gap-0 sm:px-0 sm:py-0">
-                <div className="sm:px-3 sm:py-3">
-                  <p className="text-sm font-bold text-slate-800">Siapa</p>
-                  <p className="text-xs text-slate-500">Peran atau pengguna</p>
-                </div>
-                <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                  <span className="mb-1 block text-xs font-semibold text-bsi-700 sm:hidden">Termasuk</span>
-                  <input id="finding-role-users" type="text" placeholder="e.g. Semua pelanggan" value={findingForm.roleUsers} onChange={(e) => setFindingForm((f) => ({ ...f, roleUsers: e.target.value }))} className="input w-full" />
-                </div>
-                <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                  <span className="mb-1 block text-xs font-semibold text-gold-700 sm:hidden">Tidak Termasuk</span>
-                  <input id="finding-role-users-tidak-termasuk" type="text" placeholder="e.g. Admin" value={findingForm.roleUsersTidakTermasuk} onChange={(e) => setFindingForm((f) => ({ ...f, roleUsersTidakTermasuk: e.target.value }))} className="input w-full" />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-2 border-t border-slate-100 px-3 py-3 sm:grid-cols-[150px_1fr_1fr] sm:gap-0 sm:px-0 sm:py-0">
-                <div className="sm:px-3 sm:py-3">
-                  <p className="text-sm font-bold text-slate-800">Di mana</p>
-                  <p className="text-xs text-slate-500">Langkah, fitur, layar</p>
-                </div>
-                <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                  <span className="mb-1 block text-xs font-semibold text-bsi-700 sm:hidden">Termasuk</span>
-                  <input id="finding-step-feature-screen" type="text" placeholder="e.g. Home dan notifikasi aplikasi" value={findingForm.stepFeatureScreen} onChange={(e) => setFindingForm((f) => ({ ...f, stepFeatureScreen: e.target.value }))} className="input w-full" />
-                </div>
-                <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                  <span className="mb-1 block text-xs font-semibold text-gold-700 sm:hidden">Tidak Termasuk</span>
-                  <input id="finding-step-tidak-termasuk" type="text" placeholder="e.g. Menu pembayaran" value={findingForm.stepTidakTermasuk} onChange={(e) => setFindingForm((f) => ({ ...f, stepTidakTermasuk: e.target.value }))} className="input w-full" />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-2 border-t border-slate-100 px-3 py-3 sm:grid-cols-[150px_1fr_1fr] sm:gap-0 sm:px-0 sm:py-0">
-                <div className="sm:px-3 sm:py-3">
-                  <p className="text-sm font-bold text-slate-800">Apa yang berubah</p>
-                  <p className="text-xs text-slate-500">Tampilan, alur, sistem</p>
-                </div>
-                <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                  <span className="mb-1 block text-xs font-semibold text-bsi-700 sm:hidden">Termasuk</span>
-                  <textarea id="finding-apa-yang-berubah" rows={2} placeholder="What changes for the user?" value={findingForm.apaYangBerubah} onChange={(e) => setFindingForm((f) => ({ ...f, apaYangBerubah: e.target.value }))} className="input w-full" />
-                </div>
-                <div className="sm:border-l sm:border-slate-100 sm:px-3 sm:py-3">
-                  <span className="mb-1 block text-xs font-semibold text-gold-700 sm:hidden">Tidak Termasuk</span>
-                  <textarea id="finding-apa-yang-berubah-tidak-termasuk" rows={2} placeholder="What changes outside scope?" value={findingForm.apaYangBerubahTidakTermasuk} onChange={(e) => setFindingForm((f) => ({ ...f, apaYangBerubahTidakTermasuk: e.target.value }))} className="input w-full" />
-                </div>
-              </div>
-            </fieldset>
             <div>
-              <label htmlFor="finding-output-keberhasilan" className="field-label">Output Keberhasilan</label>
-              <textarea id="finding-output-keberhasilan" rows={2} placeholder="What does success look like?" value={findingForm.outputKeberhasilan} onChange={(e) => setFindingForm((f) => ({ ...f, outputKeberhasilan: e.target.value }))} className="input w-full" />
+              <label htmlFor="finding-impact-diharapkan" className="field-label">Impact yang diharapkan dari inisiatif</label>
+              <textarea id="finding-impact-diharapkan" rows={2} placeholder="What impact should this initiative have?" value={findingForm.impactDiharapkan} onChange={(e) => setFindingForm((f) => ({ ...f, impactDiharapkan: e.target.value }))} className="input w-full" />
+            </div>
+            <div>
+              <label htmlFor="finding-catatan-batasan" className="field-label">Catatan/Batasan</label>
+              <textarea id="finding-catatan-batasan" rows={2} placeholder="Notes, constraints, or limits of this idea..." value={findingForm.catatanBatasan} onChange={(e) => setFindingForm((f) => ({ ...f, catatanBatasan: e.target.value }))} className="input w-full" />
             </div>
             {/* Tujuan Bisnis is a multi-select dropdown over the
                 admin-managed objectives (Business Objective menu), so

@@ -112,6 +112,8 @@ CREATE TABLE IF NOT EXISTS findings (
   step_feature_screen TEXT,
   apa_yang_berubah TEXT,
   output_keberhasilan TEXT,
+  impact_diharapkan TEXT,
+  catatan_batasan TEXT,
   tujuan_bisnis TEXT,
   feasibility_x NUMERIC DEFAULT 50.0,
   feasibility_y NUMERIC DEFAULT 50.0,
@@ -159,6 +161,9 @@ WHERE NOT EXISTS (
 );
 ALTER TABLE findings
   ADD COLUMN IF NOT EXISTS tujuan_bisnis_ids JSONB NOT NULL DEFAULT '[]';
+ALTER TABLE findings
+  ADD COLUMN IF NOT EXISTS impact_diharapkan TEXT,
+  ADD COLUMN IF NOT EXISTS catatan_batasan TEXT;
 
 CREATE TABLE IF NOT EXISTS finding_parameter_values (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,

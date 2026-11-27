@@ -323,6 +323,8 @@ export const dbService = {
           apaYangBerubah: f.apa_yang_berubah ?? "",
           apaYangBerubahTidakTermasuk: f.apa_yang_berubah_tidak_termasuk ?? "",
           outputKeberhasilan: f.output_keberhasilan ?? "",
+          impactDiharapkan: f.impact_diharapkan ?? "",
+          catatanBatasan: f.catatan_batasan ?? "",
           tujuanBisnis: f.tujuan_bisnis ?? "",
           // Business objectives (multi-select dropdown): ids from
           // findings.tujuan_bisnis_ids, names resolved here so detail
@@ -684,6 +686,8 @@ export const dbService = {
           apaYangBerubah: f.apa_yang_berubah ?? "",
           apaYangBerubahTidakTermasuk: f.apa_yang_berubah_tidak_termasuk ?? "",
           outputKeberhasilan: f.output_keberhasilan ?? "",
+          impactDiharapkan: f.impact_diharapkan ?? "",
+          catatanBatasan: f.catatan_batasan ?? "",
           tujuanBisnis: f.tujuan_bisnis ?? "",
           // Business objectives (multi-select dropdown): ids from
           // findings.tujuan_bisnis_ids, names resolved here so detail
@@ -1561,6 +1565,8 @@ export const dbService = {
       apaYangBerubah: s.apa_yang_berubah ?? s.apaYangBerubah ?? "",
       apaYangBerubahTidakTermasuk: s.apa_yang_berubah_tidak_termasuk ?? s.apaYangBerubahTidakTermasuk ?? "",
       outputKeberhasilan: s.output_keberhasilan ?? s.outputKeberhasilan ?? "",
+      impactDiharapkan: s.impact_diharapkan ?? s.impactDiharapkan ?? "",
+      catatanBatasan: s.catatan_batasan ?? s.catatanBatasan ?? "",
       tujuanBisnis: s.tujuan_bisnis ?? s.tujuanBisnis ?? "",
       tujuanBisnisIds: normalizeObjectiveIds(s.tujuan_bisnis_ids ?? s.tujuanBisnisIds),
     };
@@ -2173,6 +2179,10 @@ export const dbService = {
     apaYangBerubah?: string;
     apaYangBerubahTidakTermasuk?: string;
     outputKeberhasilan?: string;
+    /** Expected impact of the initiative (free text). */
+    impactDiharapkan?: string;
+    /** Notes / constraints (free text). */
+    catatanBatasan?: string;
     tujuanBisnis?: string;
     /** Business-objective ids from the multi-select dropdown. */
     tujuanBisnisIds?: string[];
@@ -2203,6 +2213,8 @@ export const dbService = {
           apa_yang_berubah: data.apaYangBerubah || null,
           apa_yang_berubah_tidak_termasuk: data.apaYangBerubahTidakTermasuk || null,
           output_keberhasilan: data.outputKeberhasilan || null,
+          impact_diharapkan: data.impactDiharapkan || null,
+          catatan_batasan: data.catatanBatasan || null,
           tujuan_bisnis: data.tujuanBisnis || null,
           tujuan_bisnis_ids: data.tujuanBisnisIds || [],
           feasibility_x: null,
@@ -2253,6 +2265,10 @@ export const dbService = {
     apaYangBerubah?: string;
     apaYangBerubahTidakTermasuk?: string;
     outputKeberhasilan?: string;
+    /** Expected impact of the initiative (free text). */
+    impactDiharapkan?: string;
+    /** Notes / constraints (free text). */
+    catatanBatasan?: string;
     tujuanBisnis?: string;
     /** Business-objective ids from the multi-select dropdown. */
     tujuanBisnisIds?: string[];
@@ -2279,6 +2295,8 @@ export const dbService = {
           ...(data.apaYangBerubah !== undefined && { apa_yang_berubah: data.apaYangBerubah || null }),
           ...(data.apaYangBerubahTidakTermasuk !== undefined && { apa_yang_berubah_tidak_termasuk: data.apaYangBerubahTidakTermasuk || null }),
           ...(data.outputKeberhasilan !== undefined && { output_keberhasilan: data.outputKeberhasilan || null }),
+          ...(data.impactDiharapkan !== undefined && { impact_diharapkan: data.impactDiharapkan || null }),
+          ...(data.catatanBatasan !== undefined && { catatan_batasan: data.catatanBatasan || null }),
           ...(data.tujuanBisnis !== undefined && { tujuan_bisnis: data.tujuanBisnis || null }),
           ...(data.tujuanBisnisIds !== undefined && { tujuan_bisnis_ids: data.tujuanBisnisIds }),
           tags: tagsJson,

@@ -165,7 +165,7 @@ export async function PUT(
 
     const { id } = params;
     const body = await request.json();
-    const { title, description, sumber, fitur, platform, tujuan, scopeTermasuk, scopeTidakTermasuk, roleUsers, roleUsersTidakTermasuk, stepFeatureScreen, stepTidakTermasuk, apaYangBerubah, apaYangBerubahTidakTermasuk, outputKeberhasilan, tujuanBisnis, tujuanBisnisIds } = body;
+    const { title, description, sumber, fitur, platform, tujuan, scopeTermasuk, scopeTidakTermasuk, roleUsers, roleUsersTidakTermasuk, stepFeatureScreen, stepTidakTermasuk, apaYangBerubah, apaYangBerubahTidakTermasuk, outputKeberhasilan, impactDiharapkan, catatanBatasan, tujuanBisnis, tujuanBisnisIds } = body;
 
     const finding = await dbService.updateFinding(id, {
       title,
@@ -183,6 +183,8 @@ export async function PUT(
       apaYangBerubah,
       apaYangBerubahTidakTermasuk,
       outputKeberhasilan,
+      impactDiharapkan,
+      catatanBatasan,
       tujuanBisnis,
       tujuanBisnisIds,
     });
