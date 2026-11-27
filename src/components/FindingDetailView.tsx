@@ -289,21 +289,6 @@ export default function FindingDetailView({
   // idea lands in (a manual pin wins, same as the board).
   const scoreSummary = (
     <div className="mt-5 grid auto-rows-fr grid-cols-2 gap-2.5 sm:grid-cols-5">
-      <div className="rounded-xl border border-gold-200 bg-gold-50 px-3.5 py-3">
-        <div className="text-xs font-bold uppercase tracking-wider text-gold-700">
-          DVF Score
-        </div>
-        <div className="mt-0.5 text-2xl font-extrabold leading-none text-gold-800">
-          {groupDVF != null ? groupDVF.toFixed(2) : "N/A"}
-        </div>
-        <p className="mt-1 text-xs leading-relaxed text-gold-700">
-          Skor gabungan menggunakan bobot (wD: 33%, wV: 33%, wF: 33%)
-        </p>
-        <p className="mt-1 text-xs leading-relaxed text-gold-700">
-          Rumus DVF: (wD × D) + (wV × V) + (wF × F)
-        </p>
-      </div>
-
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
         <div className="text-xs font-bold uppercase tracking-wider text-slate-600">
           Desirability
@@ -372,6 +357,21 @@ export default function FindingDetailView({
           {groupQuadrant
             ? QUADRANT_LABEL[groupQuadrant].detail
             : "Not placed yet"}
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-gold-200 bg-gold-50 px-3.5 py-3">
+        <div className="text-xs font-bold uppercase tracking-wider text-gold-700">
+          DVF Score
+        </div>
+        <div className="mt-0.5 text-2xl font-extrabold leading-none text-gold-800">
+          {groupDVF != null ? groupDVF.toFixed(2) : "N/A"}
+        </div>
+        <p className="mt-1 text-xs leading-relaxed text-gold-700">
+          Skor gabungan menggunakan bobot (wD: 33%, wV: 33%, wF: 33%)
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-gold-700">
+          Rumus DVF: (wD × D) + (wV × V) + (wF × F)
         </p>
       </div>
     </div>
