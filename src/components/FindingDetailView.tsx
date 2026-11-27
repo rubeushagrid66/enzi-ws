@@ -88,8 +88,12 @@ export default function FindingDetailView({
   // Shown under the header so the finding's ideas are visible at a
   // glance, whatever tab is open.
   const [relatedIdeas, setRelatedIdeas] = useState<any[]>([]);
+  // Collapsed to the first 6 pills by default, so a long linked list
+  // does not push the score summary down; "Lihat semua" expands it.
+  const [relatedExpanded, setRelatedExpanded] = useState(false);
   useEffect(() => {
     let cancelled = false;
+    setRelatedExpanded(false);
     fetch(`/api/projects/${project.slug}/findings/${finding.id}/ideas`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -566,14 +570,15 @@ export default function FindingDetailView({
               (assigned in the admin Findings tab). Compact pills in a
               wrapping row, so many linked findings stay one or two
               lines tall instead of a tall card each. Full description
-              is in the tooltip. */}
+              is in the tooltip. Only the first 6 pills show by
+              default; "Lihat semua" reveals the rest. */}
           {relatedIdeas.length > 0 && (
             <div className="mt-4">
               <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-600">
                 Related Findings ({relatedIdeas.length})
               </h3>
               <div className="mt-2 flex flex-wrap gap-2">
-                {relatedIdeas.map((idea: any) => (
+                {(relatedExpanded ? relatedIdeas : relatedIdeas.slice(0, 6)).map((idea: any) => (
                   <button
                     key={idea.id}
                     type="button"
@@ -585,6 +590,21 @@ export default function FindingDetailView({
                   </button>
                 ))}
               </div>
+              {relatedIdeas.length > 6 && (
+                <button
+                  type="button"
+                  onClick={() => setRelatedExpanded((v) => !v)}
+                  aria-expanded={relatedExpanded}
+                  className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-bsi-700 transition hover:text-bsi-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bsi-500"
+                >
+                  {relatedExpanded
+                    ? "Tampilkan lebih sedikit"
+                    : `Lihat semua (${relatedIdeas.length})`}
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${relatedExpanded ? "rotate-180" : ""}`}
+                  />
+                </button>
+              )}
             </div>
           )}
 
