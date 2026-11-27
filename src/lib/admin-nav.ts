@@ -8,6 +8,7 @@ export type AdminTab =
   | "findings"
   | "ideas"
   | "categories"
+  | "objectives"
   | "weights"
   | "groups"
   | "aspects"
@@ -31,6 +32,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
   { id: "findings", label: "Ideas & Tags", href: "/dashboard/ideas", badge: "Global", group: "Workshop" },
   { id: "ideas", label: "Findings", href: "/dashboard/findings", badge: "Global", group: "Workshop" },
   { id: "categories", label: "Findings Category", href: "/dashboard/categories", badge: "Global", group: "Workshop" },
+  { id: "objectives", label: "Business Objective", href: "/dashboard/objectives", badge: "Global", group: "Workshop" },
   { id: "weights", label: "Framework & Weighting", href: "/dashboard/framework", badge: "Global", group: "Workshop" },
   { id: "groups", label: "Groups & Participants", href: "/dashboard/groups", group: "Workshop" },
   { id: "aspects", label: "Desirability, Viability, Feasibility (DVF) Aspects", href: "/dashboard/aspects", group: "Workshop" },

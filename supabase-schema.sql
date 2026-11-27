@@ -132,6 +132,34 @@ CREATE TABLE IF NOT EXISTS finding_categories (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Business objectives (global, shared by both projects). Admin-managed
+-- from the dashboard "Business Objective" menu; a Finding picks MORE
+-- THAN ONE from a dropdown, stored as an id array in
+-- findings.tujuan_bisnis_ids. The old free-text tujuan_bisnis column
+-- stays for legacy rows (display fallback). Full migration + seed in
+-- docs/business-objectives-sql.md.
+CREATE TABLE IF NOT EXISTS business_objectives (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+INSERT INTO business_objectives (name)
+SELECT v.name FROM (VALUES
+  ('CASA'),
+  ('Saldo Giro'),
+  ('Jumlah Rekening (UREG)'),
+  ('Pengguna Aktif (USAK)'),
+  ('Frekuensi Transaksi'),
+  ('Fee-Based Income'),
+  ('Volume Transaksi Wholesale')
+) AS v(name)
+WHERE NOT EXISTS (
+  SELECT 1 FROM business_objectives b WHERE b.name = v.name
+);
+ALTER TABLE findings
+  ADD COLUMN IF NOT EXISTS tujuan_bisnis_ids JSONB NOT NULL DEFAULT '[]';
+
 CREATE TABLE IF NOT EXISTS finding_parameter_values (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   finding_id TEXT NOT NULL REFERENCES findings(id) ON DELETE CASCADE,

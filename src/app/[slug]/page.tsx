@@ -1482,12 +1482,21 @@ export default function ProjectResultViewer({
                   <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.outputKeberhasilan}</p>
                 </section>
               )}
-              {ideaDetail.tujuanBisnis && String(ideaDetail.tujuanBisnis).trim() !== "" && (
+              {Array.isArray(ideaDetail.tujuanBisnisNames) && ideaDetail.tujuanBisnisNames.length > 0 ? (
+                <section>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Tujuan Bisnis</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {ideaDetail.tujuanBisnisNames.map((name: string) => (
+                      <span key={name} className="inline-flex items-center rounded-full border border-gold-200 bg-gold-50 px-2.5 py-0.5 text-xs font-bold text-gold-800">{name}</span>
+                    ))}
+                  </div>
+                </section>
+              ) : ideaDetail.tujuanBisnis && String(ideaDetail.tujuanBisnis).trim() !== "" ? (
                 <section>
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Tujuan Bisnis</p>
                   <p className="mt-1 text-sm leading-relaxed text-slate-700">{ideaDetail.tujuanBisnis}</p>
                 </section>
-              )}
+              ) : null}
               {(ideaDetail.relatedIdeas || []).length > 0 && (
                 <section>
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Related findings</p>

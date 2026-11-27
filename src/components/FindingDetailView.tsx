@@ -399,10 +399,14 @@ export default function FindingDetailView({
       tidak: localFinding.apaYangBerubahTidakTermasuk,
     },
   ].filter((r) => (r.termasuk && String(r.termasuk).trim()) || (r.tidak && String(r.tidak).trim()));
+  const objectiveNames: string[] = Array.isArray(localFinding.tujuanBisnisNames)
+    ? localFinding.tujuanBisnisNames.filter((n: any) => typeof n === "string" && n.trim())
+    : [];
   const hasDetailContent =
     (localFinding.tujuan && String(localFinding.tujuan).trim()) ||
     scopeRows.length > 0 ||
     (localFinding.outputKeberhasilan && String(localFinding.outputKeberhasilan).trim()) ||
+    objectiveNames.length > 0 ||
     (localFinding.tujuanBisnis && String(localFinding.tujuanBisnis).trim());
 
   // Interview basis: Cash interviewed 3 companies (per the D-rule
@@ -674,12 +678,24 @@ export default function FindingDetailView({
               </div>
             )}
 
-            {localFinding.tujuanBisnis && String(localFinding.tujuanBisnis).trim() && (
+            {/* Business objectives render as gold pills (same style as
+                the dropdown); findings written before the dropdown keep
+                their old free text as a fallback. */}
+            {objectiveNames.length > 0 ? (
+              <div className="mt-5">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-600">Tujuan Bisnis</h4>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {objectiveNames.map((name: string) => (
+                    <span key={name} className="inline-flex items-center rounded-full border border-gold-200 bg-gold-50 px-2.5 py-0.5 text-xs font-bold text-gold-800">{name}</span>
+                  ))}
+                </div>
+              </div>
+            ) : localFinding.tujuanBisnis && String(localFinding.tujuanBisnis).trim() ? (
               <div className="mt-5">
                 <h4 className="text-sm font-bold uppercase tracking-wider text-slate-600">Tujuan Bisnis</h4>
                 <p className="mt-1 text-sm leading-relaxed text-slate-700">{localFinding.tujuanBisnis}</p>
               </div>
-            )}
+            ) : null}
           </div>
           )}
         </section>

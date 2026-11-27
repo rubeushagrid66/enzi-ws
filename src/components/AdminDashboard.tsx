@@ -17,6 +17,7 @@ import {
   Copy,
   Users,
   ChevronRight,
+  ChevronDown,
   ImagePlus,
   X,
 } from "lucide-react";
@@ -217,7 +218,7 @@ export default function AdminDashboard() {
     // never disagrees with the active menu (e.g. a label user landing
     // on /dashboard/ideas must end up on /dashboard/groups, not on
     // /dashboard/ideas showing Groups & Participants).
-    if (!loading && (urlTab === "users" || urlTab === "categories") && !isAdmin) {
+    if (!loading && (urlTab === "users" || urlTab === "categories" || urlTab === "objectives") && !isAdmin) {
       setActiveTab("findings");
       const href = ADMIN_NAV.find((i) => i.id === "findings")?.href ?? "/dashboard/ideas";
       if (pathname !== href) router.replace(href);
@@ -282,7 +283,7 @@ export default function AdminDashboard() {
   const [editingFindingId, setEditingFindingId] = useState<string | null>(null);
   // Where a new finding goes: the shared pool, or the selected project.
   const [findingTarget, setFindingTarget] = useState<"pool" | "project">("project");
-  const [findingForm, setFindingForm] = useState({ title: "", description: "", sumber: [] as string[], fitur: "", platform: [] as string[], tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", roleUsersTidakTermasuk: "", stepFeatureScreen: "", stepTidakTermasuk: "", apaYangBerubah: "", apaYangBerubahTidakTermasuk: "", outputKeberhasilan: "", tujuanBisnis: "" });
+  const [findingForm, setFindingForm] = useState({ title: "", description: "", sumber: [] as string[], fitur: "", platform: [] as string[], tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", roleUsersTidakTermasuk: "", stepFeatureScreen: "", stepTidakTermasuk: "", apaYangBerubah: "", apaYangBerubahTidakTermasuk: "", outputKeberhasilan: "", tujuanBisnisIds: [] as string[] });
   // Finding ids (the linked "Findings" tab items) ticked for this pool
   // idea in its modal — the reverse of an idea's Linked Ideas list.
   const [findingIdeaIds, setFindingIdeaIds] = useState<string[]>([]);
@@ -307,6 +308,15 @@ export default function AdminDashboard() {
   const [categoryName, setCategoryName] = useState("");
   const [editingCategory, setEditingCategory] = useState<{ id: string; name: string } | null>(null);
   const [savingCategory, setSavingCategory] = useState(false);
+  // Business objectives (global): admin creates them in the Business
+  // Objective menu; a Finding picks MORE THAN ONE from a dropdown in
+  // the Create/Edit Idea form. Same inline-rename pattern as
+  // categories. `objectivesDropdownOpen` is the form dropdown state.
+  const [businessObjectives, setBusinessObjectives] = useState<any[]>([]);
+  const [objectiveName, setObjectiveName] = useState("");
+  const [editingObjective, setEditingObjective] = useState<{ id: string; name: string } | null>(null);
+  const [savingObjective, setSavingObjective] = useState(false);
+  const [objectivesDropdownOpen, setObjectivesDropdownOpen] = useState(false);
   // Sub findings (inside a Finding): each has a Fitur, a Description,
   // and multiple image evidences — each image + its own description.
   // `id` is the DB id once saved, or a `new_…` temp id for a row added
@@ -426,12 +436,13 @@ export default function AdminDashboard() {
   // by all projects and do not depend on the selected project.
   const loadGlobalData = async () => {
     try {
-      const [w, f, g, ideasRes, catsRes] = await Promise.all([
+      const [w, f, g, ideasRes, catsRes, objsRes] = await Promise.all([
         apiCall("/api/global/weights"),
         apiCall("/api/global/findings"),
         apiCall("/api/global/groups"),
         apiCall("/api/global/ideas"),
         apiCall("/api/global/finding-categories").catch(() => ({ categories: [] })),
+        apiCall("/api/global/business-objectives").catch(() => ({ objectives: [] })),
       ]);
       if (w.weights) {
         setWeightInputs(w.weights.map((x: any) => ({ name: x.name, weight: x.weight })));
@@ -441,6 +452,7 @@ export default function AdminDashboard() {
       setAllGroups(g.groups || []);
       setIdeas(ideasRes.ideas || []);
       setCategories(catsRes.categories || []);
+      setBusinessObjectives(objsRes.objectives || []);
       // Surface the "run the SQL" note once, from whichever endpoint
       // reported it.
       setGlobalSetupNote(w.note || null);
@@ -534,6 +546,7 @@ export default function AdminDashboard() {
   const groupNameInputRef = useRef<HTMLInputElement>(null);
   const aspectNameInputRef = useRef<HTMLInputElement>(null);
   const categoryNameInputRef = useRef<HTMLInputElement>(null);
+  const objectiveNameInputRef = useRef<HTMLInputElement>(null);
   const focusInlineForm = (ref: React.RefObject<HTMLInputElement>) => {
     ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     ref.current?.focus({ preventScroll: true });
@@ -674,7 +687,8 @@ export default function AdminDashboard() {
   const openCreateFinding = () => {
     setEditingFindingId(null);
     setFindingTarget("project");
-    setFindingForm({ title: "", description: "", sumber: [], fitur: "", platform: platformForSlug(selectedProjectSlug), tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", roleUsersTidakTermasuk: "", stepFeatureScreen: "", stepTidakTermasuk: "", apaYangBerubah: "", apaYangBerubahTidakTermasuk: "", outputKeberhasilan: "", tujuanBisnis: "" });
+    setObjectivesDropdownOpen(false);
+    setFindingForm({ title: "", description: "", sumber: [], fitur: "", platform: platformForSlug(selectedProjectSlug), tujuan: "", scopeTermasuk: "", scopeTidakTermasuk: "", roleUsers: "", roleUsersTidakTermasuk: "", stepFeatureScreen: "", stepTidakTermasuk: "", apaYangBerubah: "", apaYangBerubahTidakTermasuk: "", outputKeberhasilan: "", tujuanBisnisIds: [] });
     setFindingIdeaIds([]);
     setFindingIdeaSearch("");
     setFindingModalOpen(true);
@@ -683,6 +697,7 @@ export default function AdminDashboard() {
   const openEditFinding = async (f: any) => {
     setEditingFindingId(f.id);
     setFindingTarget(f.projectId ? "project" : "pool");
+    setObjectivesDropdownOpen(false);
     const meta = findingMeta(f);
     setFindingForm({
       title: f.title || "",
@@ -700,7 +715,7 @@ export default function AdminDashboard() {
       apaYangBerubah: f.apaYangBerubah || "",
       apaYangBerubahTidakTermasuk: f.apaYangBerubahTidakTermasuk || "",
       outputKeberhasilan: f.outputKeberhasilan || "",
-      tujuanBisnis: f.tujuanBisnis || "",
+      tujuanBisnisIds: Array.isArray(f.tujuanBisnisIds) ? [...f.tujuanBisnisIds] : [],
     });
     // Pre-tick the findings already linked to this idea.
     setFindingIdeaIds([]);
@@ -773,6 +788,7 @@ export default function AdminDashboard() {
                     apaYangBerubahTidakTermasuk: f.apa_yang_berubah_tidak_termasuk ?? x.apaYangBerubahTidakTermasuk ?? "",
                     outputKeberhasilan: f.output_keberhasilan ?? x.outputKeberhasilan ?? "",
                     tujuanBisnis: f.tujuan_bisnis ?? x.tujuanBisnis ?? "",
+                    tujuanBisnisIds: Array.isArray(f.tujuan_bisnis_ids) ? f.tujuan_bisnis_ids : (x.tujuanBisnisIds || []),
                   }
                 : x
             )
@@ -805,6 +821,7 @@ export default function AdminDashboard() {
               apaYangBerubahTidakTermasuk: f.apa_yang_berubah_tidak_termasuk ?? "",
               outputKeberhasilan: f.output_keberhasilan ?? "",
               tujuanBisnis: f.tujuan_bisnis ?? "",
+              tujuanBisnisIds: Array.isArray(f.tujuan_bisnis_ids) ? f.tujuan_bisnis_ids : [],
               feasibilityX: null,
               feasibilityY: null,
               feasibilityQuadrant: null,
@@ -842,6 +859,7 @@ export default function AdminDashboard() {
               apaYangBerubahTidakTermasuk: f.apa_yang_berubah_tidak_termasuk ?? "",
               outputKeberhasilan: f.output_keberhasilan ?? "",
               tujuanBisnis: f.tujuan_bisnis ?? "",
+              tujuanBisnisIds: Array.isArray(f.tujuan_bisnis_ids) ? f.tujuan_bisnis_ids : [],
               feasibilityX: null,
               feasibilityY: null,
               feasibilityQuadrant: null,
@@ -1261,6 +1279,83 @@ export default function AdminDashboard() {
     );
   };
 
+  // ── Business Objectives (admin only, global) ────────────────────────
+  // Same inline-rename pattern as categories. A finding picks more
+  // than one objective, so deleting one only un-ticks it wherever it
+  // was selected — the findings themselves keep existing.
+  const handleCreateObjective = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!objectiveName.trim() || savingObjective) return;
+    setSavingObjective(true);
+    try {
+      setError(null);
+      const saved = await apiCall("/api/global/business-objectives", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: objectiveName.trim() }),
+      });
+      if (saved?.objective) setBusinessObjectives((rows: any[]) => [saved.objective, ...rows]);
+      setObjectiveName("");
+    } catch (err: any) {
+      setError(err.message || "Failed to create business objective");
+    } finally {
+      setSavingObjective(false);
+    }
+  };
+
+  const handleSaveObjective = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingObjective || !editingObjective.name.trim() || savingObjective) return;
+    setSavingObjective(true);
+    try {
+      setError(null);
+      const saved = await apiCall(`/api/global/business-objectives/${editingObjective.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editingObjective.name.trim() }),
+      });
+      if (saved?.objective) {
+        setBusinessObjectives((rows: any[]) =>
+          rows.map((o: any) => (o.id === editingObjective.id ? { ...o, name: saved.objective.name } : o))
+        );
+      }
+      setEditingObjective(null);
+    } catch (err: any) {
+      setError(err.message || "Failed to update business objective");
+    } finally {
+      setSavingObjective(false);
+    }
+  };
+
+  const handleDeleteObjective = (o: any) => {
+    const usedBy = poolFindings.filter((f: any) =>
+      Array.isArray(f.tujuanBisnisIds) && f.tujuanBisnisIds.includes(o.id)
+    ).length;
+    askConfirm(
+      "Delete business objective?",
+      usedBy > 0
+        ? `“${o.name}” will be deleted. ${usedBy} finding${usedBy === 1 ? "" : "s"} selected it — the selection will be removed, the findings keep existing.`
+        : `“${o.name}” will be permanently deleted.`,
+      "Delete objective",
+      async () => {
+        try {
+          await apiCall(`/api/global/business-objectives/${o.id}`, { method: "DELETE" });
+          setConfirm(null);
+          setBusinessObjectives((rows: any[]) => rows.filter((x: any) => x.id !== o.id));
+          setPoolFindings((rows: any[]) =>
+            rows.map((f: any) =>
+              Array.isArray(f.tujuanBisnisIds) && f.tujuanBisnisIds.includes(o.id)
+                ? { ...f, tujuanBisnisIds: f.tujuanBisnisIds.filter((id: string) => id !== o.id) }
+                : f
+            )
+          );
+        } catch (err: any) {
+          setError(err.message || "Failed to delete business objective");
+        }
+      }
+    );
+  };
+
   const handleSaveParticipant = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingParticipant || !editingParticipant.name.trim()) return;
@@ -1498,6 +1593,7 @@ export default function AdminDashboard() {
     findings: projectDataLoading ? undefined : projectPoolFindings.length,
     ideas: projectDataLoading ? undefined : projectIdeas.length,
     categories: projectDataLoading ? undefined : projectCategories.length,
+    objectives: businessObjectives.length,
     groups: activeProject?.groups?.length,
     aspects: activeProject?.viabilityAspects?.length,
     projects: projects.length,
@@ -1515,6 +1611,8 @@ export default function AdminDashboard() {
         ? { label: "Add Finding", onClick: openCreateIdea }
         : activeTab === "categories" && isAdmin
           ? { label: "Add Category", onClick: () => focusInlineForm(categoryNameInputRef) }
+          : activeTab === "objectives" && isAdmin
+            ? { label: "Add Objective", onClick: () => focusInlineForm(objectiveNameInputRef) }
           : activeTab === "groups" && isAdmin
             ? { label: "Add Group", onClick: () => focusInlineForm(groupNameInputRef) }
             : activeTab === "aspects" && isAdmin
@@ -1877,6 +1975,74 @@ export default function AdminDashboard() {
                   </ul>
                 ) : (
                   <p className="text-sm italic text-slate-500">No categories yet. Add one above — for example “Input &amp; Bulk Transfer”.</p>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* TAB: BUSINESS OBJECTIVES */}
+          {activeTab === "objectives" && (
+            <section aria-labelledby="objectives-heading" className="max-w-3xl space-y-6">
+              <div>
+                <h2 id="objectives-heading" className="section-title">Business Objective</h2>
+                <p className="section-sub">
+                  Global — applies to all projects. Create one here, then pick
+                  one or more from the Tujuan Bisnis dropdown in the Create/Edit
+                  Idea form. Renaming an objective updates it everywhere it
+                  was selected.
+                </p>
+              </div>
+
+              <div className="card space-y-5 p-5">
+                <form onSubmit={handleCreateObjective} className="flex flex-col gap-2 sm:flex-row">
+                  <input ref={objectiveNameInputRef} id="new-objective-name" type="text" required placeholder="e.g. Fee-Based Income" value={objectiveName} onChange={(e) => setObjectiveName(e.target.value)} className="input flex-1" />
+                  <button type="submit" disabled={!objectiveName.trim() || savingObjective} className="btn-primary">
+                    {savingObjective ? "Saving…" : "Add Objective"}
+                  </button>
+                </form>
+
+                {businessObjectives.length > 0 ? (
+                  <ul className="divide-y divide-slate-100">
+                    {newestFirst(businessObjectives).map((o: any) => {
+                      const usedBy = poolFindings.filter((f: any) =>
+                        Array.isArray(f.tujuanBisnisIds) && f.tujuanBisnisIds.includes(o.id)
+                      ).length;
+                      const isEditing = editingObjective?.id === o.id;
+                      const editing = isEditing ? editingObjective : null;
+                      return (
+                        <li key={o.id} className="flex items-center justify-between gap-2 py-3">
+                          {isEditing && editing ? (
+                            <form onSubmit={handleSaveObjective} className="flex flex-1 items-center gap-2">
+                              <input type="text" required autoFocus value={editing.name} onChange={(e) => setEditingObjective({ ...editing, name: e.target.value })} className="input flex-1" />
+                              <button type="submit" disabled={!editing.name.trim() || savingObjective} className="btn-primary">
+                                {savingObjective ? "Saving…" : "Save"}
+                              </button>
+                              <button type="button" onClick={() => setEditingObjective(null)} className="btn-secondary">Cancel</button>
+                            </form>
+                          ) : (
+                            <>
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium text-slate-700">{o.name}</div>
+                                <div className="text-xs text-slate-500">
+                                  {usedBy > 0 ? `${usedBy} finding${usedBy === 1 ? "" : "s"}` : "No findings yet"}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button type="button" onClick={() => setEditingObjective({ id: o.id, name: o.name })} aria-label={`Rename business objective ${o.name}`} className="btn-icon">
+                                  <Edit2 className="h-4 w-4" />
+                                </button>
+                                <button type="button" onClick={() => handleDeleteObjective(o)} aria-label={`Delete business objective ${o.name}`} className="btn-icon-danger">
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="text-sm italic text-slate-500">No business objectives yet. Add one above — for example “CASA”.</p>
                 )}
               </div>
             </section>
@@ -2402,9 +2568,77 @@ export default function AdminDashboard() {
               <label htmlFor="finding-output-keberhasilan" className="field-label">Output Keberhasilan</label>
               <textarea id="finding-output-keberhasilan" rows={2} placeholder="What does success look like?" value={findingForm.outputKeberhasilan} onChange={(e) => setFindingForm((f) => ({ ...f, outputKeberhasilan: e.target.value }))} className="input w-full" />
             </div>
-            <div>
-              <label htmlFor="finding-tujuan-bisnis" className="field-label">Tujuan Bisnis</label>
-              <input id="finding-tujuan-bisnis" type="text" placeholder="e.g. Reduce failed bulk uploads" value={findingForm.tujuanBisnis} onChange={(e) => setFindingForm((f) => ({ ...f, tujuanBisnis: e.target.value }))} className="input w-full" />
+            {/* Tujuan Bisnis is a multi-select dropdown over the
+                admin-managed objectives (Business Objective menu), so
+                an idea can carry more than one — e.g. CASA + Fee-Based
+                Income. The old free-text field is gone; findings
+                written before this change keep their text as a
+                read-only fallback in detail views. */}
+            <div className="relative">
+              <label id="finding-tujuan-bisnis-label" className="field-label">Tujuan Bisnis</label>
+              <button
+                type="button"
+                aria-labelledby="finding-tujuan-bisnis-label"
+                aria-expanded={objectivesDropdownOpen}
+                onClick={() => setObjectivesDropdownOpen((o) => !o)}
+                className="input flex min-h-10 w-full flex-wrap items-center gap-1.5 py-2 text-left"
+              >
+                {findingForm.tujuanBisnisIds.length === 0 ? (
+                  <span className="text-sm text-slate-400">Pilih tujuan bisnis…</span>
+                ) : (
+                  findingForm.tujuanBisnisIds.map((id: string) => {
+                    const o = businessObjectives.find((x: any) => x.id === id);
+                    if (!o) return null;
+                    return (
+                      <span key={id} className="inline-flex items-center gap-1 rounded-full border border-gold-200 bg-gold-50 px-2.5 py-0.5 text-xs font-bold text-gold-800">
+                        {o.name}
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Remove ${o.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFindingForm((f) => ({ ...f, tujuanBisnisIds: f.tujuanBisnisIds.filter((x: string) => x !== id) }));
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setFindingForm((f) => ({ ...f, tujuanBisnisIds: f.tujuanBisnisIds.filter((x: string) => x !== id) }));
+                            }
+                          }}
+                          className="cursor-pointer rounded-full px-0.5 leading-none hover:bg-gold-100"
+                        >
+                          <X className="h-3 w-3" />
+                        </span>
+                      </span>
+                    );
+                  })
+                )}
+                <ChevronDown className={`ml-auto h-4 w-4 shrink-0 text-slate-400 transition-transform ${objectivesDropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+              {objectivesDropdownOpen && (
+                <>
+                  <button type="button" aria-label="Close business objective list" onClick={() => setObjectivesDropdownOpen(false)} className="fixed inset-0 z-10 cursor-default" />
+                  <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+                    {businessObjectives.length === 0 ? (
+                      <p className="px-3 py-2 text-sm italic text-slate-500">Belum ada tujuan bisnis — tambahkan di menu Business Objective.</p>
+                    ) : (
+                      businessObjectives.map((o: any) => (
+                        <label key={o.id} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
+                          <input
+                            type="checkbox"
+                            checked={findingForm.tujuanBisnisIds.includes(o.id)}
+                            onChange={(e) => setFindingForm((f) => ({ ...f, tujuanBisnisIds: e.target.checked ? [...f.tujuanBisnisIds, o.id] : f.tujuanBisnisIds.filter((x: string) => x !== o.id) }))}
+                            className="h-4 w-4 rounded accent-bsi-600"
+                          />
+                          <span>{o.name}</span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
             </div>
             <div>
               <label htmlFor="finding-fitur" className="field-label">Fitur</label>

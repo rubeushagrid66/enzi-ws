@@ -32,6 +32,7 @@ export async function PUT(
       apaYangBerubahTidakTermasuk: body.apaYangBerubahTidakTermasuk,
       outputKeberhasilan: body.outputKeberhasilan,
       tujuanBisnis: body.tujuanBisnis,
+      tujuanBisnisIds: body.tujuanBisnisIds,
     });
     revalidateProjectPages();
     return NextResponse.json({ success: true, finding });

@@ -165,7 +165,7 @@ export async function PUT(
 
     const { id } = params;
     const body = await request.json();
-    const { title, description, sumber, fitur, platform, tujuan, scopeTermasuk, scopeTidakTermasuk, roleUsers, roleUsersTidakTermasuk, stepFeatureScreen, stepTidakTermasuk, apaYangBerubah, apaYangBerubahTidakTermasuk, outputKeberhasilan, tujuanBisnis } = body;
+    const { title, description, sumber, fitur, platform, tujuan, scopeTermasuk, scopeTidakTermasuk, roleUsers, roleUsersTidakTermasuk, stepFeatureScreen, stepTidakTermasuk, apaYangBerubah, apaYangBerubahTidakTermasuk, outputKeberhasilan, tujuanBisnis, tujuanBisnisIds } = body;
 
     const finding = await dbService.updateFinding(id, {
       title,
@@ -184,6 +184,7 @@ export async function PUT(
       apaYangBerubahTidakTermasuk,
       outputKeberhasilan,
       tujuanBisnis,
+      tujuanBisnisIds,
     });
 
     revalidateProjectPages(params.slug);

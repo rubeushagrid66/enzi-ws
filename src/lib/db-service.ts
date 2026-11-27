@@ -31,6 +31,14 @@ function toNotFoundError(error: any, message: string): Error {
   return isRowNotFound(error) ? new NotFoundError(message) : error;
 }
 
+/** findings.tujuan_bisnis_ids is a JSONB array of business-objective
+ *  ids; anything else (null, a legacy string, a non-array) reads as
+ *  "no objectives selected". */
+function normalizeObjectiveIds(value: any): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((x: any) => typeof x === "string" && x.length > 0);
+}
+
 /** The `users` columns that only exist after the global-setup SQL steps
  *  (group_id: Step 6, project_id: Step 7). PostgREST names the missing
  *  column in its error, so a fallback must drop ONLY that column — the
@@ -196,7 +204,7 @@ export const dbService = {
       // GLOBAL when the global setup exists (see docs/global-setup-sql.md):
       // the global rows win, each project's own rows are the fallback
       // for before the SQL is run — so existing scores never change.
-      const [weightsRes, aspectsRes, groupsRes, l1Res, findingsRes, globalWeights] =
+      const [weightsRes, aspectsRes, groupsRes, l1Res, findingsRes, globalWeights, objectiveMap] =
         await Promise.all([
           supabase.from("framework_weights").select("*").eq("project_id", project.id),
           supabase.from("viability_aspects").select("*").eq("project_id", project.id).order("created_at", { ascending: true }),
@@ -207,6 +215,7 @@ export const dbService = {
           supabase.from("parameters_l1").select("*, subCategories:parameters_l2(*, segments:parameters_l3(*))").or(`project_id.is.null,project_id.eq.${project.id}`).order("created_at", { ascending: true }),
           supabase.from("findings").select("*, viabilityVotes:viability_votes(*)").eq("project_id", project.id).order("created_at", { ascending: true }),
           dbService.getGlobalWeights(),
+          dbService.getBusinessObjectiveMap(),
         ]);
 
       const l1All = l1Res.data || [];
@@ -315,6 +324,14 @@ export const dbService = {
           apaYangBerubahTidakTermasuk: f.apa_yang_berubah_tidak_termasuk ?? "",
           outputKeberhasilan: f.output_keberhasilan ?? "",
           tujuanBisnis: f.tujuan_bisnis ?? "",
+          // Business objectives (multi-select dropdown): ids from
+          // findings.tujuan_bisnis_ids, names resolved here so detail
+          // views render pills without another lookup. Empty ids +
+          // legacy text still shows the old text (fallback).
+          tujuanBisnisIds: normalizeObjectiveIds(f.tujuan_bisnis_ids),
+          tujuanBisnisNames: normalizeObjectiveIds(f.tujuan_bisnis_ids)
+            .map((id: string) => objectiveMap[id])
+            .filter(Boolean),
           // Null stays null: an unplaced finding has no feasibility
           // position. The UI may display it at 50/50 as a neutral
           // default, but null is what marks it "not yet scored".
@@ -637,9 +654,10 @@ export const dbService = {
    *  admin findings pool tab and the workshop "select from pool" picker. */
   async getAllFindings(): Promise<any[]> {
     if (isSupabaseConfigured && supabase) {
-      const [findingsRes, projectsRes] = await Promise.all([
+      const [findingsRes, projectsRes, objectiveMap] = await Promise.all([
         supabase.from("findings").select("*").order("created_at", { ascending: true }),
         supabase.from("projects").select("id, slug, name"),
+        dbService.getBusinessObjectiveMap(),
       ]);
       const byId = new Map((projectsRes.data || []).map((p: any) => [p.id, p]));
       const allGroupMap = await dbService.getFindingsGroupMap(
@@ -667,6 +685,13 @@ export const dbService = {
           apaYangBerubahTidakTermasuk: f.apa_yang_berubah_tidak_termasuk ?? "",
           outputKeberhasilan: f.output_keberhasilan ?? "",
           tujuanBisnis: f.tujuan_bisnis ?? "",
+          // Business objectives (multi-select dropdown): ids from
+          // findings.tujuan_bisnis_ids, names resolved here so detail
+          // views render pills without another lookup.
+          tujuanBisnisIds: normalizeObjectiveIds(f.tujuan_bisnis_ids),
+          tujuanBisnisNames: normalizeObjectiveIds(f.tujuan_bisnis_ids)
+            .map((id: string) => objectiveMap[id])
+            .filter(Boolean),
           tags: typeof f.tags === "string" ? f.tags : JSON.stringify(f.tags || []),
           feasibilityX: f.feasibility_x != null ? Number(f.feasibility_x) : null,
           feasibilityY: f.feasibility_y != null ? Number(f.feasibility_y) : null,
@@ -1097,6 +1122,65 @@ export const dbService = {
     return { success: true };
   },
 
+  // ── Business objectives (global, admin-managed) ──────────────────────
+  // Same shape as finding categories. A Finding picks MORE THAN ONE
+  // objective from a dropdown; the selection is stored as an id array
+  // in findings.tujuan_bisnis_ids (docs/business-objectives-sql.md).
+  // A missing table reads as an empty list, so the dropdown degrades
+  // gracefully until the SQL is run.
+  /** All business objectives, newest first. */
+  async getBusinessObjectives(): Promise<any[]> {
+    if (isSupabaseConfigured && supabase) {
+      const { data, error } = await supabase
+        .from("business_objectives")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) return [];
+      return (data || []).map((o: any) => ({
+        id: o.id,
+        name: o.name,
+        createdAt: o.created_at,
+      }));
+    }
+    return [];
+  },
+
+  /** Objective id → name, for resolving a finding's stored ids. */
+  async getBusinessObjectiveMap(): Promise<Record<string, string>> {
+    const rows = await dbService.getBusinessObjectives();
+    return Object.fromEntries(rows.map((o: any) => [o.id, o.name]));
+  },
+
+  async createBusinessObjective(name: string) {
+    if (!isSupabaseConfigured || !supabase) throw new Error("Business objectives need Supabase");
+    const { data, error } = await supabase
+      .from("business_objectives")
+      .insert({ name })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateBusinessObjective(id: string, name: string) {
+    if (!isSupabaseConfigured || !supabase) throw new Error("Business objectives need Supabase");
+    const { data, error } = await supabase
+      .from("business_objectives")
+      .update({ name, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteBusinessObjective(id: string) {
+    if (!isSupabaseConfigured || !supabase) throw new Error("Business objectives need Supabase");
+    const { error } = await supabase.from("business_objectives").delete().eq("id", id);
+    if (error) throw error;
+    return { success: true };
+  },
+
   /** Finding ids an idea is linked to (empty when unlinked). */
   async getIdeaFindingIds(ideaId: string): Promise<string[]> {
     if (isSupabaseConfigured && supabase) {
@@ -1478,6 +1562,7 @@ export const dbService = {
       apaYangBerubahTidakTermasuk: s.apa_yang_berubah_tidak_termasuk ?? s.apaYangBerubahTidakTermasuk ?? "",
       outputKeberhasilan: s.output_keberhasilan ?? s.outputKeberhasilan ?? "",
       tujuanBisnis: s.tujuan_bisnis ?? s.tujuanBisnis ?? "",
+      tujuanBisnisIds: normalizeObjectiveIds(s.tujuan_bisnis_ids ?? s.tujuanBisnisIds),
     };
     let data: { title: string; description: string; sumber: string[]; fitur: string; platform: string[] } & typeof detail;
     if (Array.isArray(parsed)) {
@@ -2089,6 +2174,8 @@ export const dbService = {
     apaYangBerubahTidakTermasuk?: string;
     outputKeberhasilan?: string;
     tujuanBisnis?: string;
+    /** Business-objective ids from the multi-select dropdown. */
+    tujuanBisnisIds?: string[];
   }) {
     const tagsJson = JSON.stringify({
       sumber: data.sumber || [],
@@ -2117,6 +2204,7 @@ export const dbService = {
           apa_yang_berubah_tidak_termasuk: data.apaYangBerubahTidakTermasuk || null,
           output_keberhasilan: data.outputKeberhasilan || null,
           tujuan_bisnis: data.tujuanBisnis || null,
+          tujuan_bisnis_ids: data.tujuanBisnisIds || [],
           feasibility_x: null,
           feasibility_y: null,
           feasibility_quadrant: null,
@@ -2166,6 +2254,8 @@ export const dbService = {
     apaYangBerubahTidakTermasuk?: string;
     outputKeberhasilan?: string;
     tujuanBisnis?: string;
+    /** Business-objective ids from the multi-select dropdown. */
+    tujuanBisnisIds?: string[];
   }) {
     const tagsJson = JSON.stringify({
       sumber: data.sumber || [],
@@ -2190,6 +2280,7 @@ export const dbService = {
           ...(data.apaYangBerubahTidakTermasuk !== undefined && { apa_yang_berubah_tidak_termasuk: data.apaYangBerubahTidakTermasuk || null }),
           ...(data.outputKeberhasilan !== undefined && { output_keberhasilan: data.outputKeberhasilan || null }),
           ...(data.tujuanBisnis !== undefined && { tujuan_bisnis: data.tujuanBisnis || null }),
+          ...(data.tujuanBisnisIds !== undefined && { tujuan_bisnis_ids: data.tujuanBisnisIds }),
           tags: tagsJson,
           updated_at: new Date().toISOString(),
         })
