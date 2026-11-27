@@ -1307,10 +1307,12 @@ export default function ProjectResultViewer({
 
 
 
-            {/* Ideas table — a plain listing: title, linked findings,
-                platform. No chips or labels; clicking a row opens the
-                image-evidence popup (the detail page lives under each
-                group instead). */}
+            {/* Ideas table — a plain listing: title, related-findings
+                count, platform. Only the count shows in the Related
+                Findings column (a long title list made rows huge);
+                clicking a row opens the image-evidence popup, which
+                lists every linked finding. The detail page lives
+                under each group instead. */}
             {filteredFindings.length > 0 ? (
               <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs">
                 <table className="w-full text-left text-sm">
@@ -1334,11 +1336,14 @@ export default function ProjectResultViewer({
                             <div className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{finding.description}</div>
                           )}
                         </td>
-                        <td className="px-4 py-3.5 align-top">
+                        <td className="px-4 py-3.5 align-top whitespace-nowrap">
                           {finding.relatedIdeas && finding.relatedIdeas.length > 0 ? (
-                            <div className="leading-snug text-slate-700">
-                              {finding.relatedIdeas.map((r: any) => r.title).join(", ")}
-                            </div>
+                            <span
+                              title={`${finding.relatedIdeas.length} related findings — klik baris untuk melihat semuanya di popup detail`}
+                              className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-700"
+                            >
+                              {finding.relatedIdeas.length}
+                            </span>
                           ) : (
                             <span className="text-slate-500">—</span>
                           )}
