@@ -1308,10 +1308,12 @@ export default function ProjectResultViewer({
 
 
             {/* Ideas table — a plain listing: title, related-findings
-                count, platform. Only the count shows in the Related
-                Findings column (a long title list made rows huge);
-                clicking a row opens the image-evidence popup, which
-                lists every linked finding. The detail page lives
+                count. Only the count shows in the Related Findings
+                column (a long title list made rows huge); clicking a
+                row opens the image-evidence popup, which lists every
+                linked finding. No Platform column — the page is
+                already scoped to one project, so every row would
+                repeat the same platform. The detail page lives
                 under each group instead. */}
             {filteredFindings.length > 0 ? (
               <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs">
@@ -1320,7 +1322,6 @@ export default function ProjectResultViewer({
                     <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-600">
                       <th scope="col" className="px-4 py-3">Ideas</th>
                       <th scope="col" className="px-4 py-3">Related Findings</th>
-                      <th scope="col" className="px-4 py-3">Platform</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1347,9 +1348,6 @@ export default function ProjectResultViewer({
                           ) : (
                             <span className="text-slate-500">—</span>
                           )}
-                        </td>
-                        <td className="px-4 py-3.5 align-top whitespace-nowrap text-slate-700">
-                          {(finding.platform || []).length > 0 ? finding.platform.join(", ") : "—"}
                         </td>
                       </tr>
                     ))}
