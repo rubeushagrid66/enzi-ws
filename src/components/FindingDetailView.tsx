@@ -377,7 +377,7 @@ export default function FindingDetailView({
     </div>
   );
 
-  // ── About this idea ────────────────────────────────────────────
+  // ── Penjelasan Ide/Solusi ──────────────────────────────────────
   // The idea's content (Cara/Alur Kerja, Impact, Catatan/Batasan,
   // Tujuan Bisnis) — the same detail fields the admin form collects
   // and the popup shows. The detail page never showed them, so a
@@ -612,7 +612,7 @@ export default function FindingDetailView({
         </div>
       </section>
 
-      {/* ── About this idea: the idea's content, so a reader
+      {/* ── Penjelasan Ide/Solusi: the idea's content, so a reader
           understands what it is before scoring it. Only filled
           fields render; the section hides when nothing is filled.
           Collapsed by default so a scorer lands straight on the
@@ -625,7 +625,7 @@ export default function FindingDetailView({
             aria-expanded={aboutOpen}
             className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-bsi-500 sm:px-7"
           >
-            <span className="text-sm font-bold text-slate-900">About this idea</span>
+            <span className="text-sm font-bold text-slate-900">Penjelasan Ide/Solusi</span>
             <span className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-slate-600">
               {aboutOpen ? "Hide" : "Show"}
               <ChevronDown
